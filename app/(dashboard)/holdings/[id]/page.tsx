@@ -1,24 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState,use } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Card from '@/components/ui/Card';
 import TransactionItem from '@/components/features/TransactionItem';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
-export default function SchemeDetailPage({ params }: { params: { id: string } }) {
+export default function SchemeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
   const [scheme, setScheme] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadScheme();
-  }, [params.id]);
+  }, [id]);
 
   const loadScheme = async () => {
     try {
-      const data = await api.getSchemeDetail(Number(params.id));
+      // console.log(params.id)
+      const data = await api.getSchemeDetail(Number(id));
       setScheme(data);
     } catch (err) {
       console.error('Error loading scheme:', err);
