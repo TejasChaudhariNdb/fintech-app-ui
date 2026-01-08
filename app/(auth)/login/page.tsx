@@ -1,52 +1,64 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const data = await api.login(email, password);
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user_email', email);
-      router.push('/');
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("user_email", email);
+
+      // Check if user has data (simplified logic: if user is new, maybe flag it?)
+      // For now, we assume if they login they go to dashboard.
+      // In a real app, we would check `data.is_new_user`
+
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please try again.');
+      setError(err.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-4">💰</div>
-          <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-          <p className="text-neutral-600">Sign in to your account</p>
+    <div className="min-h-screen bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary-900/20 blur-[100px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-accent-900/10 blur-[100px]" />
+      </div>
+
+      <div className="glass-card rounded-3xl p-10 w-full max-w-md z-10 animate-slide-up">
+        <div className="text-center mb-10">
+          <div className="text-6xl mb-6">💎</div>
+          <h1 className="text-3xl font-bold mb-3 text-white">Welcome Back</h1>
+          <p className="text-neutral-400">Sign in to manage your wealth</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-6">
           <Input
             type="email"
             label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder="name@example.com"
             required
+            className="bg-black/20"
           />
 
           <Input
@@ -56,30 +68,41 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
+            className="bg-black/20"
           />
 
           {error && (
-            <div className="bg-danger-50 text-danger-600 px-4 py-3 rounded-xl text-sm">
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center">
+              <svg
+                className="w-4 h-4 mr-2 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
               {error}
             </div>
           )}
 
           <Button
             type="submit"
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
+            isLoading={loading}
+            className="w-full text-lg py-4"
+            variant="primary">
+            Sign In
           </Button>
         </form>
 
-        <p className="text-center text-sm text-neutral-600 mt-6">
-          Don&apos;t have an account?{' '}
-          <button 
-            onClick={() => router.push('/register')}
-            className="text-primary-600 font-semibold"
-          >
-            Sign up
+        <p className="text-center text-sm text-neutral-400 mt-8">
+          Don&apos;t have an account?{" "}
+          <button
+            onClick={() => router.push("/register")}
+            className="text-primary-400 font-semibold hover:text-primary-300 transition-colors">
+            Create account
           </button>
         </p>
       </div>

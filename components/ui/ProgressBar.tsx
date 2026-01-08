@@ -1,16 +1,20 @@
-import React from 'react';
+import React from "react";
 
 interface ProgressBarProps {
   progress: number;
   className?: string;
 }
 
-export default function ProgressBar({ progress, className = '' }: ProgressBarProps) {
+export default function ProgressBar({
+  progress,
+  className = "",
+}: ProgressBarProps) {
   return (
-    <div className={`w-full bg-neutral-100 rounded-full h-2.5 ${className}`}>
-      <div 
-        className="bg-primary-500 h-2.5 rounded-full transition-all duration-300"
-        style={{ width: `${Math.min(progress, 100)}%` }}
+    <div
+      className={`w-full bg-surface-highlight rounded-full overflow-hidden ${className}`}>
+      <div
+        className="bg-gradient-to-r from-primary-500 to-accent-400 h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-primary-500/20"
+        style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }}
       />
     </div>
   );

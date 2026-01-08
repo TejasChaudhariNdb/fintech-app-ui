@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { api } from '@/lib/api';
-import Card from '@/components/ui/Card';
-import TransactionItem from '@/components/features/TransactionItem';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import TransactionItem from "@/components/features/TransactionItem";
+import { Loader2, FileText } from "lucide-react";
 
 export default function ActivityPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -19,26 +18,31 @@ export default function ActivityPage() {
       const data = await api.getTransactions(0, 50);
       setTransactions(data.data || []);
     } catch (err) {
-      console.error('Error loading transactions:', err);
+      console.error("Error loading transactions:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (loading)
+    return (
+      <div className="flex justify-center items-center py-20">
+        <Loader2 className="animate-spin h-8 w-8 text-primary-500" />
+      </div>
+    );
 
   return (
-    <div className="pb-20 bg-neutral-50 min-h-screen">
-      <div className="bg-white border-b border-neutral-200 p-4 sticky top-0 z-10">
+    <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
+      <div className="bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5 p-4 sticky top-0 z-20 transition-colors">
         <h1 className="text-2xl font-bold">Activity</h1>
-        <p className="text-sm text-neutral-600 mt-1">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
           Recent transactions
         </p>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-6">
         {transactions.length > 0 ? (
-          <Card className="p-4">
+          <div className="space-y-3">
             {transactions.map((tx, i) => (
               <TransactionItem
                 key={i}
@@ -50,15 +54,19 @@ export default function ActivityPage() {
                 amc={tx.amc}
               />
             ))}
-          </Card>
+          </div>
         ) : (
-          <Card className="p-8 text-center">
-            <p className="text-4xl mb-2">📝</p>
-            <p className="text-neutral-600">No transactions yet</p>
-            <p className="text-sm text-neutral-500 mt-1">
-              Upload your CAS to see transactions
+          <div className="glass-card rounded-2xl p-10 text-center border-dashed border-2 border-white/10">
+            <div className="flex justify-center mb-4">
+              <FileText className="h-12 w-12 text-neutral-500" />
+            </div>
+            <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">
+              No transactions yet
+            </h3>
+            <p className="text-neutral-500 dark:text-neutral-400">
+              Upload your CAS to analyze your last 5 years of activity.
             </p>
-          </Card>
+          </div>
         )}
       </div>
     </div>
