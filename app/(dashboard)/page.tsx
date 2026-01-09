@@ -8,6 +8,7 @@ import PortfolioSummary from "@/components/features/PortfolioSummary";
 import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
+import OnboardingWizard from "@/components/features/OnboardingWizard";
 import { FileText, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 
 export default function HomePage() {
@@ -84,16 +85,47 @@ export default function HomePage() {
       setRefreshing(true);
       showToast("Updating portfolio values...", "loading");
 
-      const res = await api.refreshNAVs();
+      // 1. Capture current "last updated" time (to compare against)
+      const initialLastUpdated = netWorth?.last_updated
+        ? new Date(netWorth.last_updated).getTime()
+        : 0;
 
-      // Reload data silently to update values
-      await loadData();
+      // 2. Trigger Background Task
+      await api.refreshNAVs();
 
-      showToast(res.message || "Portfolio updated successfully", "success");
+      // 3. Start Polling for completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const latestNetWorth = await api.getNetWorth();
+          const newLastUpdated = latestNetWorth.last_updated
+            ? new Date(latestNetWorth.last_updated).getTime()
+            : 0;
+
+          // If timestamp is NEWER than what we started with, it's done!
+          if (newLastUpdated > initialLastUpdated) {
+            clearInterval(pollInterval);
+            await loadData(); // Reload full dashboard
+            setRefreshing(false);
+            showToast("Portfolio updated successfully", "success");
+          }
+        } catch (e) {
+          console.error("Polling error", e);
+        }
+      }, 2000); // Check every 2 seconds
+
+      // 4. Safety Timeout (Stop polling after 30 seconds)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (refreshing) {
+          setRefreshing(false);
+          // Don't show success, just stop spinning. It might still be running or failed silently.
+          // Or reload distinct data just in case.
+          loadData();
+        }
+      }, 30000);
     } catch (err: any) {
       console.error("Failed to refresh NAVs:", err);
-      showToast("Failed to update portfolio", "error");
-    } finally {
+      showToast("Failed to trigger update", "error");
       setRefreshing(false);
     }
   };
@@ -126,6 +158,11 @@ export default function HomePage() {
         </div>
       </div>
     );
+  }
+
+  // ✅ UX: Onboarding for New Users (Empty State)
+  if (summary && summary.invested === 0) {
+    return <OnboardingWizard />;
   }
 
   return (
@@ -163,6 +200,7 @@ export default function HomePage() {
             onRefresh={handleRefreshNAVs}
             isRefreshing={refreshing}
             dayChangePct={summary?.day_change_pct || 0}
+            lastUpdated={netWorth?.last_updated}
           />
         </section>
 

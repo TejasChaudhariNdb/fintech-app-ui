@@ -19,6 +19,14 @@ export default function Toast({
   duration = 3000,
 }: ToastProps) {
   useEffect(() => {
+    if (isVisible) {
+      // 📳 Haptic Feedback
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        if (type === "success") navigator.vibrate(50); // Short tick
+        if (type === "error") navigator.vibrate([50, 50, 50]); // Double buzz
+      }
+    }
+
     if (isVisible && duration > 0 && type !== "loading") {
       const timer = setTimeout(() => {
         onClose();
@@ -43,7 +51,7 @@ export default function Toast({
   };
 
   return (
-    <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-up">
+    <div className="fixed bottom-24 md:bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-up">
       <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 shadow-lg rounded-full px-6 py-3 flex items-center gap-3 min-w-[300px] justify-center">
         {getIcon()}
         <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">

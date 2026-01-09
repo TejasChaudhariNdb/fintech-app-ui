@@ -213,16 +213,58 @@ export default function ProfilePage() {
         title="Upload CAS">
         <form onSubmit={handleUpload} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
-              Select CAS PDF
+            <label className="block text-sm font-medium mb-3 text-neutral-700 dark:text-neutral-300">
+              Upload Statement (PDF)
             </label>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="w-full px-4 py-3 bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-900 dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-500/10 dark:file:text-primary-400 hover:file:bg-primary-100 dark:hover:file:bg-primary-500/20"
-              required
-            />
+
+            <div className="relative">
+              <input
+                type="file"
+                accept=".pdf"
+                id="cas-file-upload"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                required
+              />
+              <div
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all ${
+                  file
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-500/10"
+                    : "border-neutral-300 dark:border-white/20 hover:border-primary-400 dark:hover:border-primary-400"
+                }`}>
+                {file ? (
+                  <>
+                    <div className="p-3 bg-primary-100 dark:bg-primary-500/20 rounded-full mb-3">
+                      <FileText
+                        className="text-primary-600 dark:text-primary-400"
+                        size={24}
+                      />
+                    </div>
+                    <p className="font-medium text-neutral-900 dark:text-white text-center break-all">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-primary-600 dark:text-primary-400 mt-1">
+                      Tap to change
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 bg-neutral-100 dark:bg-white/10 rounded-full mb-3">
+                      <FileText
+                        className="text-neutral-500 dark:text-neutral-400"
+                        size={24}
+                      />
+                    </div>
+                    <p className="font-medium text-neutral-900 dark:text-white mb-1">
+                      Tap to select PDF
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
+                      Select the CAS PDF sent by CAMS/KFintech
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
           <Input

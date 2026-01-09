@@ -9,6 +9,7 @@ interface NetWorthCardProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   dayChangePct?: number;
+  lastUpdated?: string;
 }
 
 export default function NetWorthCard({
@@ -18,8 +19,19 @@ export default function NetWorthCard({
   onRefresh,
   isRefreshing = false,
   dayChangePct = 0,
+  lastUpdated,
 }: NetWorthCardProps) {
   const isPositive = dayChangePct >= 0;
+
+  // Format the date if provided
+  const formattedDate = lastUpdated
+    ? new Date(lastUpdated).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "Never";
 
   return (
     <Card className="p-6 bg-gradient-to-br from-primary-600 to-primary-800 text-white border-none shadow-2xl shadow-primary-900/40 relative overflow-hidden group">
@@ -36,12 +48,13 @@ export default function NetWorthCard({
             <button
               onClick={onRefresh}
               disabled={isRefreshing}
-              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-white/10">
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all border border-white/10 disabled:opacity-50 active:scale-95">
               {isRefreshing ? (
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" />
               ) : (
-                <RefreshCw size={16} />
+                <RefreshCw size={14} />
               )}
+              {isRefreshing ? "Updating..." : "Refresh"}
             </button>
           )}
         </div>
@@ -58,12 +71,9 @@ export default function NetWorthCard({
             {isPositive ? "▲" : "▼"} {Math.abs(dayChangePct).toFixed(2)}%
           </div>
         </div>
-        <p className="text-xs text-primary-200 mb-6">
-          Last updated: Today,{" "}
-          {new Date().toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+        <p className="text-xs text-primary-200 mb-6 font-medium">
+          Last updated:{" "}
+          <span className="text-white opacity-90">{formattedDate}</span>
         </p>
 
         <div className="grid grid-cols-2 gap-3">
