@@ -218,22 +218,8 @@ export default function HomePage() {
   }
 
   return (
-    <div
-      className="px-4 pt-8 pb-32 animate-fade-in relative transition-transform duration-200 ease-out"
-      style={{ transform: `translateY(${pullY}px)` }}>
-      {/* Pull Indicator */}
-      {pullY > 10 && (
-        <div className="absolute top-0 left-0 right-0 flex justify-center -mt-8">
-          <div
-            className={`p-2 rounded-full bg-white dark:bg-[#151A23] shadow-lg border border-neutral-200 dark:border-white/10 transition-all ${
-              pullY > PULL_THRESHOLD - 30 ? "rotate-180 scale-110" : ""
-            }`}>
-            <ArrowRight className="rotate-90 text-primary-500" size={20} />
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
+    <>
+      {/* Toast Notification - Moved outside to escape 'transform' context */}
       <Toast
         isVisible={toast.show}
         message={toast.message}
@@ -241,98 +227,114 @@ export default function HomePage() {
         onClose={() => setToast((prev) => ({ ...prev, show: false }))}
       />
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
-          Welcome back
-          <span className="text-primary-600 dark:text-primary-500">.</span>
-        </h1>
-        <p className="text-neutral-500 dark:text-neutral-400">
-          {new Date().toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </p>
-      </div>
+      <div
+        className="px-4 pt-8 pb-32 animate-fade-in relative transition-transform duration-200 ease-out"
+        style={{ transform: `translateY(${pullY}px)` }}>
+        {/* Pull Indicator */}
+        {pullY > 10 && (
+          <div className="absolute top-0 left-0 right-0 flex justify-center -mt-8">
+            <div
+              className={`p-2 rounded-full bg-white dark:bg-[#151A23] shadow-lg border border-neutral-200 dark:border-white/10 transition-all ${
+                pullY > PULL_THRESHOLD - 30 ? "rotate-180 scale-110" : ""
+              }`}>
+              <ArrowRight className="rotate-90 text-primary-500" size={20} />
+            </div>
+          </div>
+        )}
 
-      <div className="space-y-6">
-        {/* Net Worth Card */}
-        <section>
-          <NetWorthCard
-            netWorth={netWorth?.net_worth || 0}
-            mfValue={netWorth?.mutual_funds || 0}
-            stockValue={netWorth?.stocks || 0}
-            onRefresh={handleRefreshNAVs}
-            isRefreshing={refreshing}
-            dayChangePct={summary?.day_change_pct || 0}
-            lastUpdated={netWorth?.last_updated}
-          />
-        </section>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+            Welcome back
+            <span className="text-primary-600 dark:text-primary-500">.</span>
+          </h1>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            {new Date().toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
+          </p>
+        </div>
 
-        {/* Portfolio Summary */}
-        {summary && (
+        <div className="space-y-6">
+          {/* Net Worth Card */}
           <section>
-            <PortfolioSummary
-              invested={summary.invested || 0}
-              current={summary.current || 0}
-              profit={summary.profit || 0}
-              returnPct={summary.return_pct || 0}
-              dayChange={summary.day_change || 0}
-              dayChangePct={summary.day_change_pct || 0}
-              xirr={summary.xirr}
+            <NetWorthCard
+              netWorth={netWorth?.net_worth || 0}
+              mfValue={netWorth?.mutual_funds || 0}
+              stockValue={netWorth?.stocks || 0}
+              onRefresh={handleRefreshNAVs}
+              isRefreshing={refreshing}
+              dayChangePct={summary?.day_change_pct || 0}
+              lastUpdated={netWorth?.last_updated}
             />
           </section>
-        )}
 
-        {/* Goals Preview */}
-        {goals.length > 0 && (
+          {/* Portfolio Summary */}
+          {summary && (
+            <section>
+              <PortfolioSummary
+                invested={summary.invested || 0}
+                current={summary.current || 0}
+                profit={summary.profit || 0}
+                returnPct={summary.return_pct || 0}
+                dayChange={summary.day_change || 0}
+                dayChangePct={summary.day_change_pct || 0}
+                xirr={summary.xirr}
+              />
+            </section>
+          )}
+
+          {/* Goals Preview */}
+          {goals.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+                  Your Goals
+                </h3>
+                <button
+                  onClick={() => router.push("/goals")}
+                  className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:text-primary-500 dark:hover:text-primary-300 transition-colors flex items-center gap-1">
+                  View All <ArrowRight size={16} />
+                </button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {goals.map((goal) => (
+                  <GoalCard
+                    key={goal.id}
+                    id={goal.id}
+                    name={goal.name}
+                    target={goal.target}
+                    current={goal.current}
+                    progress={goal.progress}
+                    onClick={() => router.push("/goals")}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Quick Actions */}
           <section className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
-                Your Goals
-              </h3>
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+              Quick Actions
+            </h3>
+
+            <div className="grid grid-cols-1 gap-4">
               <button
-                onClick={() => router.push("/goals")}
-                className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:text-primary-500 dark:hover:text-primary-300 transition-colors flex items-center gap-1">
-                View All <ArrowRight size={16} />
+                onClick={() => router.push("/profile")}
+                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-200">
+                <FileText className="h-8 w-8 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-300">
+                  Upload CAS for Mutual Funds
+                </span>
               </button>
             </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {goals.map((goal) => (
-                <GoalCard
-                  key={goal.id}
-                  id={goal.id}
-                  name={goal.name}
-                  target={goal.target}
-                  current={goal.current}
-                  progress={goal.progress}
-                  onClick={() => router.push("/goals")}
-                />
-              ))}
-            </div>
           </section>
-        )}
-
-        {/* Quick Actions */}
-        <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            Quick Actions
-          </h3>
-
-          <div className="grid grid-cols-1 gap-4">
-            <button
-              onClick={() => router.push("/profile")}
-              className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-200">
-              <FileText className="h-8 w-8 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform" />
-              <span className="font-medium text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-300">
-                Upload CAS for Mutual Funds
-              </span>
-            </button>
-          </div>
-        </section>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
