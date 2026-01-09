@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";
 import { Loader2, Target } from "lucide-react";
+import AppSkeleton from "@/components/ui/AppSkeleton";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<any[]>([]);
@@ -111,12 +112,7 @@ export default function GoalsPage() {
     setFormData({ name: "", target: "", year: new Date().getFullYear() + 1 });
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="animate-spin h-8 w-8 text-primary-500" />
-      </div>
-    );
+  if (loading) return <AppSkeleton />;
 
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">

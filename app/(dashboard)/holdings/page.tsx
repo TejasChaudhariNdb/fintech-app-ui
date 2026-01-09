@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import SchemeCard from "@/components/features/SchemeCard";
 import Card from "@/components/ui/Card";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import AppSkeleton from "@/components/ui/AppSkeleton";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
@@ -95,12 +96,7 @@ export default function HoldingsPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center py-20">
-        <LoadingSpinner />
-      </div>
-    );
+  if (loading) return <AppSkeleton />;
 
   const totalMFValue = amcAllocation.reduce(
     (sum, item) => sum + item.current,

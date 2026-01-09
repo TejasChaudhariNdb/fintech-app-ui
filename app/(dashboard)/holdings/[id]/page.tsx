@@ -1,13 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useState,use } from 'react';
-import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import Card from '@/components/ui/Card';
-import TransactionItem from '@/components/features/TransactionItem';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import Card from "@/components/ui/Card";
+import TransactionItem from "@/components/features/TransactionItem";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import AppSkeleton from "@/components/ui/AppSkeleton";
 
-export default function SchemeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function SchemeDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const resolvedParams = use(params);
   const id = resolvedParams.id;
@@ -24,13 +29,13 @@ export default function SchemeDetailPage({ params }: { params: Promise<{ id: str
       const data = await api.getSchemeDetail(Number(id));
       setScheme(data);
     } catch (err) {
-      console.error('Error loading scheme:', err);
+      console.error("Error loading scheme:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <AppSkeleton />;
   if (!scheme) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -45,10 +50,9 @@ export default function SchemeDetailPage({ params }: { params: Promise<{ id: str
     <div className="pb-20 bg-neutral-50 min-h-screen">
       {/* Header */}
       <div className="bg-white border-b border-neutral-200 p-4 sticky top-0 z-10">
-        <button 
-          onClick={() => router.back()} 
-          className="mb-3 text-primary-600 font-medium"
-        >
+        <button
+          onClick={() => router.back()}
+          className="mb-3 text-primary-600 font-medium">
           ← Back
         </button>
         <h1 className="text-xl font-bold line-clamp-2">{scheme.scheme}</h1>
@@ -68,36 +72,44 @@ export default function SchemeDetailPage({ params }: { params: Promise<{ id: str
               <p className="text-lg font-semibold mt-1">₹{scheme.nav}</p>
             </div>
           </div>
-          
+
           {scheme.nav_date && (
             <p className="text-xs text-neutral-500 mb-4">
-              NAV as of {new Date(scheme.nav_date).toLocaleDateString('en-IN')}
+              NAV as of {new Date(scheme.nav_date).toLocaleDateString("en-IN")}
             </p>
           )}
-          
+
           <div className="h-px bg-neutral-200 my-4" />
-          
+
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-neutral-600">Invested</span>
               <span className="font-semibold">
-                ₹{scheme.invested.toLocaleString('en-IN')}
+                ₹{scheme.invested.toLocaleString("en-IN")}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-neutral-600">Current Value</span>
               <span className="font-semibold">
-                ₹{scheme.current.toLocaleString('en-IN')}
+                ₹{scheme.current.toLocaleString("en-IN")}
               </span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-neutral-200">
               <span className="font-medium">Total Gain</span>
               <div className="text-right">
-                <p className={`font-bold ${isPositive ? 'text-success-600' : 'text-danger-600'}`}>
-                  {isPositive ? '+' : ''}₹{scheme.profit.toLocaleString('en-IN')}
+                <p
+                  className={`font-bold ${
+                    isPositive ? "text-success-600" : "text-danger-600"
+                  }`}>
+                  {isPositive ? "+" : ""}₹
+                  {scheme.profit.toLocaleString("en-IN")}
                 </p>
-                <p className={`text-sm ${isPositive ? 'text-success-600' : 'text-danger-600'}`}>
-                  {isPositive ? '+' : ''}{scheme.return_pct.toFixed(2)}%
+                <p
+                  className={`text-sm ${
+                    isPositive ? "text-success-600" : "text-danger-600"
+                  }`}>
+                  {isPositive ? "+" : ""}
+                  {scheme.return_pct.toFixed(2)}%
                 </p>
               </div>
             </div>

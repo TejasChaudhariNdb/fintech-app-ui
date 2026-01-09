@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AppSkeleton from "@/components/ui/AppSkeleton";
 import { api } from "@/lib/api";
 import NetWorthCard from "@/components/features/NetWorthCard";
 import PortfolioSummary from "@/components/features/PortfolioSummary";
@@ -130,15 +131,66 @@ export default function HomePage() {
     }
   };
 
+  // Pull to Refresh State
+  const [pullY, setPullY] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const PULL_THRESHOLD = 120;
+
+  useEffect(() => {
+    let startY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only enable if at very top of page
+      if (window.scrollY === 0) {
+        startY = e.touches[0].clientY;
+        setIsPulling(true);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPulling) return;
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - startY;
+
+      if (diff > 0 && window.scrollY === 0) {
+        // Resistance effect
+        setPullY(Math.min(diff * 0.4, PULL_THRESHOLD)); // Logarithmic resistance
+        // Prevent default scrolling if we are pulling to refresh
+        if (diff < PULL_THRESHOLD) {
+          // We generally want to allow nice scrolling, but for P2R strictly at top:
+        }
+      }
+    };
+
+    const handleTouchEnd = async () => {
+      if (!isPulling) return;
+
+      if (pullY >= PULL_THRESHOLD - 20) {
+        // Trigger Refresh
+        if (typeof navigator !== "undefined" && navigator.vibrate)
+          navigator.vibrate(20);
+        showToast("Refreshing...", "loading");
+        await loadData();
+        showToast("Refreshed", "success");
+      }
+
+      setPullY(0);
+      setIsPulling(false);
+    };
+
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isPulling, pullY]);
+
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <Loader2 className="animate-spin h-12 w-12 text-primary-500 mx-auto mb-4" />
-          <p className="text-neutral-400">Loading your portfolio...</p>
-        </div>
-      </div>
-    );
+    return <AppSkeleton />;
   }
 
   if (error) {
@@ -166,7 +218,21 @@ export default function HomePage() {
   }
 
   return (
-    <div className="px-4 pt-8 pb-32 animate-fade-in relative">
+    <div
+      className="px-4 pt-8 pb-32 animate-fade-in relative transition-transform duration-200 ease-out"
+      style={{ transform: `translateY(${pullY}px)` }}>
+      {/* Pull Indicator */}
+      {pullY > 10 && (
+        <div className="absolute top-0 left-0 right-0 flex justify-center -mt-8">
+          <div
+            className={`p-2 rounded-full bg-white dark:bg-[#151A23] shadow-lg border border-neutral-200 dark:border-white/10 transition-all ${
+              pullY > PULL_THRESHOLD - 30 ? "rotate-180 scale-110" : ""
+            }`}>
+            <ArrowRight className="rotate-90 text-primary-500" size={20} />
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       <Toast
         isVisible={toast.show}

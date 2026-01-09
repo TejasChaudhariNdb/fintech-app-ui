@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import TransactionItem from "@/components/features/TransactionItem";
 import { Loader2, FileText } from "lucide-react";
+import AppSkeleton from "@/components/ui/AppSkeleton";
 
 export default function ActivityPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -24,12 +25,7 @@ export default function ActivityPage() {
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="animate-spin h-8 w-8 text-primary-500" />
-      </div>
-    );
+  if (loading) return <AppSkeleton />;
 
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
