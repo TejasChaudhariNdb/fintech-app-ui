@@ -41,7 +41,7 @@ export default function HoldingsPage() {
   });
   const showToast = (
     message: string,
-    type: "success" | "error" | "loading" = "info"
+    type: "success" | "error" | "loading" = "success"
   ) => {
     setToast({ message, type, isVisible: true });
     setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
@@ -189,8 +189,8 @@ export default function HoldingsPage() {
                         color: "#fff",
                       }}
                       itemStyle={{ color: "#fff" }}
-                      formatter={(value: number) =>
-                        `₹${value.toLocaleString()}`
+                      formatter={(value: number | undefined) =>
+                        value !== undefined ? `₹${value.toLocaleString()}` : ""
                       }
                     />
                   </PieChart>
@@ -308,8 +308,7 @@ export default function HoldingsPage() {
             </div>
             <Button
               onClick={() => setShowStockModal(true)}
-              size="sm"
-              className="gap-2">
+              className="gap-2 py-2 px-4 text-sm">
               <Plus size={16} /> Add Stock
             </Button>
           </div>

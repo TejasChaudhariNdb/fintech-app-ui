@@ -35,7 +35,7 @@ export default function ProfilePage() {
   });
   const showToast = (
     message: string,
-    type: "success" | "error" | "loading" = "info"
+    type: "success" | "error" | "loading" | "info" = "info"
   ) => {
     setToast({ message, type, isVisible: true });
     setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
