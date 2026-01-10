@@ -11,7 +11,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
-import { TrendingUp, Search, ArrowUpDown, Plus } from "lucide-react";
+import ShareStockModal from "@/components/features/ShareStockModal";
+import { TrendingUp, Search, ArrowUpDown, Plus, Share2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 const COLORS = [
@@ -33,6 +34,9 @@ export default function HoldingsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("value");
+
+  // Share Modal State
+  const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
 
   // Toast State
   const [toast, setToast] = useState({
@@ -153,9 +157,39 @@ export default function HoldingsPage() {
         <div className="px-4 pt-6 space-y-6">
           {/* AMC Allocation Chart */}
           <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
-            <h3 className="text-lg font-semibold mb-2 text-neutral-900 dark:text-white">
-              AMC Allocation
-            </h3>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+                AMC Allocation
+              </h3>
+              <button
+                onClick={() => {
+                  // Calculate total portfolio stats
+                  const totalCurrent = schemes.reduce(
+                    (sum, s) => sum + s.current,
+                    0
+                  );
+                  // Estimate invested based on current and return %
+                  // current = invested * (1 + pct/100) => invested = current / (1 + pct/100)
+                  const totalInvested = schemes.reduce((sum, s) => {
+                    return sum + s.current / (1 + (s.return_pct || 0) / 100);
+                  }, 0);
+
+                  const totalPnlPct =
+                    totalInvested > 0
+                      ? ((totalCurrent - totalInvested) / totalInvested) * 100
+                      : 0;
+
+                  setSelectedShareStock({
+                    symbol: "My Mutual Fund Portfolio",
+                    pnl_pct: totalPnlPct,
+                    value: totalCurrent,
+                  });
+                }}
+                className="p-2 text-neutral-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-full transition-all"
+                title="Share Portfolio Performance">
+                <Share2 size={20} />
+              </button>
+            </div>
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="h-[200px] w-[200px] relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -280,6 +314,13 @@ export default function HoldingsPage() {
                     current={scheme.current}
                     returnPct={scheme.return_pct}
                     onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
+                    onShare={() =>
+                      setSelectedShareStock({
+                        symbol: scheme.scheme,
+                        pnl_pct: scheme.return_pct,
+                        value: scheme.current,
+                      })
+                    }
                   />
                 ))
               ) : (
@@ -314,22 +355,50 @@ export default function HoldingsPage() {
               {manualStocks.map((stock, i) => (
                 <Card
                   key={i}
-                  className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5">
+                  className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 relative group">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold text-neutral-900 dark:text-white">
+                      <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
                         {stock.symbol}
                       </h4>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                        {stock.quantity} shares
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {stock.quantity} shares
+                        </p>
+                        {stock.pnl_pct !== undefined && (
+                          <span
+                            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              stock.pnl_pct >= 0
+                                ? "bg-green-500/10 text-green-500"
+                                : "bg-red-500/10 text-red-500"
+                            }`}>
+                            {stock.pnl_pct >= 0 ? "+" : ""}
+                            {stock.pnl_pct.toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-neutral-900 dark:text-white">
                         ₹{stock.value?.toLocaleString()}
                       </p>
+                      {stock.avg_price && (
+                        <p className="text-xs text-neutral-500 mt-0.5">
+                          Avg: ₹{stock.avg_price?.toLocaleString()}
+                        </p>
+                      )}
                     </div>
                   </div>
+                  {/* Share Button (Visible on Hover/Mobile) */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedShareStock(stock);
+                    }}
+                    className="absolute top-3 right-3 p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
+                    title="Share Performance">
+                    <Share2 size={20} />
+                  </button>
                 </Card>
               ))}
             </div>
@@ -395,6 +464,12 @@ export default function HoldingsPage() {
           </Button>
         </form>
       </Modal>
+
+      <ShareStockModal
+        isOpen={!!selectedShareStock}
+        onClose={() => setSelectedShareStock(null)}
+        stock={selectedShareStock}
+      />
 
       <Toast
         message={toast.message}

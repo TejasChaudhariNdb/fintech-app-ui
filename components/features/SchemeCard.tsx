@@ -1,4 +1,4 @@
-import React from "react";
+import { Share2 } from "lucide-react";
 import Card from "../ui/Card";
 
 interface SchemeCardProps {
@@ -8,6 +8,7 @@ interface SchemeCardProps {
   current: number;
   returnPct: number;
   onClick?: () => void;
+  onShare?: () => void;
 }
 
 export default function SchemeCard({
@@ -16,15 +17,16 @@ export default function SchemeCard({
   current,
   returnPct,
   onClick,
+  onShare,
 }: SchemeCardProps) {
   const isPositive = returnPct >= 0;
 
   return (
     <Card
-      className="p-4 bg-surface border border-neutral-200 dark:border-white/5 hover:bg-surface-highlight transition-colors"
+      className="p-4 bg-surface border border-neutral-200 dark:border-white/5 hover:bg-surface-highlight transition-colors relative group"
       onClick={onClick}>
       <div className="flex justify-between items-start">
-        <div className="flex-1 mr-3">
+        <div className="flex-1 mr-8">
           <h4 className="font-medium mb-1 line-clamp-2 text-neutral-900 dark:text-white">
             {scheme}
           </h4>
@@ -48,6 +50,18 @@ export default function SchemeCard({
           </p>
         </div>
       </div>
+
+      {onShare && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onShare();
+          }}
+          className="absolute top-3 right-3 p-2 text-neutral-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-full transition-all opacity-100 z-10"
+          title="Share Performance">
+          <Share2 size={18} />
+        </button>
+      )}
     </Card>
   );
 }
