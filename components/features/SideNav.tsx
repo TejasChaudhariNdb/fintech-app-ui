@@ -20,10 +20,10 @@ export default function SideNav() {
     <aside className="hidden lg:flex w-64 flex-col bg-surface border-r border-neutral-200 dark:border-white/5 h-screen sticky top-0 p-4">
       <div className="flex items-center gap-3 px-4 py-4 mb-6">
         <div className="h-8 w-8 rounded-lg bg-primary-600 flex items-center justify-center">
-          <span className="text-white font-bold text-xl">S</span>
+          <span className="text-white font-bold text-xl">A</span>
         </div>
         <span className="text-xl font-bold text-neutral-900 dark:text-white">
-          SmartFolio
+          Arthavi
         </span>
       </div>
 
@@ -54,7 +54,7 @@ export default function SideNav() {
 
       <div className="mt-auto px-4 py-4 border-t border-neutral-200 dark:border-white/5">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+          <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
             TE
           </div>
           <div>
