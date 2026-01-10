@@ -80,7 +80,7 @@ export default function SideNav() {
           </div>
           <button
             onClick={togglePrivacyMode}
-            className="p-1.5 text-neutral-400 hover:text-white transition-colors"
+            className="p-1.5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
             title={isPrivacyMode ? "Show Balances" : "Hide Balances"}>
             {isPrivacyMode ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>

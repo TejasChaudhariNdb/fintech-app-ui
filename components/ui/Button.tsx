@@ -18,14 +18,15 @@ export default function Button({
 
   const variants = {
     primary:
-      "bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white shadow-lg shadow-primary-500/30 focus:ring-primary-500",
+      "bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white shadow-lg shadow-primary-500/30 focus:ring-primary-500 border border-transparent",
     secondary:
-      "bg-surface-highlight hover:bg-neutral-700 text-white border border-white/5",
+      "bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-white hover:bg-neutral-50 dark:hover:bg-white/10 shadow-sm",
     danger:
       "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg shadow-red-500/30 focus:ring-red-500",
-    ghost: "bg-transparent hover:bg-white/5 text-neutral-300 hover:text-white",
+    ghost:
+      "bg-transparent hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white",
     outline:
-      "bg-transparent border border-primary-500 text-primary-400 hover:bg-primary-500/10",
+      "bg-transparent border border-primary-600 dark:border-primary-400 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-500/10",
   };
 
   return (
