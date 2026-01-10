@@ -10,7 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react";
-import { toPng } from "html-to-image";
+import { toBlob, toPng } from "html-to-image";
 import download from "downloadjs";
 import Button from "@/components/ui/Button";
 
@@ -48,6 +48,45 @@ export default function ShareStockModal({
       download(dataUrl, `${stock.symbol}-performance.png`);
     } catch (err) {
       console.error("Failed to generate image", err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!cardRef.current) return;
+    try {
+      setDownloading(true);
+      const blob = await toBlob(cardRef.current, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: "#000",
+      });
+
+      if (!blob) throw new Error("Failed to create blob");
+
+      const file = new File([blob], `${stock.symbol}-performance.png`, {
+        type: "image/png",
+      });
+
+      if (
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({ files: [file] })
+      ) {
+        await navigator.share({
+          files: [file],
+          title: `My ${stock.symbol} Performance`,
+          text: `Check out my returns on ${stock.symbol}! 🚀 #Arthavi #Investing`,
+        });
+      } else {
+        // Fallback to download if web share not supported
+        download(URL.createObjectURL(blob), `${stock.symbol}-performance.png`);
+      }
+    } catch (err) {
+      console.error("Failed to share image", err);
+      // Fallback via existing handleDownload if blob sharing fails
+      handleDownload();
     } finally {
       setDownloading(false);
     }
@@ -143,18 +182,32 @@ export default function ShareStockModal({
           </div>
 
           {/* Actions */}
-          <div className="mt-6 flex gap-3">
+          <div className="mt-6 space-y-3">
             <Button
-              onClick={handleDownload}
+              onClick={handleShare}
               isLoading={downloading}
-              className="w-full flex items-center justify-center gap-2"
+              className="w-full py-3.5 text-sm md:text-base font-semibold shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 hover:scale-[1.02] active:scale-95 transition-all border-0 rounded-xl"
               variant="primary">
-              <Download size={18} />
-              Download Image
+              <Share2 size={20} />
+              Share on Instagram Story
             </Button>
-            <Button onClick={onClose} variant="secondary" className="px-4">
-              Cancel
-            </Button>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={handleDownload}
+                isLoading={downloading}
+                className="w-full flex items-center justify-center gap-2 bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-900 dark:text-white"
+                variant="outline">
+                <Download size={18} />
+                Save Image
+              </Button>
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                className="w-full border border-transparent hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       </div>
