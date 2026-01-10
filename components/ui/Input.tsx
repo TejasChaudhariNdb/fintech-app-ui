@@ -16,7 +16,7 @@ export default function Input({
   return (
     <div className="w-full">
       {label && (
-        <label className="block text-sm font-medium mb-1.5 text-neutral-300 ml-1">
+        <label className="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300 ml-1">
           {label}
         </label>
       )}
@@ -29,13 +29,17 @@ export default function Input({
         <input
           className={`w-full ${
             leftIcon ? "pl-10" : "px-4"
-          } py-3 bg-surface-highlight border border-white/5 rounded-xl text-white placeholder-neutral-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all duration-200 ${
+          } py-3 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-500 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-all duration-200 ${
             error ? "border-red-500 focus:ring-red-500" : ""
           } ${className}`}
           {...props}
         />
       </div>
-      {error && <p className="mt-1 text-sm text-red-400 ml-1">{error}</p>}
+      {error && (
+        <p className="mt-1 text-sm text-red-500 dark:text-red-400 ml-1">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

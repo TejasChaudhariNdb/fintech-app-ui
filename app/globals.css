@@ -19,7 +19,7 @@
     --color-surface: #151a23;
     --color-surface-highlight: #2a303c;
     --color-text-primary: #f9fafb;
-    --color-text-secondary: #9ca3af;
+    --color-text-secondary: #a1a1aa; /* Turned lighter for better contrast */
     --color-text-muted: #6b7280;
     --color-border-subtle: #1f2937;
     --color-border-highlight: #374151;
@@ -86,6 +86,7 @@
     color: var(--color-text-primary);
     font-family: var(--font-sans);
     transition: background-color 0.3s, color 0.3s;
+    font-variant-numeric: tabular-nums;
   }
 }
 

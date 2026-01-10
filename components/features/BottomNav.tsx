@@ -3,10 +3,12 @@
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, Briefcase, Activity, Target, User } from "lucide-react";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { light } = useHaptic();
 
   const tabs = [
     { id: "/", label: "Home", icon: Home },
@@ -25,11 +27,14 @@ export default function BottomNav() {
           return (
             <button
               key={tab.id}
-              onClick={() => router.push(tab.id)}
+              onClick={() => {
+                light();
+                router.push(tab.id);
+              }}
               className={`flex flex-col items-center gap-1.5 px-3 py-2 transition-all duration-300 min-w-[64px] rounded-2xl ${
                 isActive
-                  ? "text-primary-400"
-                  : "text-neutral-500 hover:text-neutral-300"
+                  ? "text-primary-600 dark:text-primary-400"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300"
               }`}>
               <span
                 className={`transition-transform duration-300 ${

@@ -14,6 +14,7 @@ import Toast from "@/components/ui/Toast";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import { TrendingUp, Search, ArrowUpDown, Plus, Share2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import PrivacyMask from "@/components/ui/PrivacyMask";
 
 const COLORS = [
   "#6366F1",
@@ -66,6 +67,24 @@ export default function HoldingsPage() {
 
   const loadData = async () => {
     try {
+      // 1. Try Cache
+      if (typeof window !== "undefined") {
+        const cSchemes = localStorage.getItem("schemes");
+        const cAmc = localStorage.getItem("amc-allocation");
+        const cEquity = localStorage.getItem("equity-summary");
+
+        if (cSchemes && cAmc && cEquity) {
+          try {
+            setSchemes(JSON.parse(cSchemes).data);
+            setAmcAllocation(JSON.parse(cAmc).data);
+            setManualStocks(JSON.parse(cEquity).data.holdings || []);
+            setLoading(false);
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+      }
+
       const [s, a, e] = await Promise.all([
         api.getSchemes().catch(() => []),
         api.getAMCAllocation().catch(() => []),
@@ -231,7 +250,9 @@ export default function HoldingsPage() {
                     Total
                   </p>
                   <p className="text-sm font-bold text-neutral-900 dark:text-white">
-                    {(totalMFValue / 100000).toFixed(1)}L
+                    <PrivacyMask>
+                      {(totalMFValue / 100000).toFixed(1)}L
+                    </PrivacyMask>
                   </p>
                 </div>
               </div>
@@ -340,7 +361,8 @@ export default function HoldingsPage() {
                 My Stocks
               </h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Total Value: ₹{totalStockValue.toLocaleString()}
+                Total Value:{" "}
+                <PrivacyMask>₹{totalStockValue.toLocaleString()}</PrivacyMask>
               </p>
             </div>
             <Button
@@ -380,11 +402,16 @@ export default function HoldingsPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-neutral-900 dark:text-white">
-                        ₹{stock.value?.toLocaleString()}
+                        <PrivacyMask>
+                          ₹{stock.value?.toLocaleString()}
+                        </PrivacyMask>
                       </p>
                       {stock.avg_price && (
                         <p className="text-xs text-neutral-500 mt-0.5">
-                          Avg: ₹{stock.avg_price?.toLocaleString()}
+                          Avg:{" "}
+                          <PrivacyMask>
+                            ₹{stock.avg_price?.toLocaleString()}
+                          </PrivacyMask>
                         </p>
                       )}
                     </div>

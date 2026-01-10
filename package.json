@@ -10,8 +10,10 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@radix-ui/react-scroll-area": "^1.2.10",
     "@react-oauth/google": "^0.13.4",
     "downloadjs": "^1.4.7",
+    "framer-motion": "^12.25.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",

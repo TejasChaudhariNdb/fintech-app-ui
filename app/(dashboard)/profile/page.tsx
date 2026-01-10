@@ -15,17 +15,25 @@ import {
   Sun,
   ChevronRight,
   Loader2,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  Download, // For PWA
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { usePrivacy } from "@/context/PrivacyContext";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
   const [mounted, setMounted] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Toast State
   const [toast, setToast] = useState({
@@ -44,6 +52,20 @@ export default function ProfilePage() {
   // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
+
+    // PWA Install Prompt Listener
+    if (typeof window !== "undefined") {
+      const handler = (e: any) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        setDeferredPrompt(e);
+      };
+
+      window.addEventListener("beforeinstallprompt", handler);
+
+      return () => window.removeEventListener("beforeinstallprompt", handler);
+    }
   }, []);
 
   const email =
@@ -148,6 +170,32 @@ export default function ProfilePage() {
             )}
           </div>
 
+          {/* Privacy Toggle */}
+          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
+              </div>
+              <div className="text-left">
+                <p className="font-semibold dark:text-white">Privacy Mode</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {isPrivacyMode ? "Balances Hidden" : "Balances Visible"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={togglePrivacyMode}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                isPrivacyMode ? "bg-primary-600" : "bg-neutral-200"
+              }`}>
+              <span
+                className={`${
+                  isPrivacyMode ? "translate-x-6" : "translate-x-1"
+                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </button>
+          </div>
+
           <button
             onClick={() => setShowUploadModal(true)}
             className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
@@ -166,6 +214,34 @@ export default function ProfilePage() {
             </div>
             <ChevronRight className="text-neutral-400" size={20} />
           </button>
+
+          {deferredPrompt && (
+            <button
+              onClick={async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === "accepted") {
+                  setDeferredPrompt(null);
+                }
+              }}
+              className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <Download size={20} />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-blue-600 dark:text-blue-400">
+                    Install App
+                  </p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Add to home screen
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="text-neutral-400" size={20} />
+            </button>
+          )}
 
           <button
             onClick={handleReset}
@@ -267,15 +343,29 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Input
-            label="PDF Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter PDF password"
-            required
-            className="dark:bg-black/20 dark:border-white/10"
-          />
+          <div className="relative">
+            <Input
+              label="PDF Password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter PDF password"
+              required
+              className="dark:bg-black/20 dark:border-white/10 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 mb-2 text-xs text-neutral-500 dark:text-neutral-400 -mt-2">
+            <ShieldCheck size={12} className="text-green-500" />
+            <span>
+              Files are processed securely. We don't store your password.
+            </span>
+          </div>
 
           <Button
             type="submit"

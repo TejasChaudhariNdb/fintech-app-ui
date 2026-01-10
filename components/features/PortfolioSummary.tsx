@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import Card from "../ui/Card";
+import PrivacyMask from "../ui/PrivacyMask";
 
 interface PortfolioSummaryProps {
   invested: number;
@@ -35,7 +38,7 @@ export default function PortfolioSummary({
             Invested
           </span>
           <span className="font-semibold text-neutral-900 dark:text-white">
-            ₹{invested.toLocaleString("en-IN")}
+            <PrivacyMask>₹{invested.toLocaleString("en-IN")}</PrivacyMask>
           </span>
         </div>
 
@@ -44,7 +47,7 @@ export default function PortfolioSummary({
             Current Value
           </span>
           <span className="font-semibold text-neutral-900 dark:text-white">
-            ₹{current.toLocaleString("en-IN")}
+            <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
           </span>
         </div>
 
@@ -53,15 +56,17 @@ export default function PortfolioSummary({
             Day&apos;s Change
           </span>
           <div className="text-right">
-            <span
-              className={`font-semibold ${
-                isDayPositive
-                  ? "text-emerald-500 dark:text-emerald-400"
-                  : "text-red-500 dark:text-red-400"
-              }`}>
-              {isDayPositive ? "+" : ""}₹
-              {Math.abs(dayChange).toLocaleString("en-IN")}
-            </span>
+            <PrivacyMask>
+              <span
+                className={`font-semibold ${
+                  isDayPositive
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-red-500 dark:text-red-400"
+                }`}>
+                {isDayPositive ? "+" : ""}₹
+                {Math.abs(dayChange).toLocaleString("en-IN")}
+              </span>
+            </PrivacyMask>
             <span
               className={`text-xs ml-1.5 ${
                 isDayPositive
@@ -96,14 +101,17 @@ export default function PortfolioSummary({
             Total Gain
           </span>
           <div className="text-right px-2">
-            <p
-              className={`font-bold text-lg ${
-                isPositive
-                  ? "text-emerald-500 dark:text-emerald-400"
-                  : "text-red-500 dark:text-red-400"
-              }`}>
-              {isPositive ? "+" : ""}₹{Math.abs(profit).toLocaleString("en-IN")}
-            </p>
+            <PrivacyMask>
+              <p
+                className={`font-bold text-lg ${
+                  isPositive
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-red-500 dark:text-red-400"
+                }`}>
+                {isPositive ? "+" : ""}₹
+                {Math.abs(profit).toLocaleString("en-IN")}
+              </p>
+            </PrivacyMask>
             <p
               className={`text-xs font-medium ${
                 isPositive

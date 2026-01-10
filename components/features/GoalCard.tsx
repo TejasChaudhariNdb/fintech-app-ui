@@ -1,7 +1,10 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import Card from "../ui/Card";
 import ProgressBar from "../ui/ProgressBar";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import PrivacyMask from "../ui/PrivacyMask";
 
 interface GoalCardProps {
   id: number;
@@ -48,7 +51,7 @@ export default function GoalCard({
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Target:{" "}
             <span className="text-neutral-700 dark:text-neutral-200">
-              ₹{target.toLocaleString("en-IN")}
+              <PrivacyMask>₹{target.toLocaleString("en-IN")}</PrivacyMask>
             </span>
           </p>
         </div>
@@ -109,13 +112,15 @@ export default function GoalCard({
         <span className="text-neutral-500 dark:text-neutral-400">
           Current:{" "}
           <span className="text-neutral-900 dark:text-white">
-            ₹{current.toLocaleString("en-IN")}
+            <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
           </span>
         </span>
         <span className="text-neutral-500 dark:text-neutral-400">
           Remaining:{" "}
           <span className="text-neutral-700 dark:text-neutral-200">
-            ₹{(target - current).toLocaleString("en-IN")}
+            <PrivacyMask>
+              ₹{(target - current).toLocaleString("en-IN")}
+            </PrivacyMask>
           </span>
         </span>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import BottomNav from "@/components/features/BottomNav";
 import SideNav from "@/components/features/SideNav";
+import { PrivacyProvider } from "@/context/PrivacyContext";
 
 export default function DashboardLayout({
   children,
@@ -32,6 +33,24 @@ export default function DashboardLayout({
     }
   }, [router, pathname, isChecking]);
 
+  // Offline Detection
+  const [isOnline, setIsOnline] = useState(true);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsOnline(navigator.onLine);
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }
+  }, []);
+
   // Show loading while checking auth
   if (isChecking) {
     return (
@@ -45,17 +64,25 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen lg:flex dark:bg-[#0B0E14] bg-neutral-50">
-      <SideNav />
-      {/* Main content */}
-      <main className="flex-1 pb-32 lg:pb-10 lg:pl-0 max-w-7xl mx-auto w-full">
-        <div className="lg:px-8">{children}</div>
-      </main>
+    <PrivacyProvider>
+      <div className="min-h-screen lg:flex dark:bg-[#0B0E14] bg-neutral-50 relative">
+        <SideNav />
+        {/* Main content */}
+        <main className="flex-1 pb-32 lg:pb-10 lg:pl-0 max-w-7xl mx-auto w-full">
+          {/* Offline Banner */}
+          {!isOnline && (
+            <div className="bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium px-4 py-2 text-center border-b border-red-500/20 backdrop-blur-md sticky top-0 z-50">
+              You are offline. Showing cached data.
+            </div>
+          )}
+          <div className="lg:px-8">{children}</div>
+        </main>
 
-      {/* Mobile only bottom nav */}
-      <div className="lg:hidden">
-        <BottomNav />
+        {/* Mobile only bottom nav */}
+        <div className="lg:hidden">
+          <BottomNav />
+        </div>
       </div>
-    </div>
+    </PrivacyProvider>
   );
 }

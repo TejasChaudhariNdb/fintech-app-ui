@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import Card from "../ui/Card";
 import { RefreshCw, Loader2 } from "lucide-react";
+import PrivacyMask from "../ui/PrivacyMask";
 
 interface NetWorthCardProps {
   netWorth: number;
@@ -60,7 +63,9 @@ export default function NetWorthCard({
         </div>
         <div className="flex items-baseline gap-2 mb-1">
           <h1 className="text-4xl font-bold tracking-tight">
-            ₹{netWorth.toLocaleString("en-IN")}
+            <PrivacyMask blurStrength="md">
+              ₹{netWorth.toLocaleString("en-IN")}
+            </PrivacyMask>
           </h1>
           <div
             className={`px-2 py-0.5 rounded-lg text-sm font-medium flex items-center ${
@@ -71,9 +76,8 @@ export default function NetWorthCard({
             {isPositive ? "▲" : "▼"} {Math.abs(dayChangePct).toFixed(2)}%
           </div>
         </div>
-        <p className="text-xs text-primary-200 mb-6 font-medium">
-          Last updated:{" "}
-          <span className="text-white opacity-90">{formattedDate}</span>
+        <p className="text-xs text-primary-200/70 mb-6 font-medium">
+          Last updated: <span className="text-white/80">{formattedDate}</span>
         </p>
 
         <div className="grid grid-cols-2 gap-3">
@@ -82,13 +86,13 @@ export default function NetWorthCard({
               Mutual Funds
             </p>
             <p className="text-lg font-semibold tracking-wide">
-              ₹{mfValue.toLocaleString("en-IN")}
+              <PrivacyMask>₹{mfValue.toLocaleString("en-IN")}</PrivacyMask>
             </p>
           </div>
           <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/5">
             <p className="text-xs font-medium text-primary-100 mb-1">Stocks</p>
             <p className="text-lg font-semibold tracking-wide">
-              ₹{stockValue.toLocaleString("en-IN")}
+              <PrivacyMask>₹{stockValue.toLocaleString("en-IN")}</PrivacyMask>
             </p>
           </div>
         </div>

@@ -1,24 +1,55 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export const api = {
-  async fetch(endpoint: string, options: RequestInit = {}) {
+  async fetch(
+    endpoint: string,
+    options: RequestInit & { cacheKey?: string } = {}
+  ) {
     const token =
       typeof window !== "undefined"
         ? localStorage.getItem("access_token")
         : null;
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers,
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || "Request failed");
+
+    try {
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...options.headers,
+        },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Request failed");
+      }
+
+      const data = await res.json();
+
+      // Cache successful response if key provided
+      if (options.cacheKey && typeof window !== "undefined") {
+        localStorage.setItem(
+          options.cacheKey,
+          JSON.stringify({ timestamp: Date.now(), data })
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.warn(`API Error (${endpoint}):`, error);
+
+      // Offline Fallback: Try to return cached data
+      if (options.cacheKey && typeof window !== "undefined") {
+        const cached = localStorage.getItem(options.cacheKey);
+        if (cached) {
+          console.log(`[Offline] Serving cached data for ${options.cacheKey}`);
+          return JSON.parse(cached).data;
+        }
+      }
+
+      throw error;
     }
-    return res.json();
   },
 
   // Auth
@@ -56,7 +87,7 @@ export const api = {
     }),
 
   // Net Worth
-  getNetWorth: () => api.fetch("/equity/net-worth"),
+  getNetWorth: () => api.fetch("/equity/net-worth", { cacheKey: "net-worth" }),
   addEquity: (symbol: string, quantity: number, avgPrice: number) =>
     api.fetch(
       `/equity/?symbol=${symbol}&quantity=${quantity}&avg_price=${avgPrice}`,
@@ -64,21 +95,29 @@ export const api = {
         method: "POST",
       }
     ),
-  getEquitySummary: () => api.fetch("/equity/summary"),
+  getEquitySummary: () =>
+    api.fetch("/equity/summary", { cacheKey: "equity-summary" }),
 
   // Portfolio
-  getPortfolioSummary: () => api.fetch("/portfolio/summary"),
-  getSchemes: () => api.fetch("/portfolio/schemes"),
-  getSchemeDetail: (id: number) => api.fetch(`/portfolio/schemes/${id}`),
-  getAMCAllocation: () => api.fetch("/portfolio/amc-allocation"),
+  getPortfolioSummary: () =>
+    api.fetch("/portfolio/summary", { cacheKey: "portfolio-summary" }),
+  getSchemes: () => api.fetch("/portfolio/schemes", { cacheKey: "schemes" }),
+  getSchemeDetail: (id: number) =>
+    api.fetch(`/portfolio/schemes/${id}`, { cacheKey: `scheme-${id}` }),
+  getAMCAllocation: () =>
+    api.fetch("/portfolio/amc-allocation", { cacheKey: "amc-allocation" }),
   getTransactions: (skip = 0, limit = 50) =>
-    api.fetch(`/portfolio/transactions?skip=${skip}&limit=${limit}`),
+    api.fetch(`/portfolio/transactions?skip=${skip}&limit=${limit}`, {
+      cacheKey: `transactions-${skip}-${limit}`,
+    }),
   resetPortfolio: () => api.fetch("/portfolio/reset", { method: "DELETE" }),
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
-  getXIRR: () => api.fetch("/portfolio/xirr"),
+  getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
+  getPortfolioHistory: () =>
+    api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
 
   // Goals
-  getGoals: () => api.fetch("/goals/"),
+  getGoals: () => api.fetch("/goals/", { cacheKey: "goals" }),
   createGoal: (name: string, target: number, year: number) =>
     api.fetch(`/goals/?name=${name}&target=${target}&year=${year}`, {
       method: "POST",

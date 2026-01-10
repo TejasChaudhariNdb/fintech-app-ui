@@ -69,13 +69,6 @@ export default function OnboardingWizard() {
             <FileText className="mr-2 h-5 w-5" />
             Import Portfolio (CAS)
           </Button>
-          <Button
-            onClick={() => {}} // Placeholder for Manual Add if implemented
-            variant="outline"
-            className="px-8 py-4 text-lg rounded-xl"
-            disabled>
-            Add Manually (Coming Soon)
-          </Button>
         </div>
       </div>
     </div>

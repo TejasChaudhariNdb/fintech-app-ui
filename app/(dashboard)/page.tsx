@@ -6,16 +6,19 @@ import AppSkeleton from "@/components/ui/AppSkeleton";
 import { api } from "@/lib/api";
 import NetWorthCard from "@/components/features/NetWorthCard";
 import PortfolioSummary from "@/components/features/PortfolioSummary";
+import PerformanceChart from "@/components/features/PerformanceChart";
 import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import { FileText, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 
 export default function HomePage() {
   const router = useRouter();
   const [netWorth, setNetWorth] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
+  const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,7 +43,33 @@ export default function HomePage() {
     try {
       console.log("Loading dashboard data...");
 
-      const [nw, ps, g, xirrData] = await Promise.all([
+      // 1. Try to load from cache first (Stale-While-Revalidate)
+      if (typeof window !== "undefined") {
+        const cachedNw = localStorage.getItem("net-worth");
+        const cachedPs = localStorage.getItem("portfolio-summary");
+        const cachedGoals = localStorage.getItem("goals");
+        const cachedHistory = localStorage.getItem("portfolio-history");
+        const cachedXirr = localStorage.getItem("xirr");
+
+        if (cachedNw && cachedPs) {
+          try {
+            setNetWorth(JSON.parse(cachedNw).data);
+            setSummary({
+              ...JSON.parse(cachedPs).data,
+              xirr: cachedXirr ? JSON.parse(cachedXirr).data.xirr : 0,
+            });
+            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data.slice(0, 2));
+            if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
+
+            setLoading(false); // Show cached data immediately
+          } catch (e) {
+            console.warn("Invalid cache data", e);
+          }
+        }
+      }
+
+      // 2. Fetch Fresh Data in Background
+      const [nw, ps, g, xirrData, history] = await Promise.all([
         api.getNetWorth().catch((err) => {
           console.error("Net worth error:", err);
           return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -64,6 +93,10 @@ export default function HomePage() {
           console.error("XIRR error:", err);
           return { xirr: 0 };
         }),
+        api.getPortfolioHistory().catch((err) => {
+          console.error("History error:", err);
+          return [];
+        }),
       ]);
 
       console.log("Data loaded:", { nw, ps, g, xirrData });
@@ -71,6 +104,7 @@ export default function HomePage() {
       setNetWorth(nw);
       setSummary({ ...ps, xirr: xirrData.xirr });
       setGoals(g.slice(0, 2));
+      setPerfData(history);
     } catch (err: any) {
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");
@@ -135,6 +169,7 @@ export default function HomePage() {
   const [pullY, setPullY] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const PULL_THRESHOLD = 120;
+  const { light } = useHaptic();
 
   useEffect(() => {
     let startY = 0;
@@ -167,8 +202,7 @@ export default function HomePage() {
 
       if (pullY >= PULL_THRESHOLD - 20) {
         // Trigger Refresh
-        if (typeof navigator !== "undefined" && navigator.vibrate)
-          navigator.vibrate(20);
+        light();
         showToast("Refreshing...", "loading");
         await loadData();
         showToast("Refreshed", "success");
@@ -286,20 +320,28 @@ export default function HomePage() {
             </section>
           )}
 
+          {/* Performance Chart */}
+          <section>
+            <PerformanceChart data={perfData} />
+          </section>
+
           {/* Goals Preview */}
-          {goals.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
-                  Your Goals
-                </h3>
+          {/* Goals Preview */}
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
+                Your Goals
+              </h3>
+              {goals.length > 0 && (
                 <button
                   onClick={() => router.push("/goals")}
                   className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:text-primary-500 dark:hover:text-primary-300 transition-colors flex items-center gap-1">
                   View All <ArrowRight size={16} />
                 </button>
-              </div>
+              )}
+            </div>
 
+            {goals.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {goals.map((goal) => (
                   <GoalCard
@@ -313,8 +355,24 @@ export default function HomePage() {
                   />
                 ))}
               </div>
-            </section>
-          )}
+            ) : (
+              <button
+                onClick={() => router.push("/goals")}
+                className="w-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-neutral-200 dark:border-white/10 rounded-2xl hover:border-primary-500 dark:hover:border-primary-400 hover:bg-neutral-50 dark:hover:bg-white/5 transition-all group gap-3">
+                <div className="p-3 bg-neutral-100 dark:bg-white/5 rounded-full group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 transition-colors">
+                  <AlertTriangle className="text-neutral-400 dark:text-neutral-500 group-hover:text-primary-600 dark:group-hover:text-primary-400 h-6 w-6" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-neutral-900 dark:text-white">
+                    No Goals Set
+                  </p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Create your first financial goal to track progress
+                  </p>
+                </div>
+              </button>
+            )}
+          </section>
 
           {/* Quick Actions */}
           <section className="space-y-4">

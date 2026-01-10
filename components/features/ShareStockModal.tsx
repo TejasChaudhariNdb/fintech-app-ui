@@ -189,25 +189,17 @@ export default function ShareStockModal({
               className="w-full py-3.5 text-sm md:text-base font-semibold shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 hover:scale-[1.02] active:scale-95 transition-all border-0 rounded-xl"
               variant="primary">
               <Share2 size={20} />
-              Share on Instagram Story
+              Share
             </Button>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={handleDownload}
-                isLoading={downloading}
-                className="w-full flex items-center justify-center gap-2 bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-900 dark:text-white"
-                variant="outline">
-                <Download size={18} />
-                Save Image
-              </Button>
-              <Button
-                onClick={onClose}
-                variant="ghost"
-                className="w-full border border-transparent hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
-                Close
-              </Button>
-            </div>
+            <Button
+              onClick={handleDownload}
+              isLoading={downloading}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-900 dark:text-white rounded-xl"
+              variant="outline">
+              <Download size={18} />
+              Save Image
+            </Button>
           </div>
         </div>
       </div>

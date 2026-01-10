@@ -1,5 +1,8 @@
+"use client";
+
 import { Share2 } from "lucide-react";
 import Card from "../ui/Card";
+import PrivacyMask from "../ui/PrivacyMask";
 
 interface SchemeCardProps {
   schemeId: number;
@@ -37,7 +40,7 @@ export default function SchemeCard({
 
         <div className="text-right">
           <p className="font-semibold text-neutral-900 dark:text-white">
-            ₹{current.toLocaleString("en-IN")}
+            <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
           </p>
           <p
             className={`text-sm font-medium ${

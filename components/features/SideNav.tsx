@@ -2,11 +2,22 @@
 
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, Briefcase, Activity, Target, User } from "lucide-react";
+import {
+  Home,
+  Briefcase,
+  Activity,
+  Target,
+  User,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+
+import { usePrivacy } from "@/context/PrivacyContext";
 
 export default function SideNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
 
   const tabs = [
     { id: "/", label: "Home", icon: Home },
@@ -53,18 +64,26 @@ export default function SideNav() {
       </nav>
 
       <div className="mt-auto px-4 py-4 border-t border-neutral-200 dark:border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-            TE
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
+              TE
+            </div>
+            <div>
+              <p className="text-sm font-medium text-neutral-900 dark:text-white">
+                Tejas
+              </p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Pro Member
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-neutral-900 dark:text-white">
-              Tejas
-            </p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Pro Member
-            </p>
-          </div>
+          <button
+            onClick={togglePrivacyMode}
+            className="p-1.5 text-neutral-400 hover:text-white transition-colors"
+            title={isPrivacyMode ? "Show Balances" : "Hide Balances"}>
+            {isPrivacyMode ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         </div>
       </div>
     </aside>
