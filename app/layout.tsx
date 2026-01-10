@@ -9,11 +9,22 @@ export const metadata = {
   viewport:
     "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   themeColor: "#0ea5e9",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Arthavi",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: "/icon-512x512.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 import { Providers } from "./providers";
-
-// ...
 
 export default function RootLayout({
   children,

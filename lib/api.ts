@@ -22,24 +22,37 @@ export const api = {
   },
 
   // Auth
-  login: (email: string, password: string) => {
+  login: async (email: string, password: string) => {
     const formData = new URLSearchParams();
     formData.append("username", email);
     formData.append("password", password);
 
-    return fetch(`${API_URL}/auth/login`, {
+    const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: formData,
-    }).then((r) => r.json());
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Login failed");
+    }
+
+    return res.json();
   },
 
   register: (email: string, password: string) =>
     api.fetch("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }),
+
+  googleLogin: (token: string) =>
+    api.fetch("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ token }),
     }),
 
   // Net Worth
