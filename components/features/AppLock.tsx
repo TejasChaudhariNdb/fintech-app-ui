@@ -44,17 +44,15 @@ export default function AppLock({ onUnlock, isEnabled }: AppLockProps) {
     setIsAuthenticating(true);
 
     try {
-      // Use WebAuthn to trigger OS authentication (FaceID/TouchID/PIN)
-      // We use a dummy challenge just to invoke the authenticator
-      const publicKey: PublicKeyCredentialRequestOptions = {
-        challenge: new Uint8Array(32), // Random challenge
-        rpId: window.location.hostname,
-        userVerification: "required", // Forces the device to verify user (Biometrics/PIN)
-        timeout: 60000,
-      };
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
 
-      // This call will prompt the user
-      await navigator.credentials.get({ publicKey });
+      await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          userVerification: "required",
+        },
+      });
 
       // If successful (no error thrown), we unlock
       setIsLocked(false);
@@ -71,7 +69,7 @@ export default function AppLock({ onUnlock, isEnabled }: AppLockProps) {
   if (!isEnabled || !isLocked) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0B0E14] flex flex-col items-center justify-center p-6 animate-fade-in text-white">
+    <div className="fixed inset-0 z-50 bg-[#0B0E14] flex flex-col items-center justify-center p-6 animate-fade-in text-white">
       <div className="w-20 h-20 bg-primary-600/20 rounded-3xl flex items-center justify-center mb-8 animate-pulse">
         <Lock size={40} className="text-primary-500" />
       </div>

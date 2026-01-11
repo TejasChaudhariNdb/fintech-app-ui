@@ -68,11 +68,56 @@ export default function ProfilePage() {
     }
   }, []);
 
-  const toggleAppLock = () => {
-    const newState = !appLockEnabled;
-    setAppLockEnabled(newState);
-    localStorage.setItem("app_lock_enabled", String(newState));
-    showToast(`App Lock ${newState ? "Enabled" : "Disabled"}`, "success");
+  const toggleAppLock = async () => {
+    if (typeof window === "undefined" || !window.PublicKeyCredential) {
+      showToast("Biometrics not supported", "error");
+      return;
+    }
+
+    if (appLockEnabled) {
+      setAppLockEnabled(false);
+      localStorage.setItem("app_lock_enabled", "false");
+      showToast("Biometric Lock Disabled", "success");
+      return;
+    }
+
+    try {
+      showToast("Verifying identity...", "loading");
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+      const userId = new Uint8Array(16);
+      window.crypto.getRandomValues(userId);
+
+      await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: "SMF Tracker" },
+          user: {
+            id: userId,
+            name: "owner",
+            displayName: "Owner",
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: "public-key" },
+            { alg: -257, type: "public-key" },
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required",
+            residentKey: "preferred",
+          },
+          timeout: 60000,
+          attestation: "none",
+        },
+      });
+
+      setAppLockEnabled(true);
+      localStorage.setItem("app_lock_enabled", "true");
+      showToast("Biometric Lock Enabled", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast("Setup failed or cancelled", "error");
+    }
   };
 
   const email =
