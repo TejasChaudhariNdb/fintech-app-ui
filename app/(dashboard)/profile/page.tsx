@@ -14,11 +14,12 @@ import {
   Moon,
   Sun,
   ChevronRight,
-  Loader2,
   Eye,
   EyeOff,
   ShieldCheck,
-  Download, // For PWA
+  Download,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -33,6 +34,7 @@ export default function ProfilePage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [appLockEnabled, setAppLockEnabled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Toast State
@@ -49,24 +51,29 @@ export default function ProfilePage() {
     setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
   };
 
-  // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
+    // Check initial state
+    const lock = localStorage.getItem("app_lock_enabled") === "true";
+    setAppLockEnabled(lock);
 
     // PWA Install Prompt Listener
     if (typeof window !== "undefined") {
       const handler = (e: any) => {
-        // Prevent Chrome 67 and earlier from automatically showing the prompt
         e.preventDefault();
-        // Stash the event so it can be triggered later.
         setDeferredPrompt(e);
       };
-
       window.addEventListener("beforeinstallprompt", handler);
-
       return () => window.removeEventListener("beforeinstallprompt", handler);
     }
   }, []);
+
+  const toggleAppLock = () => {
+    const newState = !appLockEnabled;
+    setAppLockEnabled(newState);
+    localStorage.setItem("app_lock_enabled", String(newState));
+    showToast(`App Lock ${newState ? "Enabled" : "Disabled"}`, "success");
+  };
 
   const email =
     typeof window !== "undefined" ? localStorage.getItem("user_email") : "";
@@ -196,6 +203,32 @@ export default function ProfilePage() {
             </button>
           </div>
 
+          {/* App Lock Toggle */}
+          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                {appLockEnabled ? <Lock size={20} /> : <Unlock size={20} />}
+              </div>
+              <div className="text-left">
+                <p className="font-semibold dark:text-white">Biometric Lock</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {appLockEnabled ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleAppLock}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                appLockEnabled ? "bg-primary-600" : "bg-neutral-200"
+              }`}>
+              <span
+                className={`${
+                  appLockEnabled ? "translate-x-6" : "translate-x-1"
+                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </button>
+          </div>
+
           <button
             onClick={() => setShowUploadModal(true)}
             className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
@@ -267,7 +300,7 @@ export default function ProfilePage() {
         <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
           <h3 className="font-semibold mb-3 dark:text-white">About</h3>
           <div className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-            <p>Version 1.0.0</p>
+            <p>Version 1.2.1</p>
             <p>Made with ❤️ for Indian investors</p>
           </div>
         </div>
@@ -287,6 +320,20 @@ export default function ProfilePage() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         title="Upload CAS">
+        <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl mb-4 text-sm text-blue-800 dark:text-blue-200">
+          <p className="font-semibold mb-1">How to get your CAS?</p>
+          <p>
+            Download detailed statement from{" "}
+            <a
+              href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
+              target="_blank"
+              className="underline font-bold"
+              rel="noreferrer">
+              CAMS Online
+            </a>
+            . Select &quot;Detailed&quot; and specific period.
+          </p>
+        </div>
         <form onSubmit={handleUpload} className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-3 text-neutral-700 dark:text-neutral-300">
@@ -363,7 +410,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-2 mb-2 text-xs text-neutral-500 dark:text-neutral-400 -mt-2">
             <ShieldCheck size={12} className="text-green-500" />
             <span>
-              Files are processed securely. We don't store your password.
+              Files are processed securely. We don&apos;t store your password.
             </span>
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import AppLock from "@/components/features/AppLock";
 import BottomNav from "@/components/features/BottomNav";
 import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
@@ -14,10 +15,14 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
+  const [isLockEnabled, setIsLockEnabled] = useState(false);
 
   useEffect(() => {
     // Only run on client
     if (typeof window !== "undefined") {
+      const lockSetting = localStorage.getItem("app_lock_enabled");
+      if (lockSetting === "true") setIsLockEnabled(true);
+
       const token = localStorage.getItem("access_token");
       if (
         !token &&
@@ -65,7 +70,8 @@ export default function DashboardLayout({
 
   return (
     <PrivacyProvider>
-      <div className="min-h-screen lg:flex dark:bg-[#0B0E14] bg-neutral-50 relative">
+      <AppLock isEnabled={isLockEnabled} onUnlock={() => {}} />
+      <div className="min-h-screen lg:flex dark:bg-[#0B0E14] bg-neutral-50 relative transition-colors duration-300">
         <SideNav />
         {/* Main content */}
         <main className="flex-1 pb-32 lg:pb-10 lg:pl-0 max-w-7xl mx-auto w-full">
