@@ -16,27 +16,14 @@ export default function AppLock({ onUnlock, isEnabled }: AppLockProps) {
 
   // Check initial lock state
   useEffect(() => {
-    if (isEnabled) {
-      // If enabled, lock on mount
-      setIsLocked(true);
-      // Optional: Try to auto-unlock on mount?
-      // authenticate();
-    }
-  }, [isEnabled]);
-
-  // Listen for visibility change (lock when backgrounded)
-  useEffect(() => {
     if (!isEnabled) return;
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "hidden") {
-        setIsLocked(true);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    const isSessionUnlocked = sessionStorage.getItem("app_unlocked") === "true";
+    if (isSessionUnlocked) {
+      setIsLocked(false);
+    } else {
+      setIsLocked(true);
+    }
   }, [isEnabled]);
 
   const authenticate = async () => {
@@ -55,6 +42,7 @@ export default function AppLock({ onUnlock, isEnabled }: AppLockProps) {
       });
 
       // If successful (no error thrown), we unlock
+      sessionStorage.setItem("app_unlocked", "true");
       setIsLocked(false);
       onUnlock();
     } catch (err: any) {
