@@ -37,7 +37,7 @@ export default function ShareStockModal({
       setDownloading(true);
       const dataUrl = await toPng(cardRef.current, {
         cacheBust: true,
-        pixelRatio: 3, // High resolution
+        pixelRatio: 2, // High resolution but safe for mobile
         backgroundColor: "#000", // Ensure dark bg
       });
       download(dataUrl, `${stock.symbol}-performance.png`);
@@ -54,7 +54,7 @@ export default function ShareStockModal({
       setDownloading(true);
       const blob = await toBlob(cardRef.current, {
         cacheBust: true,
-        pixelRatio: 3,
+        pixelRatio: 2,
         backgroundColor: "#000",
       });
 

@@ -91,6 +91,15 @@ export default function LoginPage() {
             className="bg-black/20"
           />
 
+          <div className="flex justify-end -mt-4">
+            <button
+              type="button"
+              onClick={() => router.push("/forgot-password")}
+              className="text-sm text-primary-400 hover:text-primary-300 transition-colors font-medium">
+              Forgot password?
+            </button>
+          </div>
+
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center">
               <svg

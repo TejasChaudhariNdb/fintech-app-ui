@@ -86,6 +86,12 @@ export const api = {
       body: JSON.stringify({ token }),
     }),
 
+  resetPassword: (email: string) =>
+    api.fetch("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
   // Net Worth
   getNetWorth: () => api.fetch("/equity/net-worth", { cacheKey: "net-worth" }),
   addEquity: (symbol: string, quantity: number, avgPrice: number) =>
