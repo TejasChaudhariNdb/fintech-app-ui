@@ -93,14 +93,23 @@ export const api = {
     }),
 
   // Net Worth
+  // Net Worth & Equity
   getNetWorth: () => api.fetch("/equity/net-worth", { cacheKey: "net-worth" }),
-  addEquity: (symbol: string, quantity: number, avgPrice: number) =>
-    api.fetch(
-      `/equity/?symbol=${symbol}&quantity=${quantity}&avg_price=${avgPrice}`,
-      {
-        method: "POST",
-      }
-    ),
+
+  addStockTransaction: (data: {
+    symbol: string;
+    quantity: number;
+    price: number;
+    date: string;
+    transaction_type: "BUY" | "SELL";
+  }) =>
+    api.fetch("/equity/transaction", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  refreshStockPrices: () => api.fetch("/equity/refresh", { method: "POST" }),
+
   getEquitySummary: () =>
     api.fetch("/equity/summary", { cacheKey: "equity-summary" }),
 

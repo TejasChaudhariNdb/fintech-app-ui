@@ -13,7 +13,14 @@ import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { TrendingUp, Search, ArrowUpDown, Plus, Share2 } from "lucide-react";
+import {
+  TrendingUp,
+  Search,
+  ArrowUpDown,
+  Plus,
+  Share2,
+  RefreshCw,
+} from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 
@@ -37,6 +44,7 @@ export default function HoldingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("value");
   const [showAddTx, setShowAddTx] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Share Modal State
   const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
@@ -60,7 +68,9 @@ export default function HoldingsPage() {
   const [stockForm, setStockForm] = useState({
     symbol: "",
     quantity: "",
-    avgPrice: "",
+    price: "",
+    date: new Date().toISOString().split("T")[0],
+    transaction_type: "BUY" as "BUY" | "SELL",
   });
 
   useEffect(() => {
@@ -103,21 +113,46 @@ export default function HoldingsPage() {
     }
   };
 
+  const handleRefreshPrices = async () => {
+    setIsRefreshing(true);
+    showToast("Refreshing prices...", "loading");
+    try {
+      await api.refreshStockPrices();
+      showToast("Refresh queued. Updates will appear shortly.", "success");
+      // Poll or wait a bit
+      setTimeout(() => {
+        loadData();
+        setIsRefreshing(false);
+      }, 4000); // 4s artificial delay for effect/processing
+    } catch (err) {
+      setIsRefreshing(false);
+      showToast("Failed to refresh prices", "error");
+    }
+  };
+
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      showToast("Adding stock...", "loading");
-      await api.addEquity(
-        stockForm.symbol,
-        Number(stockForm.quantity),
-        Number(stockForm.avgPrice)
-      );
+      showToast("Recording transaction...", "loading");
+      await api.addStockTransaction({
+        symbol: stockForm.symbol,
+        quantity: Number(stockForm.quantity),
+        price: Number(stockForm.price),
+        date: stockForm.date,
+        transaction_type: stockForm.transaction_type,
+      });
       await loadData();
       setShowStockModal(false);
-      setStockForm({ symbol: "", quantity: "", avgPrice: "" });
-      showToast("Stock added successfully", "success");
+      setStockForm({
+        symbol: "",
+        quantity: "",
+        price: "",
+        date: new Date().toISOString().split("T")[0],
+        transaction_type: "BUY",
+      });
+      showToast("Transaction recorded successfully", "success");
     } catch (err: any) {
-      showToast("Failed to add stock: " + err.message, "error");
+      showToast("Failed: " + err.message, "error");
     }
   };
 
@@ -383,11 +418,19 @@ export default function HoldingsPage() {
                 <PrivacyMask>₹{totalStockValue.toLocaleString()}</PrivacyMask>
               </p>
             </div>
-            <Button
-              onClick={() => setShowStockModal(true)}
-              className="gap-2 py-2 px-4 text-sm">
-              <Plus size={16} /> Add Stock
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleRefreshPrices}
+                variant="outline"
+                className={`p-2 h-auto ${isRefreshing ? "animate-spin" : ""}`}>
+                <RefreshCw size={18} />
+              </Button>
+              <Button
+                onClick={() => setShowStockModal(true)}
+                className="gap-2 py-2 px-4 text-sm">
+                <Plus size={16} /> Add Transaction
+              </Button>
+            </div>
           </div>
 
           {manualStocks.length > 0 ? (
@@ -425,12 +468,17 @@ export default function HoldingsPage() {
                         </PrivacyMask>
                       </p>
                       {stock.avg_price && (
-                        <p className="text-xs text-neutral-500 mt-0.5">
-                          Avg:{" "}
-                          <PrivacyMask>
-                            ₹{stock.avg_price?.toLocaleString()}
-                          </PrivacyMask>
-                        </p>
+                        <div className="text-xs text-neutral-500 mt-0.5 space-y-0.5">
+                          <p>Avg: ₹{stock.avg_price?.toFixed(2)}</p>
+                          <p className="text-[10px] opacity-70">
+                            LTP: ₹{stock.current_price?.toFixed(2)}{" "}
+                            {/* stock.last_price_update TODO: format */}(
+                            {stock.last_price_update
+                              ? "Updated just now"
+                              : "Live"}
+                            )
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -466,12 +514,39 @@ export default function HoldingsPage() {
         </div>
       )}
 
-      {/* Add Stock Modal */}
+      {/* Add Stock Transaction Modal */}
       <Modal
         isOpen={showStockModal}
         onClose={() => setShowStockModal(false)}
-        title="Add Stock Holding">
+        title="Record Stock Transaction">
         <form onSubmit={handleAddStock} className="space-y-4">
+          <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl mb-4">
+            <button
+              type="button"
+              onClick={() =>
+                setStockForm({ ...stockForm, transaction_type: "BUY" })
+              }
+              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                stockForm.transaction_type === "BUY"
+                  ? "bg-white dark:bg-green-500/20 text-green-600 dark:text-green-400 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
+              }`}>
+              Buy
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setStockForm({ ...stockForm, transaction_type: "SELL" })
+              }
+              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                stockForm.transaction_type === "SELL"
+                  ? "bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
+              }`}>
+              Sell
+            </button>
+          </div>
+
           <Input
             label="Stock Symbol"
             placeholder="e.g. RELIANCE"
@@ -484,28 +559,39 @@ export default function HoldingsPage() {
             }
             required
           />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Date"
+              type="date"
+              value={stockForm.date}
+              onChange={(e) =>
+                setStockForm({ ...stockForm, date: e.target.value })
+              }
+              required
+            />
+            <Input
+              label="Quantity"
+              type="number"
+              placeholder="10"
+              value={stockForm.quantity}
+              onChange={(e) =>
+                setStockForm({ ...stockForm, quantity: e.target.value })
+              }
+              required
+            />
+          </div>
           <Input
-            label="Quantity"
-            type="number"
-            placeholder="10"
-            value={stockForm.quantity}
-            onChange={(e) =>
-              setStockForm({ ...stockForm, quantity: e.target.value })
-            }
-            required
-          />
-          <Input
-            label="Average Buy Price (₹)"
+            label="Price per Share (₹)"
             type="number"
             placeholder="2400.50"
-            value={stockForm.avgPrice}
+            value={stockForm.price}
             onChange={(e) =>
-              setStockForm({ ...stockForm, avgPrice: e.target.value })
+              setStockForm({ ...stockForm, price: e.target.value })
             }
             required
           />
           <Button type="submit" className="w-full">
-            Add Holding
+            {stockForm.transaction_type === "BUY" ? "Buy Stock" : "Sell Stock"}
           </Button>
         </form>
       </Modal>
