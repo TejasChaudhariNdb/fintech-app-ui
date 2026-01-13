@@ -25,15 +25,17 @@ export default function CreateGoalModal({
     target_amount: "",
     target_year: "",
     icon: "target",
-    linked_schemes: [] as { scheme_id: number; contribution_amount: string }[], // string for input handling
+    linked_schemes: [] as { scheme_id: number; contribution_amount: string }[],
+    linked_equities: [] as { holding_id: number; symbol: string }[],
   });
 
   const [availableSchemes, setAvailableSchemes] = useState<any[]>([]);
+  const [availableStocks, setAvailableStocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      loadSchemes();
+      loadData();
       if (goalToEdit) {
         setFormData({
           name: goalToEdit.name,
@@ -41,9 +43,15 @@ export default function CreateGoalModal({
           target_year: goalToEdit.target_year.toString(),
           icon: goalToEdit.icon || "target",
           linked_schemes: goalToEdit.linked_schemes.map((ls: any) => ({
-            scheme_id: ls.scheme_id || ls.id, // Handle backend mismatch if any
+            scheme_id: ls.scheme_id || ls.id,
             contribution_amount: ls.contribution.toString(),
           })),
+          linked_equities: goalToEdit.linked_equities
+            ? goalToEdit.linked_equities.map((le: any) => ({
+                holding_id: le.holding_id,
+                symbol: le.symbol,
+              }))
+            : [],
         });
       } else {
         setFormData({
@@ -52,16 +60,21 @@ export default function CreateGoalModal({
           target_year: "",
           icon: "target",
           linked_schemes: [],
+          linked_equities: [],
         });
       }
       setStep(1);
     }
   }, [isOpen, goalToEdit]);
 
-  const loadSchemes = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.getSchemes();
-      setAvailableSchemes(data || []);
+      const [schemes, equityData] = await Promise.all([
+        api.getSchemes(),
+        api.getEquitySummary(),
+      ]);
+      setAvailableSchemes(schemes || []);
+      setAvailableStocks(equityData.holdings || []);
     } catch (err) {
       console.error(err);
     }
@@ -78,10 +91,34 @@ export default function CreateGoalModal({
     }));
   };
 
+  const addStockLink = () => {
+    if (availableStocks.length === 0) return;
+    // Prevent adding duplicates
+    const available = availableStocks.filter(
+      (s) => !formData.linked_equities.find((l) => l.holding_id === s.id)
+    );
+    if (available.length === 0) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      linked_equities: [
+        ...prev.linked_equities,
+        { holding_id: available[0].id, symbol: available[0].symbol }, // Default to first available
+      ],
+    }));
+  };
+
   const removeSchemeLink = (index: number) => {
     setFormData((prev) => ({
       ...prev,
       linked_schemes: prev.linked_schemes.filter((_, i) => i !== index),
+    }));
+  };
+
+  const removeStockLink = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      linked_equities: prev.linked_equities.filter((_, i) => i !== index),
     }));
   };
 
@@ -90,6 +127,19 @@ export default function CreateGoalModal({
       const newLinks = [...prev.linked_schemes];
       newLinks[index] = { ...newLinks[index], [field]: value };
       return { ...prev, linked_schemes: newLinks };
+    });
+  };
+
+  const updateStockLink = (index: number, holdingId: string) => {
+    // Find symbol
+    const stock = availableStocks.find((s) => s.id === Number(holdingId));
+    setFormData((prev) => {
+      const newLinks = [...prev.linked_equities];
+      newLinks[index] = {
+        holding_id: Number(holdingId),
+        symbol: stock?.symbol || "",
+      };
+      return { ...prev, linked_equities: newLinks };
     });
   };
 
@@ -106,6 +156,9 @@ export default function CreateGoalModal({
         linked_schemes: formData.linked_schemes.map((l) => ({
           scheme_id: Number(l.scheme_id),
           contribution_amount: parseFloat(l.contribution_amount) || 0,
+        })),
+        linked_equities: formData.linked_equities.map((l) => ({
+          holding_id: Number(l.holding_id),
         })),
       };
 
@@ -189,14 +242,12 @@ export default function CreateGoalModal({
 
         {/* Investment Linking */}
         <div className="pt-4 border-t border-neutral-100 dark:border-white/5">
+          {/* Funds */}
           <div className="flex items-center justify-between mb-3">
             <div>
               <h4 className="font-semibold text-neutral-900 dark:text-white">
-                Link Investments
+                Link Mutual Funds
               </h4>
-              <p className="text-xs text-neutral-500">
-                Tag funds to this goal (optional)
-              </p>
             </div>
             <Button
               type="button"
@@ -207,10 +258,10 @@ export default function CreateGoalModal({
             </Button>
           </div>
 
-          <div className="space-y-3 max-h-[200px] overflow-y-auto">
+          <div className="space-y-3 mb-6">
             {formData.linked_schemes.length === 0 && (
-              <p className="text-sm text-neutral-400 italic text-center py-4 bg-neutral-50 dark:bg-white/5 rounded-lg border border-dashed border-neutral-200 dark:border-white/10">
-                No funds linked yet. Allot schemes to track progress accurately.
+              <p className="text-sm text-neutral-400 italic">
+                No funds linked.
               </p>
             )}
 
@@ -259,10 +310,61 @@ export default function CreateGoalModal({
               </div>
             ))}
           </div>
+
+          {/* Stocks */}
+          <div className="flex items-center justify-between mb-3 pt-4 border-t border-dashed border-neutral-200 dark:border-white/10">
+            <div>
+              <h4 className="font-semibold text-neutral-900 dark:text-white">
+                Link Stocks
+              </h4>
+            </div>
+            {availableStocks.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addStockLink}>
+                <Plus size={16} /> Add Stock
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {formData.linked_equities.length === 0 && (
+              <p className="text-sm text-neutral-400 italic">
+                No stocks linked.
+              </p>
+            )}
+
+            {formData.linked_equities.map((link, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 p-3 bg-neutral-50 dark:bg-white/5 rounded-xl border border-neutral-200 dark:border-white/10">
+                <div className="flex-1">
+                  <select
+                    className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                    value={link.holding_id}
+                    onChange={(e) => updateStockLink(index, e.target.value)}>
+                    {availableStocks.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.symbol} - ₹{s.value?.toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeStockLink(index)}
+                  className="p-2 text-red-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <Button type="submit" isLoading={loading} className="w-full">
-          Create Goal Plan
+          {goalToEdit ? "Update Goal" : "Create Goal Plan"}
         </Button>
       </form>
     </Modal>
