@@ -89,6 +89,7 @@
     font-variant-numeric: tabular-nums;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    overscroll-behavior-y: none;
   }
 
   input,
