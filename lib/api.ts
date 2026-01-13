@@ -172,4 +172,17 @@ export const api = {
       return r.json();
     });
   },
+  searchStocks: (query: string) => api.fetch(`/equity/search?q=${query}`, {}),
+
+  getStockQuote: (symbol: string) =>
+    api.fetch(`/equity/quote?symbol=${symbol}`, {}),
+
+  deleteHolding: (id: number) =>
+    api.fetch(`/equity/holding/${id}`, { method: "DELETE" }),
+
+  updateHolding: (id: number, data: { quantity: number; avg_price: number }) =>
+    api.fetch(`/equity/holding/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 };

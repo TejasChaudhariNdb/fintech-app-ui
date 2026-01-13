@@ -20,6 +20,8 @@ import {
   Plus,
   Share2,
   RefreshCw,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
@@ -72,6 +74,37 @@ export default function HoldingsPage() {
     date: new Date().toISOString().split("T")[0],
     transaction_type: "BUY" as "BUY" | "SELL",
   });
+
+  // Search State
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isValidSymbol, setIsValidSymbol] = useState(false);
+
+  // Edit Stock State
+  const [editingStock, setEditingStock] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Debounce search
+    const timer = setTimeout(async () => {
+      if (stockForm.symbol.length > 2 && showSearchResults) {
+        setIsSearching(true);
+        try {
+          const results = await api.searchStocks(stockForm.symbol);
+          setSearchResults(results);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [stockForm.symbol, showSearchResults]);
 
   useEffect(() => {
     loadData();
@@ -150,9 +183,40 @@ export default function HoldingsPage() {
         date: new Date().toISOString().split("T")[0],
         transaction_type: "BUY",
       });
+      setIsValidSymbol(false);
       showToast("Transaction recorded successfully", "success");
     } catch (err: any) {
       showToast("Failed: " + err.message, "error");
+    }
+  };
+
+  const handleDeleteStock = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this stock?")) return;
+    try {
+      showToast("Deleting stock...", "loading");
+      await api.deleteHolding(id);
+      await loadData();
+      showToast("Stock deleted successfully", "success");
+    } catch (err: any) {
+      showToast("Failed to delete stock", "error");
+    }
+  };
+
+  const handleUpdateStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStock) return;
+    try {
+      showToast("Updating stock...", "loading");
+      await api.updateHolding(editingStock.id, {
+        quantity: Number(editingStock.quantity),
+        avg_price: Number(editingStock.avg_price),
+      });
+      await loadData();
+      setIsEditModalOpen(false);
+      setEditingStock(null);
+      showToast("Stock updated successfully", "success");
+    } catch (err: any) {
+      showToast("Failed to update stock", "error");
     }
   };
 
@@ -471,10 +535,16 @@ export default function HoldingsPage() {
                         <div className="text-xs text-neutral-500 mt-0.5 space-y-0.5">
                           <p>Avg: ₹{stock.avg_price?.toFixed(2)}</p>
                           <p className="text-[10px] opacity-70">
-                            LTP: ₹{stock.current_price?.toFixed(2)}{" "}
-                            {/* stock.last_price_update TODO: format */}(
+                            LTP: ₹{stock.current_price?.toFixed(2)} (
                             {stock.last_price_update
-                              ? "Updated just now"
+                              ? new Date(
+                                  stock.last_price_update
+                                ).toLocaleString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
                               : "Live"}
                             )
                           </p>
@@ -483,15 +553,36 @@ export default function HoldingsPage() {
                     </div>
                   </div>
                   {/* Share Button (Visible on Hover/Mobile) */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedShareStock(stock);
-                    }}
-                    className="absolute top-3 right-3 p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors z-10"
-                    title="Share Performance">
-                    <Share2 size={20} />
-                  </button>
+                  <div className="absolute top-3 right-3 flex gap-1 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingStock({ ...stock });
+                        setIsEditModalOpen(true);
+                      }}
+                      className="p-2 text-neutral-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-full transition-colors"
+                      title="Edit Stock">
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteStock(stock.id);
+                      }}
+                      className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                      title="Delete Stock">
+                      <Trash2 size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedShareStock(stock);
+                      }}
+                      className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                      title="Share Performance">
+                      <Share2 size={20} />
+                    </button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -547,41 +638,93 @@ export default function HoldingsPage() {
             </button>
           </div>
 
-          <Input
-            label="Stock Symbol"
-            placeholder="e.g. RELIANCE"
-            value={stockForm.symbol}
-            onChange={(e) =>
-              setStockForm({
-                ...stockForm,
-                symbol: e.target.value.toUpperCase(),
-              })
-            }
-            required
-          />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="relative">
             <Input
-              label="Date"
-              type="date"
-              value={stockForm.date}
-              onChange={(e) =>
-                setStockForm({ ...stockForm, date: e.target.value })
-              }
+              label="Stock Symbol"
+              placeholder="e.g. RELIANCE"
+              value={stockForm.symbol}
+              onChange={(e) => {
+                setStockForm({
+                  ...stockForm,
+                  symbol: e.target.value.toUpperCase(),
+                });
+                setShowSearchResults(true);
+                setIsValidSymbol(false);
+              }}
               required
+              autoComplete="off"
             />
-            <Input
-              label="Quantity"
-              type="number"
-              placeholder="10"
-              value={stockForm.quantity}
-              onChange={(e) =>
-                setStockForm({ ...stockForm, quantity: e.target.value })
-              }
-              required
-            />
+            {showSearchResults && stockForm.symbol.length > 2 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                {isSearching ? (
+                  <div className="p-3 text-sm text-neutral-500 text-center">
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((result: any) => (
+                    <button
+                      key={result.symbol}
+                      type="button"
+                      onClick={async () => {
+                        const symbol = result.symbol;
+                        setStockForm((prev) => ({
+                          ...prev,
+                          symbol: symbol,
+                          price: "Loading...",
+                        }));
+                        setShowSearchResults(false);
+                        setIsValidSymbol(true);
+
+                        try {
+                          const quote = await api.getStockQuote(symbol);
+                          if (quote && quote.price) {
+                            setStockForm((prev) => ({
+                              ...prev,
+                              price: quote.price.toFixed(2),
+                            }));
+                          } else {
+                            setStockForm((prev) => ({ ...prev, price: "" }));
+                          }
+                        } catch (e) {
+                          console.error("Quote fetch error", e);
+                          setStockForm((prev) => ({ ...prev, price: "" }));
+                        }
+                      }}
+                      className="w-full text-left px-4 py-3 hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 last:border-0 transition-colors">
+                      <div className="font-medium text-neutral-900 dark:text-white">
+                        {result.symbol}
+                      </div>
+                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {result.name} • {result.exchange}
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="p-3 text-sm text-neutral-500 text-center">
+                    No results found
+                  </div>
+                )}
+              </div>
+            )}
+            {stockForm.symbol.length > 0 && !isValidSymbol && (
+              <p className="text-xs text-red-500 mt-1 ml-1">
+                Please select a valid stock from the search results
+              </p>
+            )}
           </div>
           <Input
-            label="Price per Share (₹)"
+            label="Quantity"
+            type="number"
+            placeholder="10"
+            value={stockForm.quantity}
+            onChange={(e) =>
+              setStockForm({ ...stockForm, quantity: e.target.value })
+            }
+            required
+            autoComplete="off"
+          />
+          <Input
+            label="Average Buy Price (₹)"
             type="number"
             placeholder="2400.50"
             value={stockForm.price}
@@ -589,9 +732,51 @@ export default function HoldingsPage() {
               setStockForm({ ...stockForm, price: e.target.value })
             }
             required
+            autoComplete="off"
+          />
+          <Button type="submit" className="w-full" disabled={!isValidSymbol}>
+            {stockForm.transaction_type === "BUY" ? "Buy Stock" : "Sell Stock"}
+          </Button>
+        </form>
+      </Modal>
+
+      {/* Edit Stock Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingStock(null);
+        }}
+        title="Edit Stock Holding">
+        <form onSubmit={handleUpdateStock} className="space-y-4">
+          <Input
+            label="Stock Symbol"
+            value={editingStock?.symbol || ""}
+            disabled
+            className="bg-neutral-100 dark:bg-white/5 opacity-70"
+          />
+          <Input
+            label="Quantity"
+            type="number"
+            value={editingStock?.quantity || ""}
+            onChange={(e) =>
+              setEditingStock({ ...editingStock, quantity: e.target.value })
+            }
+            required
+            autoComplete="off"
+          />
+          <Input
+            label="Average Buy Price (₹)"
+            type="number"
+            value={editingStock?.avg_price || ""}
+            onChange={(e) =>
+              setEditingStock({ ...editingStock, avg_price: e.target.value })
+            }
+            required
+            autoComplete="off"
           />
           <Button type="submit" className="w-full">
-            {stockForm.transaction_type === "BUY" ? "Buy Stock" : "Sell Stock"}
+            Update Holding
           </Button>
         </form>
       </Modal>
