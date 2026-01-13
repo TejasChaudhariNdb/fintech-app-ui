@@ -129,14 +129,17 @@ export const api = {
     }),
 
   // Goals
+  // Goals
   getGoals: () => api.fetch("/goals/", { cacheKey: "goals" }),
-  createGoal: (name: string, target: number, year: number) =>
-    api.fetch(`/goals/?name=${name}&target=${target}&year=${year}`, {
+  createGoal: (data: any) =>
+    api.fetch("/goals/", {
       method: "POST",
+      body: JSON.stringify(data),
     }),
-  updateGoal: (id: number, name: string, target: number, year: number) =>
-    api.fetch(`/goals/${id}?name=${name}&target=${target}&year=${year}`, {
+  updateGoal: (id: number, data: any) =>
+    api.fetch(`/goals/${id}`, {
       method: "PUT",
+      body: JSON.stringify(data),
     }),
   deleteGoal: (id: number) =>
     api.fetch(`/goals/${id}`, {
