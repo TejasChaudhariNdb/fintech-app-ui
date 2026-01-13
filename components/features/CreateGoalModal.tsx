@@ -10,12 +10,14 @@ interface CreateGoalModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  goalToEdit?: any; // Add goalToEdit prop
 }
 
 export default function CreateGoalModal({
   isOpen,
   onClose,
   onSuccess,
+  goalToEdit,
 }: CreateGoalModalProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -32,16 +34,29 @@ export default function CreateGoalModal({
   useEffect(() => {
     if (isOpen) {
       loadSchemes();
-      setFormData({
-        name: "",
-        target_amount: "",
-        target_year: "",
-        icon: "target",
-        linked_schemes: [],
-      });
+      if (goalToEdit) {
+        setFormData({
+          name: goalToEdit.name,
+          target_amount: goalToEdit.target_amount.toString(),
+          target_year: goalToEdit.target_year.toString(),
+          icon: goalToEdit.icon || "target",
+          linked_schemes: goalToEdit.linked_schemes.map((ls: any) => ({
+            scheme_id: ls.scheme_id || ls.id, // Handle backend mismatch if any
+            contribution_amount: ls.contribution.toString(),
+          })),
+        });
+      } else {
+        setFormData({
+          name: "",
+          target_amount: "",
+          target_year: "",
+          icon: "target",
+          linked_schemes: [],
+        });
+      }
       setStep(1);
     }
-  }, [isOpen]);
+  }, [isOpen, goalToEdit]);
 
   const loadSchemes = async () => {
     try {
@@ -94,12 +109,16 @@ export default function CreateGoalModal({
         })),
       };
 
-      await api.createGoal(payload);
+      if (goalToEdit) {
+        await api.updateGoal(goalToEdit.id, payload);
+      } else {
+        await api.createGoal(payload);
+      }
       onSuccess();
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Failed to create goal");
+      alert("Failed to save goal");
     } finally {
       setLoading(false);
     }
@@ -108,7 +127,10 @@ export default function CreateGoalModal({
   const ICONS = ["home", "education", "travel", "car", "retirement", "target"];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Establish New Goal">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={goalToEdit ? "Edit Goal" : "Establish New Goal"}>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Goal Details */}
         <div className="space-y-4">

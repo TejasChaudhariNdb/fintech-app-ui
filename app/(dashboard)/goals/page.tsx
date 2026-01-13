@@ -12,6 +12,7 @@ export default function GoalsPage() {
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<any>(null);
 
   useEffect(() => {
     loadGoals();
@@ -39,20 +40,31 @@ export default function GoalsPage() {
     }
   };
 
+  const handleEditGoal = (goal: any) => {
+    setEditingGoal(goal);
+    setShowCreateModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowCreateModal(false);
+    setEditingGoal(null);
+  };
+
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
       {/* Header */}
-      {/* Header */}
-      <div className="px-4 pt-8 pb-6 flex items-center justify-between">
+      <div className="px-4 pt-8 pb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
             Financial Goals
           </h1>
-          <p className="text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Plan your future with purpose
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+        <Button
+          onClick={() => setShowCreateModal(true)}
+          className="gap-2 shrink-0">
           <Plus size={18} /> New Goal
         </Button>
       </div>
@@ -69,7 +81,7 @@ export default function GoalsPage() {
                 <GoalCard
                   key={goal.id}
                   goal={goal}
-                  onEdit={() => {}}
+                  onEdit={() => handleEditGoal(goal)}
                   onDelete={() => deleteGoal(goal.id)}
                 />
               ))}
@@ -103,8 +115,9 @@ export default function GoalsPage() {
 
       <CreateGoalModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={handleCloseModal}
         onSuccess={loadGoals}
+        goalToEdit={editingGoal}
       />
     </div>
   );
