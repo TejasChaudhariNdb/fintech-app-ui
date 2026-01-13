@@ -346,15 +346,16 @@ export default function HomePage() {
             {goals.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {goals.map((goal) => (
-                  <GoalCard
+                  <div
                     key={goal.id}
-                    id={goal.id}
-                    name={goal.name}
-                    target={goal.target}
-                    current={goal.current}
-                    progress={goal.progress}
-                    onClick={() => router.push("/goals")}
-                  />
+                    className="cursor-pointer"
+                    onClick={() => router.push("/goals")}>
+                    <GoalCard
+                      goal={goal}
+                      onEdit={() => router.push("/goals")}
+                      onDelete={() => router.push("/goals")}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (

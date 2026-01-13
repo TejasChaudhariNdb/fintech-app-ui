@@ -64,13 +64,15 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
   return (
     <Card className="p-5 border border-neutral-200 dark:border-white/5 relative group">
       {/* Header */}
+      {/* Header */}
+      {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-neutral-100 dark:bg-white/10 rounded-xl">
             {getIcon(goal.icon)}
           </div>
           <div>
-            <h3 className="font-bold text-lg text-neutral-900 dark:text-white pr-6">
+            <h3 className="font-bold text-lg text-neutral-900 dark:text-white">
               {goal.name}
             </h3>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -82,55 +84,59 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
             </p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-neutral-500 font-medium uppercase tracking-wide">
-            Achieved
-          </p>
-          <p className="font-bold text-xl text-primary-600 dark:text-primary-400">
-            {goal.achieved_percentage.toFixed(0)}%
-          </p>
+
+        <div className="flex items-start gap-2">
+          {/* Achieved Stats */}
+          <div className="text-right pt-1">
+            <p className="text-[10px] text-neutral-500 font-medium uppercase tracking-wide">
+              Achieved
+            </p>
+            <p className="font-bold text-xl text-primary-600 dark:text-primary-400 leading-none mt-0.5">
+              {goal.achieved_percentage.toFixed(0)}%
+            </p>
+          </div>
+
+          {/* Menu Trigger */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(!showMenu);
+              }}
+              className="p-1 -mt-1 -mr-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
+              <MoreVertical size={18} />
+            </button>
+
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10 cursor-default"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="absolute right-0 top-8 z-20 w-32 bg-white dark:bg-black/90 border border-neutral-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      onEdit();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 dark:hover:bg-white/10 flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                    <Pencil size={14} /> Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenu(false);
+                      onDelete();
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 text-red-600 dark:text-red-400">
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Actions Menu */}
-      <div className="absolute top-4 right-4">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMenu(!showMenu);
-          }}
-          className="p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10">
-          <MoreVertical size={18} />
-        </button>
-
-        {showMenu && (
-          <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setShowMenu(false)}
-            />
-            <div className="absolute right-0 top-8 z-20 w-32 bg-white dark:bg-black/90 border border-neutral-200 dark:border-white/10 rounded-xl shadow-lg overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMenu(false);
-                  onEdit();
-                }}
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-neutral-50 dark:hover:bg-white/10 flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
-                <Pencil size={14} /> Edit
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowMenu(false);
-                  onDelete();
-                }}
-                className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2 text-red-600 dark:text-red-400">
-                <Trash2 size={14} /> Delete
-              </button>
-            </div>
-          </>
-        )}
       </div>
 
       {/* Progress Bar */}
