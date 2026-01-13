@@ -21,6 +21,8 @@ export default function Toast({
   useEffect(() => {
     if (isVisible) {
       // 📳 Haptic Feedback
+      // Note: navigator.vibrate() is supported on Android but explicitly ignored by iOS Safari/Web.
+      // There is currently no workaround for Web Haptics on iOS without a native wrapper (Capacitor/Cordova).
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         if (type === "success") navigator.vibrate(50); // Short tick
         if (type === "error") navigator.vibrate([50, 50, 50]); // Double buzz

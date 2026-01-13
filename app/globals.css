@@ -87,6 +87,14 @@
     font-family: var(--font-sans);
     transition: background-color 0.3s, color 0.3s;
     font-variant-numeric: tabular-nums;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable] {
+    user-select: text;
   }
 }
 
@@ -97,5 +105,15 @@
 
   .glass-card {
     @apply backdrop-blur-md bg-white/80 dark:bg-[#151A23]/80 border border-neutral-200 dark:border-white/5 shadow-xl;
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }
