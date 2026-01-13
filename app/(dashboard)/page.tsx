@@ -13,6 +13,7 @@ import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import { FileText, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import AddTransactionModal from "@/components/features/AddTransactionModal";
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
+  const [showAddTx, setShowAddTx] = useState(false);
 
   // Toast State
   const [toast, setToast] = useState<{

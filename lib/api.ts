@@ -122,6 +122,12 @@ export const api = {
   getPortfolioHistory: () =>
     api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
 
+  addManualTransaction: (data: any) =>
+    api.fetch("/portfolio/transactions/manual", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   // Goals
   getGoals: () => api.fetch("/goals/", { cacheKey: "goals" }),
   createGoal: (name: string, target: number, year: number) =>

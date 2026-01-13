@@ -12,6 +12,7 @@ import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import Toast from "@/components/ui/Toast";
 import ShareStockModal from "@/components/features/ShareStockModal";
+import AddTransactionModal from "@/components/features/AddTransactionModal";
 import { TrendingUp, Search, ArrowUpDown, Plus, Share2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
@@ -35,6 +36,7 @@ export default function HoldingsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("value");
+  const [showAddTx, setShowAddTx] = useState(false);
 
   // Share Modal State
   const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
@@ -287,7 +289,22 @@ export default function HoldingsPage() {
               <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
                 All Schemes ({schemes.length})
               </h3>
+              <button
+                onClick={() => setShowAddTx(true)}
+                className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+                <Plus size={16} /> Add Transaction
+              </button>
             </div>
+
+            {/* Add Transaction Modal */}
+            <AddTransactionModal
+              isOpen={showAddTx}
+              onClose={() => setShowAddTx(false)}
+              onSuccess={() => {
+                loadData();
+                showToast("Transaction added successfully", "success");
+              }}
+            />
 
             {/* Search and Filter */}
             <div className="flex gap-2 px-1">
@@ -332,6 +349,7 @@ export default function HoldingsPage() {
                     schemeId={scheme.scheme_id}
                     scheme={scheme.scheme}
                     amc={scheme.amc}
+                    nav={scheme.nav}
                     current={scheme.current}
                     returnPct={scheme.return_pct}
                     onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}

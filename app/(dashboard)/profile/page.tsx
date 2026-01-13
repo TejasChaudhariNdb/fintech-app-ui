@@ -231,7 +231,9 @@ export default function ProfilePage() {
               <div className="text-left">
                 <p className="font-semibold dark:text-white">Privacy Mode</p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {isPrivacyMode ? "Balances Hidden" : "Balances Visible"}
+                  {isPrivacyMode
+                    ? "Prices & Values Hidden"
+                    : "Prices & Values Visible"}
                 </p>
               </div>
             </div>
@@ -339,6 +341,23 @@ export default function ProfilePage() {
             </div>
             <ChevronRight className="text-neutral-400" size={20} />
           </button>
+        </div>
+
+        {/* Data Privacy Promise */}
+        <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
+          <ShieldCheck
+            className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
+            size={20}
+          />
+          <div>
+            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+              Your Data is Yours
+            </p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+              We don&apos;t sell your data. We don&apos;t spam. Your financial
+              data is encrypted.
+            </p>
+          </div>
         </div>
 
         {/* App Info */}
