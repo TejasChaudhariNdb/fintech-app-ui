@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import SchemeCard from "@/components/features/SchemeCard";
@@ -44,7 +44,7 @@ export default function HoldingsPage() {
   const [manualStocks, setManualStocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("value");
+  const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("name");
   const [showAddTx, setShowAddTx] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -84,6 +84,31 @@ export default function HoldingsPage() {
   // Edit Stock State
   const [editingStock, setEditingStock] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Stock Statistics Calculation
+  const stockStats = useMemo(() => {
+    let invested = 0;
+    let current = 0;
+    manualStocks.forEach((s) => {
+      invested += (s.quantity || 0) * (s.avg_price || 0);
+      current += s.value || 0;
+    });
+    const pnl = current - invested;
+    const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
+    return { invested, current, pnl, pnlPct };
+  }, [manualStocks]);
+
+  // Stock Sector Allocation
+  const stockSectorData = useMemo(() => {
+    const sectors: Record<string, number> = {};
+    manualStocks.forEach((s) => {
+      const sec = s.sector || "Other";
+      sectors[sec] = (sectors[sec] || 0) + (s.value || 0);
+    });
+    return Object.entries(sectors)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [manualStocks]);
 
   useEffect(() => {
     // Debounce search
@@ -497,6 +522,126 @@ export default function HoldingsPage() {
             </div>
           </div>
 
+          {manualStocks.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {/* Sector Allocation */}
+              <Card className="col-span-1 p-6 flex flex-col items-center justify-center bg-white dark:bg-surface border border-neutral-200 dark:border-white/5">
+                <h3 className="text-sm font-medium text-neutral-500 mb-4 w-full text-left">
+                  Sector Allocation
+                </h3>
+                <div className="h-[200px] w-full max-w-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stockSectorData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={2}>
+                        {stockSectorData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) =>
+                          `₹${value.toLocaleString()}`
+                        }
+                        contentStyle={{
+                          backgroundColor: "rgba(0,0,0,0.8)",
+                          border: "none",
+                          borderRadius: "8px",
+                          color: "#fff",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Compact Legend */}
+                <div className="flex flex-wrap justify-center gap-2 mt-4">
+                  {stockSectorData.slice(0, 3).map((entry, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 text-[10px]">
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}></div>
+                      <span className="text-neutral-600 dark:text-neutral-400">
+                        {entry.name}
+                      </span>
+                    </div>
+                  ))}
+                  {stockSectorData.length > 3 && (
+                    <span className="text-[10px] text-neutral-400">
+                      +{stockSectorData.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </Card>
+
+              {/* Stats Cards */}
+              <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4 h-full">
+                <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center">
+                  <p className="text-sm text-neutral-500 mb-1">Total Value</p>
+                  <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                    <PrivacyMask>
+                      ₹
+                      {stockStats.current.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </PrivacyMask>
+                  </p>
+                </Card>
+                <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center">
+                  <p className="text-sm text-neutral-500 mb-1">
+                    Invested Amount
+                  </p>
+                  <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+                    <PrivacyMask>
+                      ₹
+                      {stockStats.invested.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })}
+                    </PrivacyMask>
+                  </p>
+                </Card>
+                <Card className="col-span-2 p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-neutral-500 mb-1">
+                      Total Profit/Loss
+                    </p>
+                    <p
+                      className={`text-3xl font-bold ${
+                        stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
+                      }`}>
+                      <PrivacyMask>
+                        {stockStats.pnl >= 0 ? "+" : ""}₹
+                        {stockStats.pnl.toLocaleString(undefined, {
+                          maximumFractionDigits: 0,
+                        })}
+                      </PrivacyMask>
+                    </p>
+                  </div>
+                  <div
+                    className={`px-4 py-2 rounded-lg ${
+                      stockStats.pnl >= 0
+                        ? "bg-green-500/10 text-green-500"
+                        : "bg-red-500/10 text-red-500"
+                    } font-bold text-xl`}>
+                    {stockStats.pnlPct.toFixed(2)}%
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+
           {manualStocks.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">
               {manualStocks.map((stock, i) => (
@@ -505,10 +650,27 @@ export default function HoldingsPage() {
                   className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 relative group">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-bold text-neutral-900 dark:text-white text-lg">
+                      <h4 className="font-bold text-neutral-900 dark:text-white text-lg flex items-center gap-2">
                         {stock.symbol}
+                        {stock.short_name && (
+                          <span className="text-xs font-normal text-neutral-400">
+                            {stock.short_name}
+                          </span>
+                        )}
                       </h4>
-                      <div className="flex items-center gap-2 mt-1">
+                      {stock.company_name &&
+                        stock.company_name !== stock.symbol && (
+                          <p className="text-xs text-neutral-500 font-medium truncate max-w-[200px] mb-1">
+                            {stock.company_name}
+                          </p>
+                        )}
+
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {stock.sector && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 dark:bg-white/10 rounded text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/5">
+                            {stock.sector}
+                          </span>
+                        )}
                         <p className="text-xs text-neutral-500 dark:text-neutral-400">
                           {stock.quantity} shares
                         </p>
