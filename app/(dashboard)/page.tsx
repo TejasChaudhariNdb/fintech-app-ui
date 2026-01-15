@@ -318,6 +318,8 @@ export default function HomePage() {
                 dayChange={summary.day_change || 0}
                 dayChangePct={summary.day_change_pct || 0}
                 xirr={summary.xirr}
+                mfProfit={summary.mf_profit || 0}
+                stockProfit={summary.stock_profit || 0}
               />
             </section>
           )}

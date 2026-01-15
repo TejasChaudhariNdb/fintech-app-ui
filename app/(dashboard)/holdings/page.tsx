@@ -648,8 +648,8 @@ export default function HoldingsPage() {
                 <Card
                   key={i}
                   className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 relative group">
-                  <div className="flex justify-between items-start">
-                    <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="pr-2">
                       <h4 className="font-bold text-neutral-900 dark:text-white text-lg flex items-center gap-2">
                         {stock.symbol}
                         {stock.short_name && (
@@ -664,30 +664,8 @@ export default function HoldingsPage() {
                             {stock.company_name}
                           </p>
                         )}
-
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        {stock.sector && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 dark:bg-white/10 rounded text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/5">
-                            {stock.sector}
-                          </span>
-                        )}
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                          {stock.quantity} shares
-                        </p>
-                        {stock.pnl_pct !== undefined && (
-                          <span
-                            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              stock.pnl_pct >= 0
-                                ? "bg-green-500/10 text-green-500"
-                                : "bg-red-500/10 text-red-500"
-                            }`}>
-                            {stock.pnl_pct >= 0 ? "+" : ""}
-                            {stock.pnl_pct.toFixed(2)}%
-                          </span>
-                        )}
-                      </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right whitespace-nowrap">
                       <p className="font-semibold text-neutral-900 dark:text-white">
                         <PrivacyMask>
                           ₹{stock.value?.toLocaleString()}
@@ -696,53 +674,70 @@ export default function HoldingsPage() {
                       {stock.avg_price && (
                         <div className="text-xs text-neutral-500 mt-0.5 space-y-0.5">
                           <p>Avg: ₹{stock.avg_price?.toFixed(2)}</p>
-                          <p className="text-[10px] opacity-70">
-                            LTP: ₹{stock.current_price?.toFixed(2)} (
-                            {stock.last_price_update
-                              ? new Date(
-                                  stock.last_price_update
-                                ).toLocaleString(undefined, {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Live"}
-                            )
-                          </p>
                         </div>
                       )}
                     </div>
                   </div>
-                  {/* Share Button (Visible on Hover/Mobile) */}
-                  <div className="absolute top-3 right-3 flex gap-1 z-10">
+
+                  <div className="flex justify-between items-end">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {stock.sector && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 dark:bg-white/10 rounded text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-white/5">
+                          {stock.sector}
+                        </span>
+                      )}
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {stock.quantity} shares
+                      </p>
+                      {stock.pnl_pct !== undefined && (
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            stock.pnl_pct >= 0
+                              ? "bg-green-500/10 text-green-500"
+                              : "bg-red-500/10 text-red-500"
+                          }`}>
+                          {stock.pnl_pct >= 0 ? "+" : ""}
+                          {stock.pnl_pct.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+
+                    {stock.current_price && (
+                      <div className="text-[10px] text-neutral-400 text-right">
+                        LTP: ₹{stock.current_price?.toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions Footer */}
+                  <div className="flex justify-end items-center gap-1 mt-3 pt-3 border-t border-neutral-100 dark:border-white/5">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setEditingStock({ ...stock });
                         setIsEditModalOpen(true);
                       }}
-                      className="p-2 text-neutral-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-full transition-colors"
+                      className="p-1.5 text-neutral-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-md transition-colors flex items-center gap-1.5 text-xs font-medium"
                       title="Edit Stock">
-                      <Pencil size={16} />
+                      <Pencil size={14} /> Edit
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteStock(stock.id);
                       }}
-                      className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
+                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors flex items-center gap-1.5 text-xs font-medium"
                       title="Delete Stock">
-                      <Trash2 size={16} />
+                      <Trash2 size={14} /> Delete
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedShareStock(stock);
                       }}
-                      className="p-2 text-neutral-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                      className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/10 rounded-md transition-colors flex items-center gap-1.5 text-xs font-medium"
                       title="Share Performance">
-                      <Share2 size={20} />
+                      <Share2 size={14} /> Share
                     </button>
                   </div>
                 </Card>
