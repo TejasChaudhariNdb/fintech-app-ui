@@ -177,7 +177,15 @@ export default function CreateGoalModal({
     }
   };
 
-  const ICONS = ["home", "education", "travel", "car", "retirement", "target"];
+  const ICONS = [
+    "home",
+    "education",
+    "travel",
+    "car",
+    "retirement",
+    "target",
+    "other",
+  ];
 
   return (
     <Modal
