@@ -3,12 +3,17 @@ import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0ea5e9",
+};
+
 export const metadata = {
   title: "Arthavi",
   description: "Track your mutual funds and stocks",
-  viewport:
-    "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-  themeColor: "#0ea5e9",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
