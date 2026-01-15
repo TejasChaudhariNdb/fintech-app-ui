@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import SchemeCard from "@/components/features/SchemeCard";
 import Card from "@/components/ui/Card";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -549,9 +548,7 @@ export default function HoldingsPage() {
                         ))}
                       </Pie>
                       <Tooltip
-                        formatter={(value: number) =>
-                          `₹${value.toLocaleString()}`
-                        }
+                        formatter={(value: any) => `₹${value.toLocaleString()}`}
                         contentStyle={{
                           backgroundColor: "rgba(0,0,0,0.8)",
                           border: "none",
