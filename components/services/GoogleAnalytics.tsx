@@ -4,6 +4,17 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    gtag: (
+      command: "config" | "event" | "js",
+      targetId: string,
+      config?: Record<string, any>
+    ) => void;
+    dataLayer: any[];
+  }
+}
+
 export default function GoogleAnalytics({
   GA_MEASUREMENT_ID,
 }: {
