@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
 import GoogleAnalytics from "@/components/services/GoogleAnalytics";
+import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -50,9 +51,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>{children}</Providers>
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
-          <GoogleAnalytics
-            GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}
-          />
+          <Suspense fallback={null}>
+            <GoogleAnalytics
+              GA_MEASUREMENT_ID={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}
+            />
+          </Suspense>
         )}
       </body>
     </html>
