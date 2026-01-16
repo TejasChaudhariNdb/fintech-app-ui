@@ -21,6 +21,9 @@ export default function DashboardLayout({
   useEffect(() => {
     const getPageTitle = (path: string) => {
       if (path === "/" || path === "/dashboard") return "Dashboard - Arthavi";
+      if (path.includes("/holdings/mutual-funds"))
+        return "Mutual Funds - Arthavi";
+      if (path.includes("/holdings/stocks")) return "Stocks - Arthavi";
       if (path.startsWith("/holdings")) return "Holdings - Arthavi";
       if (path.startsWith("/goals")) return "Goals - Arthavi";
       if (path.startsWith("/activity")) return "Activity - Arthavi";
