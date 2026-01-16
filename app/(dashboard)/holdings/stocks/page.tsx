@@ -9,6 +9,7 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Toast from "@/components/ui/Toast";
 import PrivacyMask from "@/components/ui/PrivacyMask";
+import ShareStockModal from "@/components/features/ShareStockModal";
 import {
   FileSpreadsheet,
   Plus,
@@ -19,6 +20,7 @@ import {
   Search,
   Upload,
   FileUp,
+  Share2,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -72,6 +74,9 @@ export default function StocksPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isValidSymbol, setIsValidSymbol] = useState(false);
+
+  // Share Modal State
+  const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
 
   // Edit Stock State
   const [editingStock, setEditingStock] = useState<any>(null);
@@ -197,18 +202,32 @@ export default function StocksPage() {
     }
   };
 
-  const handleDeleteStock = async (symbol: string) => {
-    // TODO: Implement delete logic in API if needed or just show toast
-    // Currently we don't have a direct 'delete stock' API in the snippets I saw,
-    // but we can assume user might want this. Ideally we call an API.
-    // For now, let's just confirm.
-    if (
-      confirm(
-        `Delete all holdings for ${symbol}? This action cannot be undone.`
-      )
-    ) {
-      // This would need a backend endpoint like DELETE /equity/{symbol} which might not exist yet.
-      showToast("Feature coming soon", "info");
+  const handleDeleteStock = async (holdingId: number) => {
+    if (!confirm("Are you sure you want to delete this holding?")) return;
+    try {
+      await api.deleteHolding(holdingId);
+      loadData();
+      showToast("Holding deleted", "success");
+    } catch (err) {
+      showToast("Failed to delete holding", "error");
+    }
+  };
+
+  const handleUpdateStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStock) return;
+    try {
+      showToast("Updating stock...", "loading");
+      await api.updateHolding(editingStock.id, {
+        quantity: Number(editingStock.quantity),
+        avg_price: Number(editingStock.avg_price),
+      });
+      await loadData();
+      setIsEditModalOpen(false);
+      setEditingStock(null);
+      showToast("Stock updated successfully", "success");
+    } catch (err: any) {
+      showToast("Failed to update stock", "error");
     }
   };
 
@@ -388,48 +407,87 @@ export default function StocksPage() {
         {manualStocks.map((stock, idx) => (
           <Card
             key={idx}
-            className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-neutral-600 dark:text-neutral-300">
-                {stock.symbol.slice(0, 2)}
-              </div>
+            className="p-5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-4 group hover:border-primary-500/20 transition-all">
+            {/* Top Section: Header & Value */}
+            <div className="flex justify-between items-start">
               <div>
-                <h4 className="font-semibold text-neutral-900 dark:text-white">
-                  {stock.symbol}
-                </h4>
-                <div className="flex items-center gap-2 text-xs text-neutral-500">
-                  <span>
-                    {stock.quantity} qty • ₹{stock.avg_price?.toFixed(1) || 0}{" "}
-                    avg
+                <div className="flex items-baseline gap-2 mb-1">
+                  <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
+                    {stock.symbol}
+                  </h3>
+                  <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide truncate max-w-[150px] hidden sm:inline-block">
+                    {stock.company_name}
                   </span>
-                  {stock.ltp && (
-                    <span className="text-blue-500">LTP: ₹{stock.ltp}</span>
-                  )}
+                </div>
+                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {stock.company_name !== stock.symbol
+                    ? stock.company_name
+                    : "Equity Share"}
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1">
+                  <PrivacyMask>
+                    ₹{Math.round(stock.value || 0).toLocaleString()}
+                  </PrivacyMask>
+                </div>
+                <div className="text-xs text-neutral-500 font-medium">
+                  Avg: ₹{stock.avg_price?.toFixed(2)}
                 </div>
               </div>
             </div>
 
-            <div className="text-right">
-              <p className="font-bold text-neutral-900 dark:text-white">
-                <PrivacyMask>
-                  ₹{Math.round(stock.value || 0).toLocaleString()}
-                </PrivacyMask>
-              </p>
-              <p
-                className={`text-xs font-medium ${
-                  (stock.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
-                }`}>
-                {(stock.pnl || 0) >= 0 ? "+" : ""}
-                <PrivacyMask>
-                  ₹{Math.abs(Math.round(stock.pnl || 0)).toLocaleString()}
-                </PrivacyMask>
-              </p>
-              {/* Actions */}
-              {/* 
-                 For simplicity/safety in this refactor, I'm omitting the Edit/Delete UI triggers per-row 
-                 unless clearly requested, or we can add a simple kebab menu later.
-                 The original file had Edit Stock Modal logic.
-               */}
+            {/* Middle Section: Stats & Badges */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {stock.sector && (
+                  <span className="px-2 py-1 rounded bg-neutral-100 dark:bg-white/10 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5">
+                    {stock.sector}
+                  </span>
+                )}
+                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                  {stock.quantity} shares
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    (stock.pnl || 0) >= 0
+                      ? "bg-green-500/10 text-green-500"
+                      : "bg-red-500/10 text-red-500"
+                  }`}>
+                  {(stock.pnl || 0) >= 0 ? "+" : ""}
+                  {stock.pnl_pct?.toFixed(2)}%
+                </span>
+              </div>
+
+              <div className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                LTP:{" "}
+                <span className="text-neutral-900 dark:text-white">
+                  ₹{stock.current_price}
+                </span>
+              </div>
+            </div>
+
+            {/* Footer: Actions */}
+            <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex justify-end gap-5 opacity-80 hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => {
+                  setEditingStock({ ...stock });
+                  setIsEditModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-primary-500 transition-colors">
+                <Pencil size={14} /> Edit
+              </button>
+              <button
+                onClick={() => handleDeleteStock(stock.id)}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-red-500 transition-colors">
+                <Trash2 size={14} /> Delete
+              </button>
+              <button
+                onClick={() => setSelectedShareStock(stock)}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                <Share2 size={14} /> Share
+              </button>
             </div>
           </Card>
         ))}
@@ -607,6 +665,53 @@ export default function StocksPage() {
           </form>
         )}
       </Modal>
+
+      {/* Edit Stock Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingStock(null);
+        }}
+        title="Edit Stock Holding">
+        <form onSubmit={handleUpdateStock} className="space-y-4">
+          <Input
+            label="Stock Symbol"
+            value={editingStock?.symbol || ""}
+            disabled
+            className="bg-neutral-100 dark:bg-white/5 opacity-70"
+          />
+          <Input
+            label="Quantity"
+            type="number"
+            value={editingStock?.quantity || ""}
+            onChange={(e) =>
+              setEditingStock({ ...editingStock, quantity: e.target.value })
+            }
+            required
+            autoComplete="off"
+          />
+          <Input
+            label="Average Buy Price (₹)"
+            type="number"
+            value={editingStock?.avg_price || ""}
+            onChange={(e) =>
+              setEditingStock({ ...editingStock, avg_price: e.target.value })
+            }
+            required
+            autoComplete="off"
+          />
+          <Button type="submit" className="w-full">
+            Update Holding
+          </Button>
+        </form>
+      </Modal>
+
+      <ShareStockModal
+        isOpen={!!selectedShareStock}
+        onClose={() => setSelectedShareStock(null)}
+        stock={selectedShareStock}
+      />
     </div>
   );
 }
