@@ -18,42 +18,28 @@ import {
   ArrowUpDown,
   Plus,
   Share2,
-  RefreshCw,
   Pencil,
   Trash2,
+  Upload,
+  FileSpreadsheet,
+  Info,
+  Loader2,
+  FileUp,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 
-const COLORS = [
-  "#6366F1",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#14B8A6",
-];
+const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 export default function HoldingsPage() {
   const router = useRouter();
-  const [view, setView] = useState("mutual-funds");
-  const [schemes, setSchemes] = useState<any[]>([]);
-  const [amcAllocation, setAmcAllocation] = useState<any[]>([]);
-  const [manualStocks, setManualStocks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("name");
-  const [showAddTx, setShowAddTx] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Share Modal State
-  const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
+  const [view, setView] = useState<"mutual-funds" | "stocks">("mutual-funds");
+  const [isLoading, setIsLoading] = useState(true);
 
   // Toast State
   const [toast, setToast] = useState({
     message: "",
-    type: "info" as any,
+    type: "info" as "success" | "error" | "loading" | "info",
     isVisible: false,
   });
   const showToast = (
@@ -61,8 +47,28 @@ export default function HoldingsPage() {
     type: "success" | "error" | "loading" = "success"
   ) => {
     setToast({ message, type, isVisible: true });
-    setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
+    // Auto-hide if not loading
+    if (type !== "loading") {
+      setTimeout(
+        () => setToast((prev) => ({ ...prev, isVisible: false })),
+        3000
+      );
+    }
   };
+
+  // Data State
+  const [schemes, setSchemes] = useState<any[]>([]);
+  const [amcAllocation, setAmcAllocation] = useState<any[]>([]);
+  const [manualStocks, setManualStocks] = useState<any[]>([]);
+
+  // Filter & Search State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("name");
+  const [showAddTx, setShowAddTx] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Share Modal State
+  const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
 
   // Stock Modal State
   const [showStockModal, setShowStockModal] = useState(false);
@@ -73,6 +79,12 @@ export default function HoldingsPage() {
     date: new Date().toISOString().split("T")[0],
     transaction_type: "BUY" as "BUY" | "SELL",
   });
+  const [stockModalTab, setStockModalTab] = useState<"MANUAL" | "IMPORT">(
+    "MANUAL"
+  );
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [broker, setBroker] = useState("ZERODHA");
 
   // Search State
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -110,63 +122,48 @@ export default function HoldingsPage() {
   }, [manualStocks]);
 
   useEffect(() => {
-    // Debounce search
+    loadData();
+  }, []);
+
+  // Debounced Search
+  useEffect(() => {
     const timer = setTimeout(async () => {
-      if (stockForm.symbol.length > 2 && showSearchResults) {
+      if (stockForm.symbol.length > 2 && !isValidSymbol) {
         setIsSearching(true);
         try {
           const results = await api.searchStocks(stockForm.symbol);
           setSearchResults(results);
+          setShowSearchResults(true);
         } catch (e) {
-          console.error(e);
+          console.error("Search failed", e);
         } finally {
           setIsSearching(false);
         }
       } else {
         setSearchResults([]);
+        setShowSearchResults(false);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [stockForm.symbol, showSearchResults]);
-
-  useEffect(() => {
-    loadData();
-  }, []);
+  }, [stockForm.symbol, isValidSymbol]);
 
   const loadData = async () => {
+    setIsLoading(true);
     try {
-      // 1. Try Cache
-      if (typeof window !== "undefined") {
-        const cSchemes = localStorage.getItem("schemes");
-        const cAmc = localStorage.getItem("amc-allocation");
-        const cEquity = localStorage.getItem("equity-summary");
-
-        if (cSchemes && cAmc && cEquity) {
-          try {
-            setSchemes(JSON.parse(cSchemes).data);
-            setAmcAllocation(JSON.parse(cAmc).data);
-            setManualStocks(JSON.parse(cEquity).data.holdings || []);
-            setLoading(false);
-          } catch (e) {
-            console.warn(e);
-          }
-        }
-      }
-
-      const [s, a, e] = await Promise.all([
+      const [schemesData, amcData, equityData] = await Promise.all([
         api.getSchemes().catch(() => []),
         api.getAMCAllocation().catch(() => []),
         api.getEquitySummary().catch(() => ({ holdings: [] })),
       ]);
-      setSchemes(s);
-      setAmcAllocation(a);
-      setManualStocks(e.holdings || []);
+      setSchemes(schemesData);
+      setAmcAllocation(amcData);
+      setManualStocks(equityData.holdings || []);
     } catch (err) {
-      console.error("Error loading holdings:", err);
+      console.error("Failed to load data", err);
       showToast("Failed to load portfolio data", "error");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -175,13 +172,11 @@ export default function HoldingsPage() {
     showToast("Refreshing prices...", "loading");
     try {
       await api.refreshStockPrices();
-      showToast("Refresh queued. Updates will appear shortly.", "success");
-      // Poll or wait a bit
-      setTimeout(() => {
-        loadData();
-        setIsRefreshing(false);
-      }, 4000); // 4s artificial delay for effect/processing
+      await loadData();
+      showToast("Stock prices updated", "success");
     } catch (err) {
+      showToast("Failed to update prices", "error");
+    } finally {
       setIsRefreshing(false);
       showToast("Failed to refresh prices", "error");
     }
@@ -214,15 +209,37 @@ export default function HoldingsPage() {
     }
   };
 
-  const handleDeleteStock = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this stock?")) return;
+  const handleImportStocks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      showToast("Please select a file", "error");
+      return;
+    }
+
+    setIsImporting(true);
+    // showToast("Importing trades...", "loading"); // Optional: Button has loader now
+
     try {
-      showToast("Deleting stock...", "loading");
-      await api.deleteHolding(id);
+      const res = await api.importTrades(importFile, broker);
+      showToast(`Imported ${res.added} holdings successfully.`, "success");
       await loadData();
-      showToast("Stock deleted successfully", "success");
-    } catch (err: any) {
-      showToast("Failed to delete stock", "error");
+      setShowStockModal(false);
+      setImportFile(null);
+    } catch (err) {
+      showToast("Failed to import trades", "error");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleDeleteStock = async (holdingId: number) => {
+    if (!confirm("Are you sure you want to delete this holding?")) return;
+    try {
+      await api.deleteHolding(holdingId);
+      loadData();
+      showToast("Holding deleted", "success");
+    } catch (err) {
+      showToast("Failed to delete holding", "error");
     }
   };
 
@@ -244,7 +261,7 @@ export default function HoldingsPage() {
     }
   };
 
-  if (loading) return <AppSkeleton />;
+  if (isLoading) return <AppSkeleton />;
 
   const totalMFValue = amcAllocation.reduce(
     (sum, item) => sum + item.current,
@@ -413,21 +430,13 @@ export default function HoldingsPage() {
                 All Schemes ({schemes.length})
               </h3>
               <button
-                onClick={() => setShowAddTx(true)}
+                onClick={() => {
+                  setShowAddTx(true);
+                }}
                 className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
                 <Plus size={16} /> Add Transaction
               </button>
             </div>
-
-            {/* Add Transaction Modal */}
-            <AddTransactionModal
-              isOpen={showAddTx}
-              onClose={() => setShowAddTx(false)}
-              onSuccess={() => {
-                loadData();
-                showToast("Transaction added successfully", "success");
-              }}
-            />
 
             {/* Search and Filter */}
             <div className="flex gap-2 px-1">
@@ -507,17 +516,23 @@ export default function HoldingsPage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button
-                onClick={handleRefreshPrices}
-                variant="outline"
-                className={`p-2 h-auto ${isRefreshing ? "animate-spin" : ""}`}>
-                <RefreshCw size={18} />
-              </Button>
-              <Button
-                onClick={() => setShowStockModal(true)}
-                className="gap-2 py-2 px-4 text-sm">
+              <button
+                onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("MANUAL");
+                }}
+                className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
                 <Plus size={16} /> Add Transaction
-              </Button>
+              </button>
+              <button
+                onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("IMPORT");
+                }}
+                className="p-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors aspect-square flex items-center justify-center"
+                title="Import Stocks">
+                <FileUp size={20} />
+              </button>
             </div>
           </div>
 
@@ -550,11 +565,12 @@ export default function HoldingsPage() {
                       <Tooltip
                         formatter={(value: any) => `₹${value.toLocaleString()}`}
                         contentStyle={{
-                          backgroundColor: "rgba(0,0,0,0.8)",
+                          backgroundColor: "#1A1F2B",
                           border: "none",
-                          borderRadius: "8px",
+                          borderRadius: "12px",
                           color: "#fff",
                         }}
+                        itemStyle={{ color: "#fff" }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -764,134 +780,233 @@ export default function HoldingsPage() {
         isOpen={showStockModal}
         onClose={() => setShowStockModal(false)}
         title="Record Stock Transaction">
-        <form onSubmit={handleAddStock} className="space-y-4">
-          <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl mb-4">
-            <button
-              type="button"
-              onClick={() =>
-                setStockForm({ ...stockForm, transaction_type: "BUY" })
-              }
-              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                stockForm.transaction_type === "BUY"
-                  ? "bg-white dark:bg-green-500/20 text-green-600 dark:text-green-400 shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
-              }`}>
-              Buy
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setStockForm({ ...stockForm, transaction_type: "SELL" })
-              }
-              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                stockForm.transaction_type === "SELL"
-                  ? "bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
-              }`}>
-              Sell
-            </button>
-          </div>
+        <div className="flex border-b border-neutral-200 dark:border-white/10 mb-6">
+          <button
+            onClick={() => setStockModalTab("MANUAL")}
+            className={`flex-1 pb-3 text-sm font-medium transition-colors relative ${
+              stockModalTab === "MANUAL"
+                ? "text-primary-600 dark:text-primary-400"
+                : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            }`}>
+            Manual Entry
+            {stockModalTab === "MANUAL" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setStockModalTab("IMPORT")}
+            className={`flex-1 pb-3 text-sm font-medium transition-colors relative ${
+              stockModalTab === "IMPORT"
+                ? "text-primary-600 dark:text-primary-400"
+                : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            }`}>
+            Import File
+            {stockModalTab === "IMPORT" && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500" />
+            )}
+          </button>
+        </div>
 
-          <div className="relative">
+        {stockModalTab === "MANUAL" ? (
+          <form onSubmit={handleAddStock} className="space-y-4">
+            <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl mb-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setStockForm({ ...stockForm, transaction_type: "BUY" })
+                }
+                className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  stockForm.transaction_type === "BUY"
+                    ? "bg-white dark:bg-green-500/20 text-green-600 dark:text-green-400 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
+                }`}>
+                Buy
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setStockForm({ ...stockForm, transaction_type: "SELL" })
+                }
+                className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  stockForm.transaction_type === "SELL"
+                    ? "bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400"
+                }`}>
+                Sell
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                label="Stock Symbol"
+                placeholder="e.g. RELIANCE"
+                value={stockForm.symbol}
+                onChange={(e) => {
+                  setStockForm({
+                    ...stockForm,
+                    symbol: e.target.value.toUpperCase(),
+                  });
+                  setShowSearchResults(true);
+                  setIsValidSymbol(false);
+                }}
+                required
+                autoComplete="off"
+              />
+              {showSearchResults && stockForm.symbol.length > 2 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
+                  {isSearching ? (
+                    <div className="p-3 text-sm text-neutral-500 text-center">
+                      Searching...
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    searchResults.map((result: any) => (
+                      <button
+                        key={result.symbol}
+                        type="button"
+                        onClick={async () => {
+                          const symbol = result.symbol;
+                          setStockForm((prev) => ({
+                            ...prev,
+                            symbol: symbol,
+                            price: "Loading...",
+                          }));
+                          setShowSearchResults(false);
+                          setIsValidSymbol(true);
+
+                          try {
+                            const quote = await api.getStockQuote(symbol);
+                            if (quote && quote.price) {
+                              setStockForm((prev) => ({
+                                ...prev,
+                                price: quote.price.toFixed(2),
+                              }));
+                            } else {
+                              setStockForm((prev) => ({ ...prev, price: "" }));
+                            }
+                          } catch (e) {
+                            console.error("Quote fetch error", e);
+                            setStockForm((prev) => ({ ...prev, price: "" }));
+                          }
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 last:border-0 transition-colors">
+                        <div className="font-medium text-neutral-900 dark:text-white">
+                          {result.symbol}
+                        </div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {result.name} • {result.exchange}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-3 text-sm text-neutral-500 text-center">
+                      No results found
+                    </div>
+                  )}
+                </div>
+              )}
+              {stockForm.symbol.length > 0 && !isValidSymbol && (
+                <p className="text-xs text-red-500 mt-1 ml-1">
+                  Please select a valid stock from the search results
+                </p>
+              )}
+            </div>
             <Input
-              label="Stock Symbol"
-              placeholder="e.g. RELIANCE"
-              value={stockForm.symbol}
-              onChange={(e) => {
-                setStockForm({
-                  ...stockForm,
-                  symbol: e.target.value.toUpperCase(),
-                });
-                setShowSearchResults(true);
-                setIsValidSymbol(false);
-              }}
+              label="Quantity"
+              type="number"
+              placeholder="10"
+              value={stockForm.quantity}
+              onChange={(e) =>
+                setStockForm({ ...stockForm, quantity: e.target.value })
+              }
               required
               autoComplete="off"
             />
-            {showSearchResults && stockForm.symbol.length > 2 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto">
-                {isSearching ? (
-                  <div className="p-3 text-sm text-neutral-500 text-center">
-                    Searching...
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map((result: any) => (
-                    <button
-                      key={result.symbol}
-                      type="button"
-                      onClick={async () => {
-                        const symbol = result.symbol;
-                        setStockForm((prev) => ({
-                          ...prev,
-                          symbol: symbol,
-                          price: "Loading...",
-                        }));
-                        setShowSearchResults(false);
-                        setIsValidSymbol(true);
-
-                        try {
-                          const quote = await api.getStockQuote(symbol);
-                          if (quote && quote.price) {
-                            setStockForm((prev) => ({
-                              ...prev,
-                              price: quote.price.toFixed(2),
-                            }));
-                          } else {
-                            setStockForm((prev) => ({ ...prev, price: "" }));
-                          }
-                        } catch (e) {
-                          console.error("Quote fetch error", e);
-                          setStockForm((prev) => ({ ...prev, price: "" }));
-                        }
-                      }}
-                      className="w-full text-left px-4 py-3 hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 last:border-0 transition-colors">
-                      <div className="font-medium text-neutral-900 dark:text-white">
-                        {result.symbol}
-                      </div>
-                      <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                        {result.name} • {result.exchange}
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="p-3 text-sm text-neutral-500 text-center">
-                    No results found
-                  </div>
-                )}
+            <Input
+              label="Average Buy Price (₹)"
+              type="number"
+              placeholder="2400.50"
+              value={stockForm.price}
+              onChange={(e) =>
+                setStockForm({ ...stockForm, price: e.target.value })
+              }
+              required
+              autoComplete="off"
+            />
+            <Button type="submit" className="w-full" disabled={!isValidSymbol}>
+              {stockForm.transaction_type === "BUY"
+                ? "Buy Stock"
+                : "Sell Stock"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleImportStocks} className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300 ml-1">
+                  Select Broker
+                </label>
+                <select
+                  value={broker}
+                  onChange={(e) => setBroker(e.target.value)}
+                  className="w-full px-4 py-3 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none">
+                  <option value="ZERODHA">Zerodha (Kite)</option>
+                </select>
               </div>
-            )}
-            {stockForm.symbol.length > 0 && !isValidSymbol && (
-              <p className="text-xs text-red-500 mt-1 ml-1">
-                Please select a valid stock from the search results
-              </p>
-            )}
-          </div>
-          <Input
-            label="Quantity"
-            type="number"
-            placeholder="10"
-            value={stockForm.quantity}
-            onChange={(e) =>
-              setStockForm({ ...stockForm, quantity: e.target.value })
-            }
-            required
-            autoComplete="off"
-          />
-          <Input
-            label="Average Buy Price (₹)"
-            type="number"
-            placeholder="2400.50"
-            value={stockForm.price}
-            onChange={(e) =>
-              setStockForm({ ...stockForm, price: e.target.value })
-            }
-            required
-            autoComplete="off"
-          />
-          <Button type="submit" className="w-full" disabled={!isValidSymbol}>
-            {stockForm.transaction_type === "BUY" ? "Buy Stock" : "Sell Stock"}
-          </Button>
-        </form>
+
+              <div>
+                <label className="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300 ml-1">
+                  Upload Tradebook or Holdings (CSV)
+                </label>
+                <div className="border-2 border-dashed border-neutral-200 dark:border-white/10 rounded-xl p-8 flex flex-col items-center justify-center bg-white/5 text-center hover:border-primary-500/50 transition-colors">
+                  <FileSpreadsheet className="w-10 h-10 text-neutral-400 mb-3" />
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="stock-file-upload"
+                  />
+                  <label
+                    htmlFor="stock-file-upload"
+                    className="text-primary-500 font-medium cursor-pointer hover:underline mb-1">
+                    Click to upload
+                  </label>
+                  <p className="text-sm text-neutral-400">
+                    {importFile
+                      ? importFile.name
+                      : "or drag and drop CSV file here"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl flex gap-3 items-start">
+                <Info className="flex-shrink-0 w-5 h-5 text-blue-500 mt-0.5" />
+                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                  Supports <b>holdings</b> (Current Snapshot) CSV from
+                  Zerodha/Kite.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full py-4 text-base"
+              variant="primary"
+              disabled={isImporting}>
+              {isImporting ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5 mr-2" />
+                  Import Stocks
+                </>
+              )}
+            </Button>
+          </form>
+        )}
       </Modal>
 
       {/* Edit Stock Modal */}
@@ -946,6 +1061,15 @@ export default function HoldingsPage() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
+      />
+      {/* Add Transaction Modal (Global for page) */}
+      <AddTransactionModal
+        isOpen={showAddTx}
+        onClose={() => setShowAddTx(false)}
+        onSuccess={() => {
+          loadData();
+          showToast("Transaction added successfully", "success");
+        }}
       />
     </div>
   );

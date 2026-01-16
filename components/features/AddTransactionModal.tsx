@@ -5,7 +5,7 @@ import Modal from "../ui/Modal";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { api } from "@/lib/api";
-import { Check, Info, TrendingUp, TrendingDown } from "lucide-react";
+import { Check, TrendingUp, TrendingDown } from "lucide-react";
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -19,6 +19,8 @@ export default function AddTransactionModal({
   onSuccess,
 }: AddTransactionModalProps) {
   const [loading, setLoading] = useState(false);
+
+  // Manual Form State
   const [schemes, setSchemes] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     scheme_id: "",
@@ -53,7 +55,7 @@ export default function AddTransactionModal({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -77,8 +79,8 @@ export default function AddTransactionModal({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Manual Transaction">
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
+      <form onSubmit={handleManualSubmit} className="space-y-4">
         {/* Transaction Type Toggle */}
         <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl mb-6">
           <button
@@ -172,15 +174,6 @@ export default function AddTransactionModal({
           className="font-bold text-lg dark:bg-white/5"
           placeholder="₹0.00"
         />
-
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-xl flex gap-3 items-start">
-          <Info className="flex-shrink-0 w-5 h-5 text-blue-500 mt-0.5" />
-          <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-            This transaction will be added manually tagged as "User Entry". It
-            will be reconciled automatically when you upload your next official
-            CAS statement.
-          </p>
-        </div>
 
         <Button
           type="submit"

@@ -125,7 +125,8 @@ export const api = {
     api.fetch(`/portfolio/transactions?skip=${skip}&limit=${limit}`, {
       cacheKey: `transactions-${skip}-${limit}`,
     }),
-  resetPortfolio: () => api.fetch("/portfolio/reset", { method: "DELETE" }),
+  resetPortfolio: (type: "ALL" | "MF" | "STOCKS" = "ALL") =>
+    api.fetch(`/portfolio/reset?reset_type=${type}`, { method: "DELETE" }),
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
   getPortfolioHistory: () =>
@@ -185,4 +186,21 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+
+  importTrades: (file: File, broker: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("broker", broker);
+    const token = localStorage.getItem("access_token");
+    return fetch(`${API_URL}/equity/import`, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    }).then((r) => {
+      if (!r.ok) throw new Error("Import failed");
+      return r.json();
+    });
+  },
 };

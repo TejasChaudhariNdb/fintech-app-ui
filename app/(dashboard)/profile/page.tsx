@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
   const [mounted, setMounted] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -151,19 +152,25 @@ export default function ProfilePage() {
     }
   };
 
-  const handleReset = async () => {
-    if (
-      !confirm(
-        "⚠️ This will delete ALL portfolio data. This action cannot be undone. Continue?"
-      )
-    ) {
-      return;
-    }
+  const handleReset = async (type: "ALL" | "MF" | "STOCKS" = "ALL") => {
+    // Confirmation
+    const msg =
+      type === "ALL"
+        ? "⚠️ This will delete ALL portfolio data. This action cannot be undone. Continue?"
+        : `⚠️ This will delete ALL ${
+            type === "MF" ? "Mutual Fund" : "Stock"
+          } data. Continue?`;
+
+    if (!confirm(msg)) return;
 
     try {
       showToast("Resetting portfolio...", "loading");
-      await api.resetPortfolio();
-      showToast("Portfolio reset successfully", "success");
+      await api.resetPortfolio(type);
+      showToast(
+        `${type === "ALL" ? "Portfolio" : type} reset successfully`,
+        "success"
+      );
+      setShowResetModal(false);
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
       showToast("Reset failed: " + err.message, "error");
@@ -324,7 +331,7 @@ export default function ProfilePage() {
           )}
 
           <button
-            onClick={handleReset}
+            onClick={() => setShowResetModal(true)}
             className="w-full flex items-center justify-between p-4 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
@@ -335,7 +342,7 @@ export default function ProfilePage() {
                   Reset Portfolio
                 </p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Clear all data
+                  Clear MF, Stocks, or Everything
                 </p>
               </div>
             </div>
@@ -384,6 +391,7 @@ export default function ProfilePage() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         title="Upload CAS">
+        {/* ... existing upload modal content ... */}
         <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl mb-4 text-sm text-blue-800 dark:text-blue-200">
           <p className="font-semibold mb-1">How to get your CAS?</p>
           <p>
@@ -486,6 +494,68 @@ export default function ProfilePage() {
             {uploading ? "Uploading..." : "Upload CAS"}
           </Button>
         </form>
+      </Modal>
+
+      {/* Reset Portfolio Modal */}
+      <Modal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        title="Reset Portfolio Data">
+        <div className="p-1 space-y-4">
+          <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-xl text-sm text-red-700 dark:text-red-300 mb-4">
+            <p className="font-bold flex items-center gap-2 mb-1">
+              <Trash2 size={16} /> Warning: Irreversible Action
+            </p>
+            <p>
+              Deleting data helps you start fresh, but explicitly entered
+              transactions or imported files will be lost forever.
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            <button
+              onClick={() => handleReset("MF")}
+              className="flex items-center justify-between p-4 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors text-left">
+              <div>
+                <h3 className="font-semibold text-neutral-900 dark:text-white">
+                  Reset Mutual Funds
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Clear all folios, schemes, and SIPs
+                </p>
+              </div>
+              <ChevronRight className="text-neutral-400" size={18} />
+            </button>
+
+            <button
+              onClick={() => handleReset("STOCKS")}
+              className="flex items-center justify-between p-4 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors text-left">
+              <div>
+                <h3 className="font-semibold text-neutral-900 dark:text-white">
+                  Reset Stocks
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Clear all equity holdings and trades
+                </p>
+              </div>
+              <ChevronRight className="text-neutral-400" size={18} />
+            </button>
+
+            <button
+              onClick={() => handleReset("ALL")}
+              className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-left group">
+              <div>
+                <h3 className="font-semibold text-red-700 dark:text-red-400 group-hover:text-red-800 dark:group-hover:text-red-300">
+                  Reset Everything
+                </h3>
+                <p className="text-xs text-red-600/70 dark:text-red-400/70">
+                  Delete ALL portfolio data completely
+                </p>
+              </div>
+              <Trash2 className="text-red-500 dark:text-red-400" size={18} />
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
