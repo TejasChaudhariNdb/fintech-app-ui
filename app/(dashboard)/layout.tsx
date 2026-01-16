@@ -17,6 +17,19 @@ export default function DashboardLayout({
   const [isChecking, setIsChecking] = useState(true);
   const [isLockEnabled, setIsLockEnabled] = useState(false);
 
+  // Update Page Title for GA & UX
+  useEffect(() => {
+    const getPageTitle = (path: string) => {
+      if (path === "/" || path === "/dashboard") return "Dashboard - Arthavi";
+      if (path.startsWith("/holdings")) return "Holdings - Arthavi";
+      if (path.startsWith("/goals")) return "Goals - Arthavi";
+      if (path.startsWith("/activity")) return "Activity - Arthavi";
+      if (path.startsWith("/profile")) return "Profile - Arthavi";
+      return "Arthavi";
+    };
+    document.title = getPageTitle(pathname);
+  }, [pathname]);
+
   useEffect(() => {
     // Only run on client
     if (typeof window !== "undefined") {
