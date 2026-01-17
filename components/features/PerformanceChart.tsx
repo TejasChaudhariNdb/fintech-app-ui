@@ -62,6 +62,30 @@ export default function PerformanceChart({
     return sourceData.filter((d) => new Date(d.date) >= cutoff);
   }, [sourceData, range]);
 
+  // Calculate dynamic domain with buffer
+  const yDomain = useMemo(() => {
+    if (!chartData.length) return ["auto", "auto"];
+
+    const dataKey =
+      assetType === "MF" ? "mf" : assetType === "STOCK" ? "equity" : "value";
+
+    // Extract values for the currently visible series
+    const values = chartData.map((d: any) => Number(d[dataKey] || 0));
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    // Add 65% buffer to top and bottom
+    const rangeVal = max - min;
+
+    // If range is 0 (flat line), add +/- 5% of value
+    if (rangeVal === 0) {
+      return [min * 0.95, max * 1.05];
+    }
+
+    const buffer = rangeVal * 0.4;
+    return [min - buffer, max + buffer];
+  }, [chartData, assetType]);
+
   if (!propData) {
     return (
       <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none mb-6 h-[300px] flex items-center justify-center">
@@ -175,7 +199,21 @@ export default function PerformanceChart({
               interval="preserveStartEnd"
               minTickGap={30}
             />
-            <YAxis hide={true} domain={["auto", "auto"]} />
+            <YAxis
+              domain={yDomain}
+              axisLine={false}
+              tickLine={false}
+              padding={{ bottom: 20 }}
+              width={50}
+              tick={{ fill: "#9CA3AF", fontSize: 11 }}
+              tickFormatter={(value) => {
+                if (value >= 10000000)
+                  return `${(value / 10000000).toFixed(1)}Cr`;
+                if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
+                if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+                return value;
+              }}
+            />
             <Tooltip
               contentStyle={{
                 backgroundColor: "#1A1F2B",
