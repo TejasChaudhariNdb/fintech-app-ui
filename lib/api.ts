@@ -125,12 +125,39 @@ export const api = {
     api.fetch(`/portfolio/transactions?skip=${skip}&limit=${limit}`, {
       cacheKey: `transactions-${skip}-${limit}`,
     }),
+
+  exportTransactions: async () => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("access_token")
+        : null;
+    const res = await fetch(`${API_URL}/portfolio/export/transactions`, {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!res.ok) throw new Error("Export failed");
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   resetPortfolio: (type: "ALL" | "MF" | "STOCKS" = "ALL") =>
     api.fetch(`/portfolio/reset?reset_type=${type}`, { method: "DELETE" }),
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
+
   getPortfolioHistory: () =>
     api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
+  getInsights: () => api.fetch("/portfolio/insights", { cacheKey: "insights" }),
 
   addManualTransaction: (data: any) =>
     api.fetch("/portfolio/transactions/manual", {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import AppSkeleton from "@/components/ui/AppSkeleton";
+import Toast, { ToastType } from "@/components/ui/Toast";
 import TransactionItem from "@/components/features/TransactionItem";
 import Button from "@/components/ui/Button";
 import { Search, Calendar, Filter, Download } from "lucide-react";
@@ -12,13 +13,41 @@ export default function ActivityPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("ALL"); // ALL, BUY, SELL, SIP, DIVIDEND
   const { light } = useHaptic();
 
+  // Toast State
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: ToastType;
+  }>({ show: false, message: "", type: "info" });
+
+  const showToast = (message: string, type: ToastType) => {
+    setToast({ show: true, message, type });
+  };
+
   const LIMIT = 20;
+
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    light();
+    showToast("Preparing CSV export...", "loading");
+    try {
+      await api.exportTransactions();
+      showToast("Download started", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Export failed", "error");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const loadTransactions = async (skip: number, isLoadMore = false) => {
     try {
@@ -118,6 +147,14 @@ export default function ActivityPage() {
 
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
+      {/* Toast Notification */}
+      <Toast
+        isVisible={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
       {/* Header */}
       <div className="bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5 p-4 sticky top-0 z-20 transition-colors flex justify-between items-center">
         <div>
@@ -126,8 +163,13 @@ export default function ActivityPage() {
             Track your transaction history
           </p>
         </div>
-        <button className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400">
-          <Download size={20} />
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className={`p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 transition-colors ${
+            exporting ? "opacity-50 cursor-not-allowed" : ""
+          }`}>
+          <Download size={20} className={exporting ? "animate-bounce" : ""} />
         </button>
       </div>
 

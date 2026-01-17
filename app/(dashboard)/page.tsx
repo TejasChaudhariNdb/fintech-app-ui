@@ -13,6 +13,7 @@ import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import { FileText, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import InsightsCard from "@/components/features/InsightsCard";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
 
 export default function HomePage() {
@@ -21,6 +22,7 @@ export default function HomePage() {
   const [summary, setSummary] = useState<any>(null);
   const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
+  const [insights, setInsights] = useState<any[]>([]); // New State
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
@@ -52,6 +54,7 @@ export default function HomePage() {
         const cachedGoals = localStorage.getItem("goals");
         const cachedHistory = localStorage.getItem("portfolio-history");
         const cachedXirr = localStorage.getItem("xirr");
+        const cachedInsights = localStorage.getItem("insights");
 
         if (cachedNw && cachedPs) {
           try {
@@ -62,6 +65,7 @@ export default function HomePage() {
             });
             if (cachedGoals) setGoals(JSON.parse(cachedGoals).data.slice(0, 2));
             if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
+            if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
 
             setLoading(false); // Show cached data immediately
           } catch (e) {
@@ -71,7 +75,7 @@ export default function HomePage() {
       }
 
       // 2. Fetch Fresh Data in Background
-      const [nw, ps, g, xirrData, history] = await Promise.all([
+      const [nw, ps, g, xirrData, history, ins] = await Promise.all([
         api.getNetWorth().catch((err) => {
           console.error("Net worth error:", err);
           return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -99,6 +103,10 @@ export default function HomePage() {
           console.error("History error:", err);
           return [];
         }),
+        api.getInsights().catch((err) => {
+          console.error("Insights error:", err);
+          return [];
+        }),
       ]);
 
       console.log("Data loaded:", { nw, ps, g, xirrData });
@@ -107,6 +115,7 @@ export default function HomePage() {
       setSummary({ ...ps, xirr: xirrData.xirr });
       setGoals(g.slice(0, 2));
       setPerfData(history);
+      setInsights(ins);
     } catch (err: any) {
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");
@@ -328,6 +337,9 @@ export default function HomePage() {
           <section>
             <PerformanceChart data={perfData} />
           </section>
+
+          {/* Smart Insights (Nudges) */}
+          <InsightsCard insights={insights} />
 
           {/* Goals Preview */}
           {/* Goals Preview */}
