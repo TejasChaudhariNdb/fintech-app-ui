@@ -335,7 +335,12 @@ export default function HomePage() {
 
           {/* Performance Chart */}
           <section>
-            <PerformanceChart data={perfData} />
+            <PerformanceChart
+              data={perfData}
+              investedAmount={summary?.invested || 0}
+              mfInvested={summary?.mf_invested || 0}
+              stockInvested={summary?.stock_invested || 0}
+            />
           </section>
 
           {/* Smart Insights (Nudges) */}

@@ -9,22 +9,61 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import Card from "@/components/ui/Card";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 interface PerformanceChartProps {
   data?: { date: string; value: number }[];
+  investedAmount?: number;
+  mfInvested?: number;
+  stockInvested?: number;
 }
 
 const ranges = ["1M", "6M", "1Y", "ALL"];
 
 export default function PerformanceChart({
   data: propData,
+  investedAmount,
+  mfInvested,
+  stockInvested,
 }: PerformanceChartProps) {
+  console.log("PerformanceChart Props:", {
+    investedAmount,
+    mfInvested,
+    stockInvested,
+  });
   const [range, setRange] = useState("ALL");
   const [assetType, setAssetType] = useState("ALL"); // ALL, MF, STOCK
+  const [hoveredValue, setHoveredValue] = useState<number | null>(null);
   const { light } = useHaptic();
+
+  // Determine active data key based on asset type
+  const activeDataKey = useMemo(() => {
+    switch (assetType) {
+      case "MF":
+        return "mf";
+      case "STOCK":
+        return "equity";
+      case "ALL":
+      default:
+        return "value";
+    }
+  }, [assetType]);
+
+  // Calculate current Reference Line value based on asset type
+  const activeReferenceValue = useMemo(() => {
+    switch (assetType) {
+      case "MF":
+        return mfInvested;
+      case "STOCK":
+        return stockInvested;
+      case "ALL":
+      default:
+        return investedAmount;
+    }
+  }, [assetType, investedAmount, mfInvested, stockInvested]);
 
   // If no data provided (e.g. loading), use empty array
   const sourceData = useMemo(() => {
@@ -49,6 +88,14 @@ export default function PerformanceChart({
     setAssetType(type);
   };
 
+  // Helper to format large numbers
+  const formatValue = (value: number) => {
+    if (value >= 10000000) return `${(value / 10000000).toFixed(2)}Cr`;
+    if (value >= 100000) return `${(value / 100000).toFixed(2)}L`;
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+    return value.toFixed(0);
+  };
+
   const chartData = useMemo(() => {
     if (!sourceData.length) return [];
     if (range === "ALL") return sourceData;
@@ -66,25 +113,46 @@ export default function PerformanceChart({
   const yDomain = useMemo(() => {
     if (!chartData.length) return ["auto", "auto"];
 
-    const dataKey =
-      assetType === "MF" ? "mf" : assetType === "STOCK" ? "equity" : "value";
-
     // Extract values for the currently visible series
-    const values = chartData.map((d: any) => Number(d[dataKey] || 0));
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const values = chartData.map((d: any) => Number(d[activeDataKey] || 0));
 
-    // Add 65% buffer to top and bottom
-    const rangeVal = max - min;
-
-    // If range is 0 (flat line), add +/- 5% of value
-    if (rangeVal === 0) {
-      return [min * 0.95, max * 1.05];
+    // Include the reference line value in the domain calculation
+    if (activeReferenceValue && activeReferenceValue > 0) {
+      values.push(activeReferenceValue);
     }
 
-    const buffer = rangeVal * 0.4;
-    return [min - buffer, max + buffer];
-  }, [chartData, assetType]);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const rangeVal = max - min;
+
+    // Add small initial buffer (5%)
+    const paddedMin = min - rangeVal * 0.05;
+    const paddedMax = max + rangeVal * 0.05;
+
+    // Calculate "nice" range steps
+    const roughTickCount = 5;
+    const roughRange = paddedMax - paddedMin;
+    if (roughRange === 0) return [min * 0.9, max * 1.1]; // Fallback for flat line
+
+    const rawInterval = roughRange / roughTickCount;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)));
+    const normalizedInterval = rawInterval / magnitude;
+
+    let interval;
+    if (normalizedInterval <= 1) interval = 1 * magnitude;
+    else if (normalizedInterval <= 2) interval = 2 * magnitude;
+    else if (normalizedInterval <= 5) interval = 5 * magnitude;
+    else interval = 10 * magnitude;
+
+    // Calculate nice bounds
+    const niceMin = Math.floor(paddedMin / interval) * interval;
+    const niceMax = Math.ceil(paddedMax / interval) * interval;
+
+    // Ensure we don't go below 0 unless data has negatives
+    const finalMin = min >= 0 && niceMin < 0 ? 0 : niceMin;
+
+    return [finalMin, niceMax];
+  }, [chartData, activeDataKey, activeReferenceValue]);
 
   if (!propData) {
     return (
@@ -170,7 +238,14 @@ export default function PerformanceChart({
 
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData}>
+          <AreaChart
+            data={chartData}
+            onMouseMove={(e: any) => {
+              if (e.activePayload && e.activePayload.length) {
+                setHoveredValue(e.activePayload[0].payload[activeDataKey]);
+              }
+            }}
+            onMouseLeave={() => setHoveredValue(null)}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
@@ -215,6 +290,7 @@ export default function PerformanceChart({
               }}
             />
             <Tooltip
+              cursor={{ strokeDasharray: "3 3", stroke: "#9CA3AF" }}
               contentStyle={{
                 backgroundColor: "#1A1F2B",
                 border: "none",
@@ -246,7 +322,6 @@ export default function PerformanceChart({
               />
             )}
 
-            {/* 2. MUTUAL FUNDS (Blue) - Show if MF or ALL is selected */}
             {/* 2. MUTUAL FUNDS (Blue) - Show if MF is selected */}
             {assetType === "MF" && (
               <Area
@@ -272,6 +347,68 @@ export default function PerformanceChart({
                 fillOpacity={1}
                 fill="url(#colorStock)"
                 animationDuration={500}
+              />
+            )}
+
+            {/* Reference Line for Invested Amount (Anchor) */}
+            {activeReferenceValue && activeReferenceValue > 0 && (
+              <ReferenceLine
+                y={activeReferenceValue}
+                label={{
+                  position: "insideBottomRight",
+                  value: "Invested",
+                  fill: "#6B7280",
+                  fontSize: 10,
+                }}
+                stroke="#9CA3AF"
+                strokeDasharray="3 3"
+                opacity={0.5}
+              />
+            )}
+
+            {/* TradingView-style: Current Value Indicator (Permanent) */}
+            {chartData.length > 0 && (
+              <ReferenceLine
+                y={Number(chartData[chartData.length - 1][activeDataKey] || 0)}
+                stroke={
+                  assetType === "MF"
+                    ? "#3B82F6"
+                    : assetType === "STOCK"
+                    ? "#22C55E"
+                    : "#6366F1"
+                }
+                strokeDasharray="3 3"
+                label={{
+                  position: "right",
+                  value: formatValue(
+                    Number(chartData[chartData.length - 1][activeDataKey] || 0)
+                  ),
+                  fill:
+                    assetType === "MF"
+                      ? "#3B82F6"
+                      : assetType === "STOCK"
+                      ? "#22C55E"
+                      : "#6366F1",
+                  fontSize: 11,
+                  fontWeight: "bold",
+                  dy: -10,
+                }}
+              />
+            )}
+
+            {/* Crosshair Horizontal Line */}
+            {hoveredValue !== null && (
+              <ReferenceLine
+                y={hoveredValue}
+                stroke="#9CA3AF"
+                strokeDasharray="3 3"
+                label={{
+                  position: "right",
+                  value: formatValue(hoveredValue),
+                  fill: "#9CA3AF",
+                  fontSize: 11,
+                  dy: 10,
+                }}
               />
             )}
           </AreaChart>
