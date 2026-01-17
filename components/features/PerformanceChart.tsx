@@ -245,7 +245,18 @@ export default function PerformanceChart({
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
               }
             }}
-            onMouseLeave={() => setHoveredValue(null)}>
+            onMouseLeave={() => setHoveredValue(null)}
+            onTouchStart={(e: any) => {
+              if (e.activePayload && e.activePayload.length) {
+                setHoveredValue(e.activePayload[0].payload[activeDataKey]);
+              }
+            }}
+            onTouchMove={(e: any) => {
+              if (e.activePayload && e.activePayload.length) {
+                setHoveredValue(e.activePayload[0].payload[activeDataKey]);
+              }
+            }}
+            onTouchEnd={() => setHoveredValue(null)}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />

@@ -302,6 +302,13 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* Smart Insights (Dismissible Banners) */}
+        {insights.length > 0 && (
+          <section className="mb-0">
+            <InsightsCard insights={insights} />
+          </section>
+        )}
+
         <div className="space-y-6">
           {/* Net Worth Card */}
           <section>
