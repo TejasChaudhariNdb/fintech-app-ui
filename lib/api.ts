@@ -3,7 +3,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const api = {
   async fetch(
     endpoint: string,
-    options: RequestInit & { cacheKey?: string } = {}
+    options: RequestInit & { cacheKey?: string } = {},
   ) {
     const token =
       typeof window !== "undefined"
@@ -31,7 +31,7 @@ export const api = {
       if (options.cacheKey && typeof window !== "undefined") {
         localStorage.setItem(
           options.cacheKey,
-          JSON.stringify({ timestamp: Date.now(), data })
+          JSON.stringify({ timestamp: Date.now(), data }),
         );
       }
 
@@ -90,6 +90,18 @@ export const api = {
     api.fetch("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify({ email }),
+    }),
+
+  requestPasswordReset: (email: string) =>
+    api.fetch("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  confirmPasswordReset: (email: string, token: string, new_password: string) =>
+    api.fetch("/auth/reset-password/confirm", {
+      method: "POST",
+      body: JSON.stringify({ email, token, new_password }),
     }),
 
   // Net Worth
