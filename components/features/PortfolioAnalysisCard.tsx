@@ -133,25 +133,16 @@ export default function PortfolioAnalysisCard() {
           </div>
         )}
 
-        {/* Key Insights (Hardcoded/Generated Logic Placeholder) */}
+        {/* Key Insights */}
         <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-white/5 space-y-2">
           <h4 className="text-primary-500 font-medium text-sm">
             Key Insights:
           </h4>
           <ul className="text-xs text-neutral-600 dark:text-neutral-400 space-y-1 list-disc pl-4">
-            <li>You have {totalStocks} stocks in your portfolio.</li>
-            {activeTab === "stocks" && data?.stocks?.length > 0 && (
-              <li>
-                Your top holding is <b>{data.stocks[0].name}</b> at{" "}
-                {data.stocks[0].percentage}%.
-              </li>
-            )}
-            {activeTab === "sectors" && data?.sectors?.length > 0 && (
-              <li>
-                Your highest exposure is in <b>{data.sectors[0].name}</b> sector
-                ({data.sectors[0].percentage}%).
-              </li>
-            )}
+            {insights.map((text, i) => (
+              <li key={i}>{text}</li>
+            ))}
+            {insights.length === 0 && <li>No insights available yet.</li>}
           </ul>
         </div>
       </div>
