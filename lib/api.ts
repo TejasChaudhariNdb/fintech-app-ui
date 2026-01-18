@@ -233,4 +233,17 @@ export const api = {
       return r.json();
     });
   },
+
+  // User Profile
+  getUserProfile: () => api.fetch("/users/me", { cacheKey: "user-profile" }),
+
+  updateUserProfile: (data: {
+    full_name?: string;
+    phone_number?: string;
+    pan_card?: string;
+  }) =>
+    api.fetch("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 };

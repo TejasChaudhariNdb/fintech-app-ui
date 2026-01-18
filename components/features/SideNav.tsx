@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home,
@@ -13,11 +13,29 @@ import {
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
+import { api } from "@/lib/api";
 
 export default function SideNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
+  const [user, setUser] = useState<{
+    full_name?: string;
+    email?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    // Fetch user profile for sidebar
+    const loadUser = async () => {
+      try {
+        const data = await api.getUserProfile();
+        setUser(data);
+      } catch (e) {
+        console.error("Failed to load user for sidebar", e);
+      }
+    };
+    loadUser();
+  }, []);
 
   const tabs = [
     { id: "/", label: "Home", icon: Home },
@@ -66,12 +84,14 @@ export default function SideNav() {
       <div className="mt-auto px-4 py-4 border-t border-neutral-200 dark:border-white/5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold">
-              TE
+            <div className="h-9 w-9 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold uppercase">
+              {user?.full_name
+                ? user.full_name.substring(0, 2)
+                : user?.email?.substring(0, 2) || "U"}
             </div>
-            <div>
-              <p className="text-sm font-medium text-neutral-900 dark:text-white">
-                Tejas
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium text-neutral-900 dark:text-white truncate max-w-[100px]">
+                {user?.full_name || user?.email?.split("@")[0] || "User"}
               </p>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 Pro Member

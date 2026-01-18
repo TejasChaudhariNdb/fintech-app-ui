@@ -7,6 +7,10 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import {
+  Unlock,
+  CreditCard,
+  Smartphone,
+  Mail,
   User,
   FileText,
   Trash2,
@@ -19,7 +23,6 @@ import {
   ShieldCheck,
   Download,
   Lock,
-  Unlock,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -37,6 +40,17 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [appLockEnabled, setAppLockEnabled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Profile State
+  const [userProfile, setUserProfile] = useState({
+    email: "",
+    full_name: "",
+    phone_number: "",
+    pan_card: "",
+  });
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [originalProfile, setOriginalProfile] = useState<any>(null); // For cancel
 
   // Toast State
   const [toast, setToast] = useState({
@@ -58,6 +72,8 @@ export default function ProfilePage() {
     const lock = localStorage.getItem("app_lock_enabled") === "true";
     setAppLockEnabled(lock);
 
+    loadUserProfile();
+
     // PWA Install Prompt Listener
     if (typeof window !== "undefined") {
       const handler = (e: any) => {
@@ -68,6 +84,53 @@ export default function ProfilePage() {
       return () => window.removeEventListener("beforeinstallprompt", handler);
     }
   }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const data = await api.getUserProfile();
+      setUserProfile({
+        email: data.email || "",
+        full_name: data.full_name || "",
+        phone_number: data.phone_number || "",
+        pan_card: data.pan_card || "",
+      });
+      setOriginalProfile(data);
+    } catch (err) {
+      console.error("Failed to load profile", err);
+    }
+  };
+
+  const handleSaveProfile = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingProfile(true);
+    try {
+      await api.updateUserProfile({
+        full_name: userProfile.full_name,
+        phone_number: userProfile.phone_number,
+        pan_card: userProfile.pan_card,
+      });
+      showToast("Profile updated successfully", "success");
+      setShowProfileModal(false); // Close modal on success
+      setOriginalProfile(userProfile);
+    } catch (err: any) {
+      showToast("Failed to update profile", "error");
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleCloseProfileModal = () => {
+    // Reset to original values on close
+    if (originalProfile) {
+      setUserProfile({
+        email: originalProfile.email || "",
+        full_name: originalProfile.full_name || "",
+        phone_number: originalProfile.phone_number || "",
+        pan_card: originalProfile.pan_card || "",
+      });
+    }
+    setShowProfileModal(false);
+  };
 
   const toggleAppLock = async () => {
     if (typeof window === "undefined" || !window.PublicKeyCredential) {
@@ -120,9 +183,6 @@ export default function ProfilePage() {
       showToast("Setup failed or cancelled", "error");
     }
   };
-
-  const email =
-    typeof window !== "undefined" ? localStorage.getItem("user_email") : "";
 
   const handleLogout = () => {
     showToast("Logging out...", "loading");
@@ -188,7 +248,7 @@ export default function ProfilePage() {
           <div>
             <h1 className="text-white text-xl font-bold">Profile</h1>
             <p className="text-white/80 dark:text-neutral-400 text-sm mt-1">
-              {email}
+              {userProfile.email || "Loading..."}
             </p>
           </div>
         </div>
@@ -197,6 +257,28 @@ export default function ProfilePage() {
       <div className="px-4 -mt-4 space-y-6">
         {/* Actions Group */}
         <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm">
+          {/* Personal Details Button */}
+          <button
+            onClick={() => {
+              setShowProfileModal(true);
+            }}
+            className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <User size={20} />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold dark:text-white">
+                  Personal Details
+                </p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  Name, Phone, PAN
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="text-neutral-400" size={20} />
+          </button>
+
           {/* Theme Toggle */}
           <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
             <div className="flex items-center gap-3">
@@ -385,6 +467,126 @@ export default function ProfilePage() {
           Logout
         </Button>
       </div>
+
+      {/* Profile Edit Modal */}
+      <Modal
+        isOpen={showProfileModal}
+        onClose={handleCloseProfileModal}
+        title="Personal Details">
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 p-4 rounded-xl mb-4 flex items-center gap-3">
+            <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+              <User size={20} />
+            </div>
+            <p className="text-sm text-indigo-800 dark:text-indigo-200">
+              Update your personal information accurately.
+            </p>
+          </div>
+
+          {/* Full Name */}
+          <div>
+            <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+              Full Name
+            </label>
+            <div className="relative">
+              <User
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+              />
+              <input
+                type="text"
+                value={userProfile.full_name}
+                onChange={(e) =>
+                  setUserProfile({ ...userProfile, full_name: e.target.value })
+                }
+                placeholder="Enter your name"
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white"
+              />
+            </div>
+          </div>
+
+          {/* Email (Read Only) */}
+          <div>
+            <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+              />
+              <input
+                type="email"
+                disabled
+                value={userProfile.email}
+                className="w-full pl-9 pr-4 py-3 rounded-xl text-sm bg-neutral-100 dark:bg-white/5 border border-transparent text-neutral-500 dark:text-neutral-400 cursor-not-allowed opacity-70"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Phone */}
+            <div>
+              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Smartphone
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                />
+                <input
+                  type="tel"
+                  value={userProfile.phone_number}
+                  onChange={(e) =>
+                    setUserProfile({
+                      ...userProfile,
+                      phone_number: e.target.value,
+                    })
+                  }
+                  placeholder="+91..."
+                  className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            {/* PAN */}
+            <div>
+              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                PAN Card
+              </label>
+              <div className="relative">
+                <CreditCard
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                />
+                <input
+                  type="text"
+                  value={userProfile.pan_card}
+                  onChange={(e) =>
+                    setUserProfile({
+                      ...userProfile,
+                      pan_card: e.target.value.toUpperCase(),
+                    })
+                  }
+                  placeholder="ABCDE1234F"
+                  className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none uppercase bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <Button
+              type="submit"
+              isLoading={isSavingProfile}
+              className="w-full"
+              variant="primary">
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Upload Modal */}
       <Modal
