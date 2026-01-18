@@ -33,7 +33,7 @@ export default function PortfolioAnalysisCard() {
         const res = await api.getEquityAllocation();
         setData(res);
         if (res.stocks) {
-          setTotalStocks(res.stocks.length);
+          setTotalStocks(res.total_stock_count || res.stocks.length);
         }
       } catch (err) {
         console.error("Failed to load allocation", err);
@@ -42,9 +42,90 @@ export default function PortfolioAnalysisCard() {
     fetchData();
   }, []);
 
-  if (!data) return null;
+  const currentData = data ? data[activeTab] || [] : [];
 
-  const currentData = data[activeTab] || [];
+  const insights = React.useMemo(() => {
+    if (!data) return [];
+    const list: string[] = [];
+
+    if (activeTab === "stocks" && data.stocks) {
+      // 1. Count
+      const count = totalStocks;
+      const isOptimal = count >= 15 && count <= 25;
+      list.push(
+        `You have ${count} stocks in your portfolio${isOptimal ? ", which is within the range of ideal number of stocks as per experts" : "."}`,
+      );
+      if (!isOptimal)
+        list.push(
+          "As per financial experts, 15 to 25 stocks are considered optimal",
+        );
+
+      // 2. Top Holding
+      const realStocks = data.stocks.filter((s: any) => s.name !== "Others");
+      if (realStocks.length > 0) {
+        const top = realStocks[0];
+        list.push(
+          `Your most invested stock is ${top.name} which is ${top.percentage}% of your total stock investments`,
+        );
+      }
+
+      // 3. Concentration
+      const top3 = realStocks.slice(0, 3);
+      const top3Sum = top3.reduce(
+        (sum: number, s: any) => sum + s.percentage,
+        0,
+      );
+      list.push(
+        `Your top 3 stocks contributes to ${top3Sum.toFixed(2)}% of your total stock investments`,
+      );
+
+      // 4. Diversification
+      if (top3Sum < 60) {
+        list.push(
+          "Your portfolio is appropriately diversified among different stocks",
+        );
+      } else {
+        list.push(
+          "Your portfolio is highly concentrated in a few stocks. Consider diversifying.",
+        );
+      }
+    } else if (activeTab === "sectors" && data.sectors) {
+      // 1. Count
+      const realSectors = data.sectors.filter((s: any) => s.name !== "Others");
+      const count = realSectors.length;
+      list.push(
+        `Your investments are spread across ${count} different sectors`,
+      );
+
+      // 2. Diversification
+      if (count >= 5) {
+        list.push(
+          "Your portfolio is appropriately diversified across multiple sectors",
+        );
+      } else {
+        list.push("Your portfolio is concentrated in a few sectors");
+      }
+
+      // 3. Highest Allocation
+      if (realSectors.length > 0) {
+        const top = realSectors[0];
+        list.push(
+          `You have highest allocation in ${top.name} sector which accounts to ${top.percentage}% of your total portfolio`,
+        );
+
+        // 4. Warning
+        if (top.percentage > 25) {
+          list.push(
+            "Sectoral allocation of more than 25% ideally can be avoided",
+          );
+        }
+      }
+    }
+
+    return list;
+  }, [data, activeTab, totalStocks]);
+
+  if (!data) return null;
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
