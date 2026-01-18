@@ -349,6 +349,7 @@ export default function HomePage() {
               stockInvested={summary?.stock_invested || 0}
             />
           </section>
+
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />
 

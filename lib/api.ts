@@ -125,6 +125,8 @@ export const api = {
   getEquitySummary: () =>
     api.fetch("/equity/summary", { cacheKey: "equity-summary" }),
 
+  getEquityAllocation: () => api.fetch("/equity/allocation"),
+
   // Portfolio
   getPortfolioSummary: () =>
     api.fetch("/portfolio/summary", { cacheKey: "portfolio-summary" }),

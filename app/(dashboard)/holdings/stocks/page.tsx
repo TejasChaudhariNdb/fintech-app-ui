@@ -17,14 +17,12 @@ import {
   Trash2,
   Pencil,
   TrendingUp,
-  Search,
   Upload,
   FileUp,
   Share2,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
+import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 
 export default function StocksPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -37,13 +35,13 @@ export default function StocksPage() {
   });
   const showToast = (
     message: string,
-    type: "success" | "error" | "loading" = "success"
+    type: "success" | "error" | "loading" = "success",
   ) => {
     setToast({ message, type, isVisible: true });
     if (type !== "loading") {
       setTimeout(
         () => setToast((prev) => ({ ...prev, isVisible: false })),
-        3000
+        3000,
       );
     }
   };
@@ -61,7 +59,7 @@ export default function StocksPage() {
     transaction_type: "BUY" as "BUY" | "SELL",
   });
   const [stockModalTab, setStockModalTab] = useState<"MANUAL" | "IMPORT">(
-    "MANUAL"
+    "MANUAL",
   );
 
   // Import State
@@ -111,18 +109,6 @@ export default function StocksPage() {
     const pnl = current - invested;
     const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
     return { invested, current, pnl, pnlPct };
-  }, [manualStocks]);
-
-  // Stock Sector Allocation
-  const stockSectorData = useMemo(() => {
-    const sectors: Record<string, number> = {};
-    manualStocks.forEach((s) => {
-      const sec = s.sector || "Other";
-      sectors[sec] = (sectors[sec] || 0) + (s.value || 0);
-    });
-    return Object.entries(sectors)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
   }, [manualStocks]);
 
   // Search Stocks
@@ -277,70 +263,12 @@ export default function StocksPage() {
       </div>
 
       {manualStocks.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Sector Allocation */}
-          <Card className="col-span-1 p-6 flex flex-col items-center justify-center bg-white dark:bg-surface border border-neutral-200 dark:border-white/5">
-            <h3 className="text-sm font-medium text-neutral-500 mb-4 w-full text-left">
-              Sector Allocation
-            </h3>
-            <div className="h-[200px] w-full max-w-[200px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stockSectorData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}>
-                    {stockSectorData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: any) => `₹${value.toLocaleString()}`}
-                    contentStyle={{
-                      backgroundColor: "#1A1F2B",
-                      border: "none",
-                      borderRadius: "12px",
-                      color: "#fff",
-                    }}
-                    itemStyle={{ color: "#fff" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Compact Legend */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              {stockSectorData.slice(0, 3).map((entry, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-1 text-[10px]">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor: COLORS[index % COLORS.length],
-                    }}></div>
-                  <span className="text-neutral-600 dark:text-neutral-400">
-                    {entry.name}
-                  </span>
-                </div>
-              ))}
-              {stockSectorData.length > 3 && (
-                <span className="text-[10px] text-neutral-400">
-                  +{stockSectorData.length - 3} more
-                </span>
-              )}
-            </div>
-          </Card>
+        <div className="space-y-6 mb-8">
+          {/* New Portfolio Analysis */}
+          <PortfolioAnalysisCard />
 
           {/* Stats Cards */}
-          <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4 h-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center">
               <p className="text-sm text-neutral-500 mb-1">Total Value</p>
               <p className="text-2xl font-bold text-neutral-900 dark:text-white">
@@ -363,7 +291,7 @@ export default function StocksPage() {
                 </PrivacyMask>
               </p>
             </Card>
-            <Card className="col-span-2 p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between">
+            <Card className="col-span-1 md:col-span-2 p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between">
               <div>
                 <p className="text-sm text-neutral-500 mb-1">
                   Total Profit/Loss
