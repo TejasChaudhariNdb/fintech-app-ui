@@ -155,8 +155,11 @@ export const api = {
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
 
-  getPortfolioHistory: () =>
-    api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
+  getPortfolioHistory: () => api.fetch("/portfolio/timeseries"),
+
+  getBenchmark: () => api.fetch("/portfolio/benchmark"),
+
+  // Schemesy: "portfolio-history" }),
   getInsights: () => api.fetch("/portfolio/insights", { cacheKey: "insights" }),
 
   addManualTransaction: (data: any) =>

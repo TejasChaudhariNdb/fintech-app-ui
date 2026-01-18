@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Card from "../ui/Card";
 import PrivacyMask from "../ui/PrivacyMask";
+import { ChevronDown } from "lucide-react";
 
 interface PortfolioSummaryProps {
   invested: number;
@@ -14,6 +15,8 @@ interface PortfolioSummaryProps {
   xirr?: number;
   mfProfit?: number;
   stockProfit?: number;
+  mfInvested?: number;
+  stockInvested?: number;
 }
 
 export default function PortfolioSummary({
@@ -26,9 +29,12 @@ export default function PortfolioSummary({
   xirr,
   mfProfit,
   stockProfit,
+  mfInvested = 0,
+  stockInvested = 0,
 }: PortfolioSummaryProps) {
   const isPositive = profit >= 0;
   const isDayPositive = dayChange >= 0;
+  const [isInvestedExpanded, setIsInvestedExpanded] = useState(false);
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -37,13 +43,55 @@ export default function PortfolioSummary({
       </h3>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center group">
-          <span className="text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">
-            Invested
-          </span>
-          <span className="font-semibold text-neutral-900 dark:text-white">
-            <PrivacyMask>₹{invested.toLocaleString("en-IN")}</PrivacyMask>
-          </span>
+        {/* Invested Section - Expandable */}
+        <div className="flex flex-col">
+          <div
+            className="flex justify-between items-center group cursor-pointer select-none"
+            onClick={() => setIsInvestedExpanded(!isInvestedExpanded)}>
+            <span className="text-neutral-500 dark:text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
+              Invested
+              <div
+                className={`p-0.5 rounded-full bg-neutral-100 dark:bg-white/5 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 transition-colors duration-200`}>
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 ${
+                    isInvestedExpanded
+                      ? "rotate-180 text-primary-600 dark:text-primary-400"
+                      : ""
+                  }`}
+                />
+              </div>
+            </span>
+            <span className="font-semibold text-neutral-900 dark:text-white">
+              <PrivacyMask>₹{invested.toLocaleString("en-IN")}</PrivacyMask>
+            </span>
+          </div>
+
+          {/* Expanded Breakdown */}
+          {isInvestedExpanded && (
+            <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-neutral-400 dark:text-neutral-500">
+                  Mutual Funds
+                </span>
+                <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                  <PrivacyMask>
+                    ₹{mfInvested.toLocaleString("en-IN")}
+                  </PrivacyMask>
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-neutral-400 dark:text-neutral-500">
+                  Stocks
+                </span>
+                <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                  <PrivacyMask>
+                    ₹{stockInvested.toLocaleString("en-IN")}
+                  </PrivacyMask>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between items-center group">

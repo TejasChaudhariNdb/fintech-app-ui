@@ -11,10 +11,11 @@ import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
-import { FileText, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
+import { FileText, AlertTriangle, ArrowRight } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import InsightsCard from "@/components/features/InsightsCard";
-import AddTransactionModal from "@/components/features/AddTransactionModal";
+
+import BenchmarkCard from "@/components/features/BenchmarkCard";
 
 export default function HomePage() {
   const router = useRouter();
@@ -23,10 +24,11 @@ export default function HomePage() {
   const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]); // New State
+
+  const [benchmark, setBenchmark] = useState<any>(null); // New State
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
-  const [showAddTx, setShowAddTx] = useState(false);
 
   // Toast State
   const [toast, setToast] = useState<{
@@ -75,7 +77,7 @@ export default function HomePage() {
       }
 
       // 2. Fetch Fresh Data in Background
-      const [nw, ps, g, xirrData, history, ins] = await Promise.all([
+      const [nw, ps, g, xirrData, history, ins, bm] = await Promise.all([
         api.getNetWorth().catch((err) => {
           console.error("Net worth error:", err);
           return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -107,15 +109,18 @@ export default function HomePage() {
           console.error("Insights error:", err);
           return [];
         }),
+        api.getBenchmark().catch((err) => {
+          console.error("Benchmark error:", err);
+          return null;
+        }),
       ]);
 
-      console.log("Data loaded:", { nw, ps, g, xirrData });
+      console.log("Data loaded:", { nw, ps, g, xirrData, bm });
 
-      setNetWorth(nw);
-      setSummary({ ...ps, xirr: xirrData.xirr });
       setGoals(g.slice(0, 2));
       setPerfData(history);
       setInsights(ins);
+      setBenchmark(bm);
     } catch (err: any) {
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");
@@ -302,13 +307,6 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Smart Insights (Dismissible Banners) */}
-        {insights.length > 0 && (
-          <section className="mb-0">
-            <InsightsCard insights={insights} />
-          </section>
-        )}
-
         <div className="space-y-6">
           {/* Net Worth Card */}
           <section>
@@ -336,6 +334,8 @@ export default function HomePage() {
                 xirr={summary.xirr}
                 mfProfit={summary.mf_profit || 0}
                 stockProfit={summary.stock_profit || 0}
+                mfInvested={summary.mf_invested || 0}
+                stockInvested={summary.stock_invested || 0}
               />
             </section>
           )}
@@ -349,11 +349,21 @@ export default function HomePage() {
               stockInvested={summary?.stock_invested || 0}
             />
           </section>
-
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />
 
           {/* Goals Preview */}
+
+          {/* Benchmark Comparison */}
+          {benchmark && (
+            <section className="animate-fade-in">
+              <BenchmarkCard
+                portfolioXirr={summary?.xirr || 0}
+                benchmark={benchmark}
+              />
+            </section>
+          )}
+
           {/* Goals Preview */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">
