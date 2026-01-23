@@ -40,3 +40,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 todo.txt
+
+# Android PWA
+*.apk
+*.aab
+*.idsig
+android.keystore
+android-pwa/.gradle/
+android-pwa/build/
+android-pwa/app/build/
+android-pwa
+.gradle
