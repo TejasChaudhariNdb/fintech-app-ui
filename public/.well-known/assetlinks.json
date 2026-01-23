@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.arthavi.android",
+            "sha256_cert_fingerprints": [
+                "D2:64:63:53:FF:C4:54:96:F8:2E:5A:7B:A5:71:D9:D9:18:3E:E7:06:DF:52:78:F3:75:7D:0D:63:C6:E6:25:73"
+            ]
+        }
+    }
+]
