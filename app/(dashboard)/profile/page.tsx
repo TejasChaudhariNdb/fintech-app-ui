@@ -60,7 +60,7 @@ export default function ProfilePage() {
   });
   const showToast = (
     message: string,
-    type: "success" | "error" | "loading" | "info" = "info"
+    type: "success" | "error" | "loading" | "info" = "info",
   ) => {
     setToast({ message, type, isVisible: true });
     setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
@@ -228,7 +228,7 @@ export default function ProfilePage() {
       await api.resetPortfolio(type);
       showToast(
         `${type === "ALL" ? "Portfolio" : type} reset successfully`,
-        "success"
+        "success",
       );
       setShowResetModal(false);
       setTimeout(() => window.location.reload(), 1500);

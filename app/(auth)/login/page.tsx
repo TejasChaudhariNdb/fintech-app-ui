@@ -57,11 +57,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative">
-      {/* ... */}
-
-      <div className="glass-card rounded-3xl p-10 w-full max-w-md z-10 animate-slide-up">
-        <div className="text-center mb-10">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative transition-colors duration-300">
+      <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-8 lg:p-10 w-full max-w-md z-10 shadow-xl animate-slide-up">
+        <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <Image
               src="/icon-512x512.png"
@@ -71,10 +69,14 @@ export default function LoginPage() {
               className="rounded-2xl shadow-2xl shadow-primary-500/20"
             />
           </div>
-          <h1 className="text-3xl font-bold mb-3 text-white">Welcome Back</h1>
-          <p className="text-neutral-400">Sign in to manage your wealth</p>
+          <h1 className="text-3xl font-bold mb-2 text-neutral-900 dark:text-white transition-colors">
+            Welcome Back
+          </h1>
+          <p className="text-neutral-500 dark:text-neutral-400 transition-colors">
+            Sign in to manage your wealth
+          </p>
         </div>
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-5">
           <Input
             type="email"
             label="Email"
@@ -82,7 +84,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@example.com"
             required
-            className="bg-black/20"
+            className="bg-neutral-50 dark:bg-black/20"
           />
 
           <Input
@@ -92,20 +94,20 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
-            className="bg-black/20"
+            className="bg-neutral-50 dark:bg-black/20"
           />
 
-          <div className="flex justify-end -mt-4">
+          <div className="flex justify-end -mt-2">
             <button
               type="button"
               onClick={() => router.push("/forgot-password")}
-              className="text-sm text-primary-400 hover:text-primary-300 transition-colors font-medium">
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors font-medium">
               Forgot password?
             </button>
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center">
+            <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-center">
               <svg
                 className="w-4 h-4 mr-2 flex-shrink-0"
                 fill="none"
@@ -124,17 +126,26 @@ export default function LoginPage() {
           <Button
             type="submit"
             isLoading={loading}
-            className="w-full text-lg py-4"
+            className="w-full text-lg py-3.5"
             variant="primary">
             Sign In
           </Button>
 
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => router.push("/register")}
+              className="w-full py-3.5 px-4 rounded-xl border-2 border-primary-100 dark:border-primary-500/20 text-primary-600 dark:text-primary-400 font-semibold hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-all active:scale-[0.98]">
+              Create an Account
+            </button>
+          </div>
+
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-800"></div>
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-800 transition-colors"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#151a23] text-neutral-500">
+              <span className="px-3 bg-white dark:bg-[#151A23] text-neutral-500 transition-colors">
                 Or continue with
               </span>
             </div>
@@ -143,7 +154,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => handleGoogleLogin()}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-neutral-700 rounded-xl hover:bg-white/5 transition-colors text-white font-medium">
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-neutral-200 dark:border-neutral-700 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors text-neutral-700 dark:text-white font-medium bg-white dark:bg-transparent">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -165,15 +176,6 @@ export default function LoginPage() {
             Sign in with Google
           </button>
         </form>
-
-        <p className="text-center text-sm text-neutral-400 mt-8">
-          Don&apos;t have an account?{" "}
-          <button
-            onClick={() => router.push("/register")}
-            className="text-primary-400 font-semibold hover:text-primary-300 transition-colors">
-            Create account
-          </button>
-        </p>
       </div>
     </div>
   );
