@@ -17,7 +17,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     document.title = "Login - Arthavi";
-  }, []);
+    // Redirect if already logged in
+    if (localStorage.getItem("access_token")) {
+      router.replace("/");
+    }
+  }, [router]);
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -20,6 +20,12 @@ export default function ForgotPasswordPage() {
     type: "error",
     isVisible: false,
   });
+
+  useEffect(() => {
+    if (localStorage.getItem("access_token")) {
+      router.replace("/");
+    }
+  }, [router]);
 
   const showToast = (msg: string, type: "success" | "error" = "error") => {
     setToast({ message: msg, type, isVisible: true });

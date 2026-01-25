@@ -16,6 +16,13 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    // Redirect if already logged in
+    if (localStorage.getItem("access_token")) {
+      router.replace("/");
+    }
+  }, [router]);
+
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
