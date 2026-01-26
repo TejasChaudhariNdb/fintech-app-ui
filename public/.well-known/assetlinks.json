@@ -10,5 +10,17 @@
                 "D2:64:63:53:FF:C4:54:96:F8:2E:5A:7B:A5:71:D9:D9:18:3E:E7:06:DF:52:78:F3:75:7D:0D:63:C6:E6:25:73"
             ]
         }
+    },
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.arthavi.app.twa",
+            "sha256_cert_fingerprints": [
+                "F4:8A:62:17:F9:B4:AE:7A:F1:ED:68:74:01:14:D1:85:F8:00:8E:C0:85:2E:A7:64:F6:73:E9:33:AC:32:EB:DC"
+            ]
+        }
     }
 ]
