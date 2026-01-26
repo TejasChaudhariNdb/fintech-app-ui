@@ -90,7 +90,6 @@ export default function LoginPage() {
             required
             className="bg-neutral-50 dark:bg-black/20"
           />
-
           <Input
             type="password"
             label="Password"
@@ -100,7 +99,6 @@ export default function LoginPage() {
             required
             className="bg-neutral-50 dark:bg-black/20"
           />
-
           <div className="flex justify-end -mt-2">
             <button
               type="button"
@@ -109,7 +107,6 @@ export default function LoginPage() {
               Forgot password?
             </button>
           </div>
-
           {error && (
             <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-center">
               <svg
@@ -126,7 +123,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-
           <Button
             type="submit"
             isLoading={loading}
@@ -134,7 +130,6 @@ export default function LoginPage() {
             variant="primary">
             Sign In
           </Button>
-
           <div className="text-center pt-2">
             <button
               type="button"
@@ -143,7 +138,6 @@ export default function LoginPage() {
               Create an Account
             </button>
           </div>
-
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-neutral-200 dark:border-neutral-800 transition-colors"></div>
@@ -154,7 +148,6 @@ export default function LoginPage() {
               </span>
             </div>
           </div>
-
           <button
             type="button"
             onClick={() => handleGoogleLogin()}
@@ -178,6 +171,26 @@ export default function LoginPage() {
               />
             </svg>
             Sign in with Google
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/demo")}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3.5 border border-indigo-200 dark:border-indigo-500/30 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors text-indigo-700 dark:text-indigo-300 font-medium bg-indigo-50/50 dark:bg-transparent mt-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" />
+              <path d="M12 8h.01" />
+            </svg>
+            Try Demo Account
           </button>
         </form>
       </div>
