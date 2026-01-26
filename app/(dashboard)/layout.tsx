@@ -7,6 +7,8 @@ import BottomNav from "@/components/features/BottomNav";
 import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
 
+import DemoRibbon from "@/components/ui/DemoRibbon";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -83,7 +85,6 @@ export default function DashboardLayout({
       </div>
     );
   }
-
   return (
     <PrivacyProvider>
       <AppLock isEnabled={isLockEnabled} onUnlock={() => {}} />
@@ -91,6 +92,8 @@ export default function DashboardLayout({
         <SideNav />
         {/* Main content */}
         <main className="flex-1 pb-32 lg:pb-10 lg:pl-0 max-w-7xl mx-auto w-full">
+          <DemoRibbon />
+
           {/* Offline Banner */}
           {!isOnline && (
             <div className="bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium px-4 py-2 text-center border-b border-red-500/20 backdrop-blur-md sticky top-0 z-50">
