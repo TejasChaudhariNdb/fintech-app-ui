@@ -11,6 +11,29 @@ export const api = {
         : null;
 
     try {
+      const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+
+      // Intercept and block demo user actions
+      if (
+        token &&
+        typeof window !== "undefined" &&
+        ["POST", "PUT", "DELETE", "PATCH"].includes(options.method || "GET")
+      ) {
+        const userEmail = localStorage.getItem("user_email");
+        // Allowed endpoints for demo user
+        const allowedEndpoints = ["/auth/login", "/auth/logout"];
+
+        if (
+          userEmail &&
+          demoEmail &&
+          userEmail.toLowerCase() === demoEmail.toLowerCase() &&
+          !allowedEndpoints.some((ep) => endpoint.startsWith(ep))
+        ) {
+          alert("This feature is disabled for the demo account.");
+          return;
+        }
+      }
+
       const res = await fetch(`${API_URL}${endpoint}`, {
         ...options,
         headers: {

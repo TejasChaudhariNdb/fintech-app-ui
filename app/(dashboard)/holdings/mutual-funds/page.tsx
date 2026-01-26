@@ -27,13 +27,13 @@ export default function MutualFundsPage() {
   });
   const showToast = (
     message: string,
-    type: "success" | "error" | "loading" = "success"
+    type: "success" | "error" | "loading" = "success",
   ) => {
     setToast({ message, type, isVisible: true });
     if (type !== "loading") {
       setTimeout(
         () => setToast((prev) => ({ ...prev, isVisible: false })),
-        3000
+        3000,
       );
     }
   };
@@ -104,7 +104,7 @@ export default function MutualFundsPage() {
             onClick={() => {
               const totalCurrent = schemes.reduce(
                 (sum, s) => sum + s.current,
-                0
+                0,
               );
               const totalInvested = schemes.reduce((sum, s) => {
                 return sum + s.current / (1 + (s.return_pct || 0) / 100);
@@ -230,16 +230,16 @@ export default function MutualFundsPage() {
                 sortBy === "value"
                   ? "name"
                   : sortBy === "name"
-                  ? "profit"
-                  : "value"
+                    ? "profit"
+                    : "value",
               )
             }
             className="px-3 py-2 bg-neutral-100 dark:bg-white/5 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
             {sortBy === "value"
               ? "Value"
               : sortBy === "name"
-              ? "Name"
-              : "Profit"}
+                ? "Name"
+                : "Profit"}
             <ArrowUpDown size={14} />
           </button>
         </div>
