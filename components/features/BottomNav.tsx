@@ -1,7 +1,6 @@
 "use client";
-
-import React from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Home, Briefcase, Activity, Target, User } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
@@ -27,11 +26,11 @@ export default function BottomNav() {
 
           const Icon = tab.icon;
           return (
-            <button
+            <Link
               key={tab.id}
+              href={tab.id}
               onClick={() => {
                 light();
-                router.push(tab.id);
               }}
               className={`flex flex-col items-center gap-1.5 px-3 py-2 transition-all duration-300 min-w-[64px] rounded-2xl ${
                 isActive
@@ -50,7 +49,7 @@ export default function BottomNav() {
                 }`}>
                 {tab.label}
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>

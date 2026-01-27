@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Home,
   Briefcase,
@@ -63,9 +64,9 @@ export default function SideNav() {
 
           const Icon = tab.icon;
           return (
-            <button
+            <Link
               key={tab.id}
-              onClick={() => router.push(tab.id)}
+              href={tab.id}
               className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 text-sm font-medium ${
                 isActive
                   ? "bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-white"
@@ -78,7 +79,7 @@ export default function SideNav() {
                 }
               />
               {tab.label}
-            </button>
+            </Link>
           );
         })}
       </nav>
