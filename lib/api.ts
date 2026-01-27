@@ -283,4 +283,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
+
+  // AI
+  chatWithAI: (message: string) =>
+    api.fetch("/ai/chat", {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
 };

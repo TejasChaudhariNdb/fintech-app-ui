@@ -9,6 +9,8 @@ import { PrivacyProvider } from "@/context/PrivacyContext";
 
 import DemoRibbon from "@/components/ui/DemoRibbon";
 
+import ChatWidget from "@/components/features/AIChat/ChatWidget";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -103,11 +105,11 @@ export default function DashboardLayout({
           <div className="lg:px-8">{children}</div>
         </main>
 
-        {/* Mobile only bottom nav */}
         <div className="lg:hidden">
           <BottomNav />
         </div>
       </div>
+      <ChatWidget />
     </PrivacyProvider>
   );
 }
