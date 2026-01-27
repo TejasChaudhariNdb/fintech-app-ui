@@ -12,7 +12,7 @@ import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import { FileText, AlertTriangle, ArrowRight } from "lucide-react";
-import { useHaptic } from "@/lib/hooks/useHaptic";
+
 import InsightsCard from "@/components/features/InsightsCard";
 
 import BenchmarkCard from "@/components/features/BenchmarkCard";
@@ -181,64 +181,6 @@ export default function HomePage() {
     }
   };
 
-  // Pull to Refresh State
-  const [pullY, setPullY] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
-  const PULL_THRESHOLD = 120;
-  const { light } = useHaptic();
-
-  useEffect(() => {
-    let startY = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Only enable if at very top of page
-      if (window.scrollY === 0) {
-        startY = e.touches[0].clientY;
-        setIsPulling(true);
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isPulling) return;
-      const currentY = e.touches[0].clientY;
-      const diff = currentY - startY;
-
-      if (diff > 0 && window.scrollY === 0) {
-        // Resistance effect
-        setPullY(Math.min(diff * 0.4, PULL_THRESHOLD)); // Logarithmic resistance
-        // Prevent default scrolling if we are pulling to refresh
-        if (diff < PULL_THRESHOLD) {
-          // We generally want to allow nice scrolling, but for P2R strictly at top:
-        }
-      }
-    };
-
-    const handleTouchEnd = async () => {
-      if (!isPulling) return;
-
-      if (pullY >= PULL_THRESHOLD - 20) {
-        // Trigger Refresh
-        light();
-        showToast("Refreshing...", "loading");
-        await loadData();
-        showToast("Refreshed", "success");
-      }
-
-      setPullY(0);
-      setIsPulling(false);
-    };
-
-    window.addEventListener("touchstart", handleTouchStart);
-    window.addEventListener("touchmove", handleTouchMove);
-    window.addEventListener("touchend", handleTouchEnd);
-
-    return () => {
-      window.removeEventListener("touchstart", handleTouchStart);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("touchend", handleTouchEnd);
-    };
-  }, [isPulling, pullY]);
-
   if (loading) {
     return <AppSkeleton />;
   }
@@ -277,21 +219,7 @@ export default function HomePage() {
         onClose={() => setToast((prev) => ({ ...prev, show: false }))}
       />
 
-      <div
-        className="px-4 pt-8 pb-32 animate-fade-in relative transition-transform duration-200 ease-out"
-        style={{ transform: `translateY(${pullY}px)` }}>
-        {/* Pull Indicator */}
-        {pullY > 10 && (
-          <div className="absolute top-0 left-0 right-0 flex justify-center -mt-8">
-            <div
-              className={`p-2 rounded-full bg-white dark:bg-[#151A23] shadow-lg border border-neutral-200 dark:border-white/10 transition-all ${
-                pullY > PULL_THRESHOLD - 30 ? "rotate-180 scale-110" : ""
-              }`}>
-              <ArrowRight className="rotate-90 text-primary-500" size={20} />
-            </div>
-          </div>
-        )}
-
+      <div className="px-4 pt-8 pb-32 animate-fade-in relative">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white mb-2">

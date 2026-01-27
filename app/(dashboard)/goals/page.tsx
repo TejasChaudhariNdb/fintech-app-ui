@@ -7,6 +7,7 @@ import GoalCard from "@/components/features/GoalCard";
 import CreateGoalModal from "@/components/features/CreateGoalModal";
 import Button from "@/components/ui/Button";
 import { Plus, Target, RefreshCw } from "lucide-react";
+import AppSkeleton from "@/components/ui/AppSkeleton";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<any[]>([]);
@@ -71,9 +72,7 @@ export default function GoalsPage() {
 
       <div className="px-4">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="animate-spin text-neutral-400" />
-          </div>
+          <AppSkeleton />
         ) : goals.length > 0 ? (
           <>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
