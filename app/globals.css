@@ -111,6 +111,12 @@
   [contenteditable] {
     user-select: text;
   }
+
+  @media (max-width: 400px) {
+    html {
+      font-size: 14px;
+    }
+  }
 }
 
 @layer utilities {

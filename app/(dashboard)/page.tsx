@@ -294,7 +294,7 @@ export default function HomePage() {
 
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white mb-2">
             Welcome back
             <span className="text-primary-600 dark:text-primary-500">.</span>
           </h1>

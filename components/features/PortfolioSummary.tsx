@@ -38,7 +38,7 @@ export default function PortfolioSummary({
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
-      <h3 className="text-lg font-semibold mb-6 text-neutral-900 dark:text-white">
+      <h3 className="text-base sm:text-lg font-semibold mb-6 text-neutral-900 dark:text-white">
         Portfolio Summary
       </h3>
 

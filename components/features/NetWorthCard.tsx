@@ -61,14 +61,14 @@ export default function NetWorthCard({
             </button>
           )}
         </div>
-        <div className="flex items-baseline gap-2 mb-1">
-          <h1 className="text-4xl font-bold tracking-tight">
+        <div className="flex flex-wrap items-baseline gap-2 mb-1">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
             <PrivacyMask blurStrength="md">
               ₹{netWorth.toLocaleString("en-IN")}
             </PrivacyMask>
           </h1>
           <div
-            className={`px-2 py-0.5 rounded-lg text-sm font-medium flex items-center ${
+            className={`px-2 py-0.5 rounded-lg text-xs sm:text-sm font-medium flex items-center ${
               isPositive
                 ? "bg-emerald-500/20 text-emerald-100"
                 : "bg-red-500/20 text-red-100"
@@ -81,17 +81,17 @@ export default function NetWorthCard({
         </p>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/5">
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/5">
             <p className="text-xs font-medium text-primary-100 mb-1">
               Mutual Funds
             </p>
-            <p className="text-lg font-semibold tracking-wide">
+            <p className="text-base sm:text-lg font-semibold tracking-wide truncate">
               <PrivacyMask>₹{mfValue.toLocaleString("en-IN")}</PrivacyMask>
             </p>
           </div>
-          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 border border-white/5">
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/5">
             <p className="text-xs font-medium text-primary-100 mb-1">Stocks</p>
-            <p className="text-lg font-semibold tracking-wide">
+            <p className="text-base sm:text-lg font-semibold tracking-wide truncate">
               <PrivacyMask>₹{stockValue.toLocaleString("en-IN")}</PrivacyMask>
             </p>
           </div>
