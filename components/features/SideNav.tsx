@@ -58,7 +58,9 @@ export default function SideNav() {
 
       <nav className="space-y-1">
         {tabs.map((tab) => {
-          const isActive = pathname === tab.id;
+          const isActive =
+            tab.id === "/" ? pathname === "/" : pathname.startsWith(tab.id);
+
           const Icon = tab.icon;
           return (
             <button
