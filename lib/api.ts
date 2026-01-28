@@ -285,9 +285,15 @@ export const api = {
     }),
 
   // AI
-  chatWithAI: (message: string) =>
+  // AI
+  getSessions: () => api.fetch("/ai/sessions"),
+  createSession: () => api.fetch("/ai/sessions", { method: "POST" }),
+  getSessionMessages: (sessionId: number) =>
+    api.fetch(`/ai/sessions/${sessionId}/messages`),
+
+  chatWithAI: (message: string, sessionId?: number) =>
     api.fetch("/ai/chat", {
       method: "POST",
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, session_id: sessionId }),
     }),
 };
