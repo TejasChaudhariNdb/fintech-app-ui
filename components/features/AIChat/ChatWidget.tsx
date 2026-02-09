@@ -11,9 +11,11 @@ import {
   Plus,
   ChevronLeft,
   MessageSquare,
+  Phone,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import ChatMessage from "./ChatMessage";
+import ContactSupportModal from "../ContactSupportModal";
 
 interface Message {
   role: "user" | "assistant";
@@ -32,7 +34,7 @@ export default function ChatWidget() {
     {
       role: "assistant",
       content:
-        "Hello! I'm Arthavi AI. Ask questions about your portfolio and investing concepts.",
+        "Hello! I'm Arthavi AI. Ask questions about your portfolio and investing concepts. for any human help contact/whatsapp +91 9158110065",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
@@ -44,6 +46,7 @@ export default function ChatWidget() {
     undefined,
   );
   const [showHistory, setShowHistory] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -89,7 +92,7 @@ export default function ChatWidget() {
       {
         role: "assistant",
         content:
-          "Hello! I'm Arthavi AI. Ask questions about your portfolio and investing concepts.",
+          "Hello! I'm Arthavi AI. Ask questions about your portfolio and investing concepts.for any human help contact/whatsapp +91 9158110065",
       },
     ]);
     setCurrentSessionId(undefined);
@@ -195,6 +198,13 @@ export default function ChatWidget() {
                 <Plus size={20} />
               </button>
             )}
+            <button
+              onClick={() => setShowContactModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full text-neutral-500 dark:text-neutral-400 transition-colors text-xs font-medium"
+              title="Contact Support">
+              <Phone size={14} />
+              <span>Support</span>
+            </button>
             <button
               onClick={() => setIsOpen(false)}
               className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-full text-neutral-500 dark:text-neutral-400 transition-colors">
@@ -337,6 +347,11 @@ export default function ChatWidget() {
           </>
         )}
       </button>
+
+      <ContactSupportModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
     </div>
   );
 }

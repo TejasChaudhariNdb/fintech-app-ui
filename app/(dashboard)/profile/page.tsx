@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
+import ContactSupportModal from "@/components/features/ContactSupportModal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import {
@@ -23,6 +24,7 @@ import {
   ShieldCheck,
   Download,
   Lock,
+  MessageCircle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -39,6 +41,7 @@ export default function ProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [appLockEnabled, setAppLockEnabled] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Profile State
@@ -365,6 +368,24 @@ export default function ProfilePage() {
             </button>
           </div>
 
+          {/* Contact Support */}
+          <button
+            onClick={() => setShowContactModal(true)}
+            className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                <MessageCircle size={20} />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold dark:text-white">Contact Support</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  Get help or share feedback
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="text-neutral-400" size={20} />
+          </button>
+
           <button
             onClick={() => setShowUploadModal(true)}
             className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
@@ -587,6 +608,12 @@ export default function ProfilePage() {
           </div>
         </form>
       </Modal>
+
+      {/* Contact Support Modal */}
+      <ContactSupportModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
 
       {/* Upload Modal */}
       <Modal
