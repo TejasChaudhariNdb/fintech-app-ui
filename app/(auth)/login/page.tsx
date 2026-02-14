@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useGoogleLogin } from "@react-oauth/google";
 import { api } from "@/lib/api";
@@ -10,18 +10,27 @@ import Button from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Check for impersonation token from admin dashboard
+    const impersonateToken = searchParams.get("impersonate_token");
+    if (impersonateToken) {
+      localStorage.setItem("access_token", impersonateToken);
+      router.replace("/");
+      return;
+    }
+
     document.title = "Login - Arthavi";
     // Redirect if already logged in
     if (localStorage.getItem("access_token")) {
       router.replace("/");
     }
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
