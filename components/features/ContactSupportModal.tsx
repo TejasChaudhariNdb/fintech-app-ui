@@ -20,7 +20,7 @@ export default function ContactSupportModal({
 
         {/* Email */}
         <a
-          href="mailto:tejaschaudhari038@gmail.com"
+          href="mailto:arthaviapp@gmail.com"
           className="flex items-center gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
           <div className="p-3 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-full">
             <Mail size={20} />
@@ -30,7 +30,7 @@ export default function ContactSupportModal({
               Email Us
             </p>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 break-all">
-              tejaschaudhari038@gmail.com
+              arthaviapp@gmail.com
             </p>
           </div>
         </a>

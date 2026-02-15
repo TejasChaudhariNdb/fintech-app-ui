@@ -204,15 +204,24 @@ export default function OnboardingWizard() {
                 </a>
               </li>
               <li>
-                Select <strong>&quot;Detailed&quot;</strong> statement type.
+                Select <strong>&quot;Detailed&quot;</strong>{" "}
+                <span className="font-medium">
+                  (Includes transaction listing)
+                </span>{" "}
+                statement type.
               </li>
               <li>
                 Select <strong>&quot;Specific Period&quot;</strong> (e.g., from
-                Jan 2000 to Today) to get your full history.
+                Jan 2000 to Today).
               </li>
               <li>Enter your email formatted password.</li>
               <li>
                 Download the PDF you receive in your email and upload it here.
+              </li>
+              <li className="text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/10 p-2 rounded-lg border border-red-100 dark:border-red-500/20">
+                IMPORTANT: Do NOT upload the &quot;Summary&quot; statement. Only
+                the &quot;Detailed&quot; statement has the data needed for
+                analysis.
               </li>
             </ol>
           </div>

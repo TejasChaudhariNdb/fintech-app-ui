@@ -20,6 +20,7 @@ import {
   Upload,
   FileUp,
   Share2,
+  Download,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -422,9 +423,25 @@ export default function StocksPage() {
         {manualStocks.length === 0 && !isLoading && (
           <div className="text-center py-10 text-neutral-500 space-y-4">
             <p>No stocks added yet.</p>
-            <Button onClick={() => setShowStockModal(true)}>
-              Add your first stock
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("MANUAL");
+                }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add your first stock
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("IMPORT");
+                }}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Upload Stock Excel Sheet
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -542,12 +559,21 @@ export default function StocksPage() {
           </form>
         ) : (
           <form onSubmit={handleImportStocks} className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
-              <p className="font-semibold mb-1">Upload Instructions:</p>
-              <p>
-                Supports <b>holdings</b> (Current Snapshot) CSV from
-                Zerodha/Kite.
-              </p>
+            <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 leading-relaxed flex justify-between items-center">
+              <div>
+                <p className="font-semibold mb-1">Upload Instructions:</p>
+                <p>
+                  Supports <b>holdings</b> (Current Snapshot) CSV from
+                  Zerodha/Kite.
+                </p>
+              </div>
+              <a
+                href="/assets/stock_upload_sheet.csv"
+                download="stock_upload_sheet.csv"
+                className="flex items-center gap-1 text-xs font-semibold bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-500/30 px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors shrink-0">
+                <Download size={14} />
+                Sample CSV
+              </a>
             </div>
 
             <div className="border-2 border-dashed border-neutral-300 dark:border-white/20 rounded-xl p-8 flex flex-col items-center justify-center bg-neutral-50 dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer relative">

@@ -34,7 +34,7 @@ export default function ChatWidget() {
     {
       role: "assistant",
       content:
-        "Hello! I'm Arthavi AI. Ask questions about your portfolio and investing concepts. for any human help contact/whatsapp +91 9158110065",
+        "Hello! I'm Arthavi AI. Ask questions about your portfolio and investing concepts. for any human click on support button",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
