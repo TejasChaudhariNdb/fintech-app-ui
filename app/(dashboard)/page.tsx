@@ -11,7 +11,7 @@ import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
-import { FileText, AlertTriangle, ArrowRight } from "lucide-react";
+import { FileText, AlertTriangle, ArrowRight, Gift } from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
 
@@ -24,6 +24,7 @@ export default function HomePage() {
   const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]); // New State
+  const [userProfile, setUserProfile] = useState<any>(null); // New State
 
   const [benchmark, setBenchmark] = useState<any>(null); // New State
   const [loading, setLoading] = useState(true);
@@ -77,7 +78,7 @@ export default function HomePage() {
       }
 
       // 2. Fetch Fresh Data in Background
-      const [nw, ps, g, xirrData, history, ins, bm] = await Promise.all([
+      const [nw, ps, g, xirrData, history, ins, bm, up] = await Promise.all([
         api.getNetWorth().catch((err) => {
           console.error("Net worth error:", err);
           return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -113,6 +114,10 @@ export default function HomePage() {
           console.error("Benchmark error:", err);
           return null;
         }),
+        api.getUserProfile().catch((err) => {
+          console.error("Profile error:", err);
+          return null;
+        }),
       ]);
 
       console.log("Data loaded:", { nw, ps, g, xirrData, bm });
@@ -121,6 +126,7 @@ export default function HomePage() {
       setPerfData(history);
       setInsights(ins);
       setBenchmark(bm);
+      if (up) setUserProfile(up);
     } catch (err: any) {
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");
@@ -206,7 +212,7 @@ export default function HomePage() {
 
   // ✅ UX: Onboarding for New Users (Empty State)
   if (summary && summary.invested === 0) {
-    return <OnboardingWizard />;
+    return <OnboardingWizard userProfile={userProfile} />;
   }
 
   return (
@@ -248,7 +254,6 @@ export default function HomePage() {
               lastUpdated={netWorth?.last_updated}
             />
           </section>
-
           {/* Portfolio Summary */}
           {summary && (
             <section>
@@ -267,7 +272,6 @@ export default function HomePage() {
               />
             </section>
           )}
-
           {/* Performance Chart */}
           <section>
             <PerformanceChart
@@ -277,12 +281,9 @@ export default function HomePage() {
               stockInvested={summary?.stock_invested || 0}
             />
           </section>
-
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />
-
           {/* Goals Preview */}
-
           {/* Benchmark Comparison */}
           {benchmark && (
             <section className="animate-fade-in">
@@ -292,7 +293,6 @@ export default function HomePage() {
               />
             </section>
           )}
-
           {/* Goals Preview */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">
@@ -342,19 +342,54 @@ export default function HomePage() {
             )}
           </section>
 
+          {/* Growth Banner: Refer & Earn (Only if not premium) */}
+          {userProfile && !userProfile.is_ai_unlocked && (
+            <div
+              className="mb-8 bg-linear-to-r from-indigo-600 to-purple-600 rounded-xl p-4 text-white flex items-center justify-between shadow-lg shadow-indigo-500/20 animate-fade-in relative overflow-hidden group cursor-pointer"
+              onClick={() => router.push("/profile")}>
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <Gift className="text-yellow-300 animate-bounce" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-sm sm:text-base">
+                    Get Unlimited AI Chats
+                  </p>
+                  <p className="text-xs sm:text-sm text-indigo-100">
+                    Invite a friend & unlock premium features instantly.
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white/20 p-2 rounded-full group-hover:bg-white/30 transition-colors">
+                <ArrowRight className="text-white" size={20} />
+              </div>
+              {/* Glossy effect */}
+              <div className="absolute top-0 right-0 -mr-10 -mt-10 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700" />
+            </div>
+          )}
+
           {/* Quick Actions */}
           <section className="space-y-4">
             <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
               Quick Actions
             </h3>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => router.push("/profile")}
                 className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-200">
                 <FileText className="h-8 w-8 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform" />
-                <span className="font-medium text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-300">
-                  Upload CAS for Mutual Funds
+                <span className="font-medium text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-300 text-center text-sm">
+                  Upload CAS
+                </span>
+              </button>
+
+              <button
+                onClick={() => router.push("/profile")}
+                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-200">
+                <Gift className="h-8 w-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-neutral-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 text-center text-sm">
+                  Refer & Earn
                 </span>
               </button>
             </div>

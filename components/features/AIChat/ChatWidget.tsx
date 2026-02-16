@@ -124,12 +124,25 @@ export default function ChatWidget() {
       }
     } catch (err) {
       console.error(err);
+      let errorMessage =
+        "Sorry, I'm having trouble connecting right now. Please try again later.";
+
+      if (err instanceof Error && err.message.includes("403")) {
+        errorMessage =
+          "You have reached your free chat limit 🔒. Refer a friend in Profile to unlock unlimited access!";
+      } else if (
+        err instanceof Error &&
+        err.message.includes("Free chat limit reached")
+      ) {
+        errorMessage =
+          "You have reached your free chat limit 🔒. Refer a friend in Profile to unlock unlimited access!";
+      }
+
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content:
-            "Sorry, I'm having trouble connecting right now. Please try again later.",
+          content: errorMessage,
         },
       ]);
     } finally {

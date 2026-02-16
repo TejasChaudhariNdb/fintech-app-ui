@@ -284,6 +284,11 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  applyReferralCode: (code: string) =>
+    api.fetch(`/users/referral/apply?code=${code}`, {
+      method: "POST",
+    }),
+
   // AI
   // AI
   getSessions: () => api.fetch("/ai/sessions"),

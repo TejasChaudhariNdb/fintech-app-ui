@@ -25,6 +25,9 @@ import {
   Download,
   Lock,
   MessageCircle,
+  Copy,
+  Gift,
+  CheckCircle,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -50,7 +53,16 @@ export default function ProfilePage() {
     full_name: "",
     phone_number: "",
     pan_card: "",
+    referral_code: "",
+    referral_count: 0,
+    ai_chats_used: 0,
+    is_ai_unlocked: false,
+    feature_flags: {} as Record<string, boolean>,
+    referred_by: "",
   });
+  const [referralInput, setReferralInput] = useState("");
+  const [referralError, setReferralError] = useState("");
+  const [isApplyingReferral, setIsApplyingReferral] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [originalProfile, setOriginalProfile] = useState<any>(null); // For cancel
@@ -96,6 +108,12 @@ export default function ProfilePage() {
         full_name: data.full_name || "",
         phone_number: data.phone_number || "",
         pan_card: data.pan_card || "",
+        referral_code: data.referral_code || "",
+        referral_count: data.referral_count || 0,
+        ai_chats_used: data.ai_chats_used || 0,
+        feature_flags: data.feature_flags || {},
+        is_ai_unlocked: data.feature_flags?.ai_unlocked || false,
+        referred_by: data.referred_by || "",
       });
       setOriginalProfile(data);
     } catch (err) {
@@ -130,6 +148,12 @@ export default function ProfilePage() {
         full_name: originalProfile.full_name || "",
         phone_number: originalProfile.phone_number || "",
         pan_card: originalProfile.pan_card || "",
+        referral_code: originalProfile.referral_code || "",
+        referral_count: originalProfile.referral_count || 0,
+        ai_chats_used: originalProfile.ai_chats_used || 0,
+        feature_flags: originalProfile.feature_flags || {},
+        is_ai_unlocked: originalProfile.feature_flags?.ai_unlocked || false,
+        referred_by: originalProfile.referred_by || "",
       });
     }
     setShowProfileModal(false);
@@ -187,10 +211,61 @@ export default function ProfilePage() {
     }
   };
 
+  const handleApplyReferral = async () => {
+    if (!referralInput.trim()) return;
+    setIsApplyingReferral(true);
+    setReferralError("");
+    try {
+      const res = await api.applyReferralCode(referralInput.trim());
+      if (res.status === "already_applied") {
+        setReferralError("You have already applied a referral code.");
+        showToast("You have already applied a referral code.", "info");
+      } else {
+        showToast(
+          "Referral code applied! Premium features unlocked.",
+          "success",
+        );
+        loadUserProfile(); // Refresh to show unlocked status
+        setReferralInput("");
+      }
+    } catch (err: any) {
+      let msg = err.message || "Invalid referral code";
+      try {
+        // Try to parse JSON error if it comes as stringified JSON
+        if (msg.startsWith("{")) {
+          const parsed = JSON.parse(msg);
+          msg = parsed.detail || msg;
+        }
+      } catch (e) {
+        // ignore parse error
+      }
+      setReferralError(msg);
+      showToast(msg, "error");
+    } finally {
+      setIsApplyingReferral(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showToast("Copied to clipboard!", "success");
+  };
+
   const handleLogout = () => {
     showToast("Logging out...", "loading");
+    // Clear Auth
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_email");
+
+    // Clear Dashboard Cache (to prevent showing old data on next login)
+    localStorage.removeItem("net-worth");
+    localStorage.removeItem("portfolio-summary");
+    localStorage.removeItem("goals");
+    localStorage.removeItem("portfolio-history");
+    localStorage.removeItem("xirr");
+    localStorage.removeItem("insights");
+    // Also clear app lock setting just in case? Or keep it? Keeping it is usually better UX.
+
     setTimeout(() => router.push("/login"), 500);
   };
 
@@ -244,21 +319,32 @@ export default function ProfilePage() {
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-900 dark:to-[#0B0E14] border-b border-white/5 px-4 pt-12 pb-8 transition-colors duration-300">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-white/20 dark:bg-primary-500/20 flex items-center justify-center text-3xl border border-white/30 dark:border-primary-500/30 backdrop-blur-sm">
-            <User className="text-white dark:text-primary-400 h-8 w-8" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-white/20 dark:bg-primary-500/20 flex items-center justify-center text-3xl border border-white/30 dark:border-primary-500/30 backdrop-blur-sm shrink-0">
+              <User className="text-white dark:text-primary-400 h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-white text-xl font-bold">Profile</h1>
+              <p className="text-white/80 dark:text-neutral-400 text-sm mt-1">
+                {userProfile.email || "Loading..."}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-white text-xl font-bold">Profile</h1>
-            <p className="text-white/80 dark:text-neutral-400 text-sm mt-1">
-              {userProfile.email || "Loading..."}
-            </p>
-          </div>
+          <button
+            onClick={() =>
+              document
+                .getElementById("refer-earn-section")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-colors text-xs font-medium text-white backdrop-blur-sm shrink-0">
+            <Gift size={14} className="text-yellow-300" />
+            Refer & Earn
+          </button>
         </div>
       </div>
 
       <div className="px-4 -mt-4 space-y-6">
-        {/* Actions Group */}
         <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm">
           {/* Personal Details Button */}
           <button
@@ -470,15 +556,101 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Refer & Earn Card */}
+        <div
+          id="refer-earn-section"
+          className="bg-linear-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-800 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-xl animate-pulse" />
+          <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-black/10 rounded-full blur-xl" />
+
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Gift className="text-yellow-300" size={20} />
+                <h2 className="text-lg font-bold">Refer & Earn</h2>
+              </div>
+              {userProfile.is_ai_unlocked ? (
+                <div className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 border border-white/30">
+                  <Unlock size={10} /> Premium Unlocked
+                </div>
+              ) : (
+                <div className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-semibold border border-white/30">
+                  {5 - userProfile.ai_chats_used} Free Chats Left
+                </div>
+              )}
+            </div>
+
+            <p className="text-indigo-100 text-xs mb-4 max-w-sm leading-relaxed">
+              Invite friends to Arthavi. Get unlimited AI chats and unlock
+              upcoming premium features for both of you!
+            </p>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] text-indigo-200 uppercase font-semibold mb-1 tracking-wider">
+                  Your Code
+                </p>
+                <code className="text-xl font-mono font-bold tracking-wider">
+                  {userProfile.referral_code || "..."}
+                </code>
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  onClick={() => copyToClipboard(userProfile.referral_code)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors active:scale-95 bg-white/10">
+                  <Copy size={16} />
+                </button>
+                <div className="text-[10px] text-indigo-200 flex items-center gap-1">
+                  <User size={10} />
+                  <span>{userProfile.referral_count} referred</span>
+                </div>
+              </div>
+            </div>
+
+            {!userProfile.referred_by && !userProfile.is_ai_unlocked && (
+              <div className="flex flex-col gap-1">
+                <div className="bg-black/20 rounded-xl p-1 flex items-center">
+                  <input
+                    type="text"
+                    value={referralInput}
+                    onChange={(e) => {
+                      setReferralInput(e.target.value);
+                      setReferralError("");
+                    }}
+                    placeholder="Enter friend's code"
+                    className="bg-transparent border-none text-white placeholder:text-white/40 text-xs focus:ring-0 w-full px-3 py-1.5"
+                  />
+                  <button
+                    onClick={handleApplyReferral}
+                    disabled={isApplyingReferral || !referralInput.trim()}
+                    className="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50 transition-colors shrink-0">
+                    {isApplyingReferral ? "..." : "Apply"}
+                  </button>
+                </div>
+                {referralError && (
+                  <p className="text-[10px] text-red-300 px-2 font-medium bg-red-500/10 rounded-md py-0.5">
+                    {referralError}
+                  </p>
+                )}
+              </div>
+            )}
+            {userProfile.referred_by && (
+              <div className="text-[10px] text-indigo-200 flex items-center gap-1 mt-2">
+                <CheckCircle size={10} className="text-green-400" />
+                Referred by {userProfile.referred_by}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* App Info */}
         <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
           <h3 className="font-semibold mb-3 dark:text-white">About</h3>
           <div className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-            <p>Version 1.2.1</p>
+            <p>Version 1.2.2</p>
             <p>Made with ❤️ for Indian investors</p>
           </div>
         </div>
-
         {/* Logout */}
         <Button
           onClick={handleLogout}

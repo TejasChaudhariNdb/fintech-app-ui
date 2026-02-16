@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ExternalLink,
   ArrowRight,
+  Gift,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -20,7 +21,13 @@ import Input from "../ui/Input";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
-export default function OnboardingWizard() {
+interface OnboardingWizardProps {
+  userProfile?: any;
+}
+
+export default function OnboardingWizard({
+  userProfile,
+}: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(1); // 1: Intro, 2: Upload
   const [file, setFile] = useState<File | null>(null);
@@ -76,6 +83,32 @@ export default function OnboardingWizard() {
               today.
             </p>
           </div>
+
+          {/* Referral Banner (Growth) */}
+          {userProfile && !userProfile.is_ai_unlocked && (
+            <div className="max-w-xl mx-auto mb-10">
+              <button
+                onClick={() => router.push("/profile")}
+                className="w-full bg-linear-to-r from-indigo-600 to-purple-600 rounded-2xl p-4 text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center justify-between gap-4 group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <Gift size={20} className="text-yellow-300" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm">
+                      No holdings yet? Invite friends!
+                    </p>
+                    <p className="text-xs text-indigo-100">
+                      Unlock unlimited AI insights while you set up.
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white/20 p-2 rounded-full group-hover:bg-white/30 transition-colors">
+                  <ArrowRight size={16} />
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* Main Actions */}
           <div className="grid md:grid-cols-2 gap-5 max-w-4xl mx-auto mb-16">
