@@ -24,19 +24,27 @@ const useFcmToken = () => {
           setPermission(permission);
 
           if (permission === "granted") {
-            // Dynamic SW Registration
-            const swUrl = `/firebase-messaging-sw.js?apiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`;
+            // Dynamic SW Registration with Versioning to force update
+            const swUrl = `/firebase-messaging-sw.js?v=2&apiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`;
 
             const registration = await navigator.serviceWorker.register(swUrl);
+            // console.log("Service Worker registered:", registration);
 
             // 2. Get Token
+            const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+            if (!vapidKey) {
+              console.error("VAPID Key is missing from env vars!");
+              return;
+            }
+            // console.log("Using VAPID Key:", vapidKey);
+
             const currentToken = await getToken(messaging, {
-              vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+              vapidKey: vapidKey,
               serviceWorkerRegistration: registration,
             });
 
             if (currentToken) {
-              console.log("FCM Token:", currentToken);
+              // console.log("FCM Token:", currentToken);
               setToken(currentToken);
 
               // 3. Send to Backend

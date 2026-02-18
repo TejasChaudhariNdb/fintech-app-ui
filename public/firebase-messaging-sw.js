@@ -7,11 +7,21 @@ importScripts(
 // Initialize the Firebase app in the service worker by reading URL parameters
 const params = new URLSearchParams(self.location.search);
 
+// const firebaseConfig = {
+//   apiKey: params.get("apiKey"),
+//   projectId: params.get("projectId"),
+//   messagingSenderId: params.get("messagingSenderId"),
+//   appId: params.get("appId"),
+// };
+
 const firebaseConfig = {
-  apiKey: params.get("apiKey"),
-  projectId: params.get("projectId"),
-  messagingSenderId: params.get("messagingSenderId"),
-  appId: params.get("appId"),
+  apiKey: "AIzaSyB8B2WUXl1HzbYEo-QNtVmcQfZrfSXLRMI",
+  authDomain: "arthavi.firebaseapp.com",
+  projectId: "arthavi",
+  storageBucket: "arthavi.firebasestorage.app",
+  messagingSenderId: "677391855620",
+  appId: "1:677391855620:web:b9baa1a0b7ca7c6392c551",
+  measurementId: "G-SNVL4L7EN7",
 };
 
 if (
