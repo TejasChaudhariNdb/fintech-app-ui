@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useGoogleLogin } from "@react-oauth/google";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -12,7 +13,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -44,11 +44,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
     if (password.length < 6) {
       setError("Password must be at least 6 characters");
       return;
@@ -69,58 +64,65 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative">
-      {/* ... */}
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative transition-colors duration-300">
+      {/* Background Decor */}
+      <div className="absolute top-[-10%] right-[-5%] w-96 h-96 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-10%] left-[-5%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="glass-card rounded-3xl p-10 w-full max-w-md z-10 animate-slide-up">
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-6">
+      <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 rounded-3xl p-8 lg:p-10 w-full max-w-md z-10 shadow-xl shadow-neutral-200/50 dark:shadow-none animate-slide-up backdrop-blur-xl">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-6 relative group">
+            <div className="absolute inset-0 bg-primary-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-300 opacity-50" />
             <Image
               src="/icon-512x512.png"
               alt="Arthavi Logo"
-              width={80}
-              height={80}
-              className="rounded-2xl shadow-2xl shadow-primary-500/20"
+              width={72}
+              height={72}
+              className="rounded-2xl relative shadow-lg"
             />
           </div>
-          <h1 className="text-3xl font-bold mb-3 text-white">Get Started</h1>
-          <p className="text-neutral-400">Join thousands of smart investors</p>
+          <h1 className="text-3xl font-bold mb-2 text-neutral-900 dark:text-white tracking-tight">
+            Create Account
+          </h1>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm">
+            Join thousands of smart investors tracking their wealth
+          </p>
         </div>
+
         <form onSubmit={handleRegister} className="space-y-5">
           <Input
             type="email"
-            label="Email"
+            label="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@example.com"
             required
-            className="bg-black/20"
+            leftIcon={<Mail className="w-5 h-5" />}
+            className="bg-neutral-50 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40"
           />
 
-          <Input
-            type="password"
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            className="bg-black/20"
-          />
-
-          <Input
-            type="password"
-            label="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            className="bg-black/20"
-          />
+          <div className="space-y-1">
+            <Input
+              type="password"
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a strong password"
+              required
+              leftIcon={<Lock className="w-5 h-5" />}
+              className="bg-neutral-50 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40"
+            />
+            {password && password.length < 6 && (
+              <p className="text-xs text-amber-500 flex items-center gap-1 ml-1">
+                Must be at least 6 characters
+              </p>
+            )}
+          </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-sm flex items-center">
+            <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-start gap-2 animate-shake">
               <svg
-                className="w-4 h-4 mr-2 flex-shrink-0"
+                className="w-5 h-5 shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24">
@@ -130,24 +132,25 @@ export default function RegisterPage() {
                   strokeWidth="2"
                   d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              {error}
+              <span>{error}</span>
             </div>
           )}
 
           <Button
             type="submit"
             isLoading={loading}
-            className="w-full text-lg py-4"
+            className="w-full text-lg py-3.5 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all duration-300"
             variant="primary">
-            Create Account
+            Create account
+            {!loading && <ArrowRight className="w-5 h-5 ml-2 inline-block" />}
           </Button>
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-800"></div>
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#151a23] text-neutral-500">
+              <span className="px-3 bg-white dark:bg-[#151A23] text-neutral-500">
                 Or continue with
               </span>
             </div>
@@ -156,8 +159,10 @@ export default function RegisterPage() {
           <button
             type="button"
             onClick={() => handleGoogleLogin()}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-neutral-700 rounded-xl hover:bg-white/5 transition-colors text-white font-medium">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            className="w-full flex items-center justify-center gap-3 px-4 py-3.5 border border-neutral-200 dark:border-neutral-700 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/5 transition-all duration-200 text-neutral-700 dark:text-white font-medium bg-white dark:bg-transparent group">
+            <svg
+              className="w-5 h-5 group-hover:scale-110 transition-transform duration-200"
+              viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -177,35 +182,14 @@ export default function RegisterPage() {
             </svg>
             Sign up with Google
           </button>
-
-          <button
-            type="button"
-            onClick={() => router.push("/demo")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-indigo-500/30 rounded-xl hover:bg-indigo-500/10 transition-colors text-indigo-300 font-medium bg-transparent mt-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4" />
-              <path d="M12 8h.01" />
-            </svg>
-            Try Demo Account
-          </button>
         </form>
 
-        <p className="text-center text-sm text-neutral-400 mt-8">
+        <p className="text-center text-sm text-neutral-500 dark:text-neutral-400 mt-8">
           Already have an account?{" "}
           <button
             onClick={() => router.push("/login")}
-            className="text-primary-400 font-semibold hover:text-primary-300 transition-colors">
-            Sign in
+            className="text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
+            Login
           </button>
         </p>
       </div>
