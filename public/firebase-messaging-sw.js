@@ -4,16 +4,7 @@ importScripts(
   "https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js",
 );
 
-// Initialize the Firebase app in the service worker by reading URL parameters
-const params = new URLSearchParams(self.location.search);
-
-// const firebaseConfig = {
-//   apiKey: params.get("apiKey"),
-//   projectId: params.get("projectId"),
-//   messagingSenderId: params.get("messagingSenderId"),
-//   appId: params.get("appId"),
-// };
-
+// Hardcoded Firebase Config for Reliability
 const firebaseConfig = {
   apiKey: "AIzaSyB8B2WUXl1HzbYEo-QNtVmcQfZrfSXLRMI",
   authDomain: "arthavi.firebaseapp.com",
@@ -24,43 +15,36 @@ const firebaseConfig = {
   measurementId: "G-SNVL4L7EN7",
 };
 
-if (
-  firebaseConfig.apiKey &&
-  firebaseConfig.projectId &&
-  firebaseConfig.messagingSenderId &&
-  firebaseConfig.appId
-) {
-  firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
 
-  // Retrieve an instance of Firebase Messaging so that it can handle background
-  // messages.
-  const messaging = firebase.messaging();
+// Retrieve an instance of Firebase Messaging so that it can handle background
+// messages.
+const messaging = firebase.messaging();
 
-  messaging.onBackgroundMessage((payload) => {
-    console.log(
-      "[firebase-messaging-sw.js] Received background message ",
-      payload,
-    );
-    // Customize notification here
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-      body: payload.notification.body,
-      icon: "/icon-192x192.png", // Use existing icon
-      data: payload.data,
-    };
+messaging.onBackgroundMessage((payload) => {
+  console.log(
+    "[firebase-messaging-sw.js] Received background message ",
+    payload,
+  );
+  // Customize notification here
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: "/icon-192x192.png", // Use existing icon
+    data: payload.data,
+  };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
-} else {
-  console.warn("Firebase Config missing in Service Worker URL parameters.");
-}
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
 
 self.addEventListener("notificationclick", function (event) {
   console.log("[firebase-messaging-sw.js] Notification click Received.", event);
   event.notification.close();
 
   // Add custom click handling, e.g., open a URL
-  const urlToOpen = event.notification.data?.url || "/"; // Default to root
+  // You can send a data payload with { "url": "/portfolio" } to open a specific page
+  const urlToOpen = event.notification.data?.url || "/";
 
   event.waitUntil(
     clients
