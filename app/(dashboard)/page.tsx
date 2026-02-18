@@ -122,6 +122,11 @@ export default function HomePage() {
 
       console.log("Data loaded:", { nw, ps, g, xirrData, bm });
 
+      setNetWorth(nw);
+      setSummary({
+        ...ps,
+        xirr: xirrData?.xirr || 0,
+      });
       setGoals(g.slice(0, 2));
       setPerfData(history);
       setInsights(ins);
