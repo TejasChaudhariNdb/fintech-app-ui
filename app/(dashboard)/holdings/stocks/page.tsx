@@ -244,6 +244,22 @@ export default function StocksPage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={async () => {
+              showToast("Refreshing prices...", "loading");
+              try {
+                await api.refreshStockPrices();
+                await new Promise((r) => setTimeout(r, 2000)); // Wait for background task
+                await loadData();
+                showToast("Prices refreshed", "success");
+              } catch (e) {
+                showToast("Refresh failed", "error");
+              }
+            }}
+            className="p-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors aspect-square flex items-center justify-center"
+            title="Refresh Prices">
+            <Loader2 size={20} className={isLoading ? "animate-spin" : ""} />
+          </button>
+          <button
             onClick={() => {
               setShowStockModal(true);
               setStockModalTab("IMPORT");
@@ -358,7 +374,16 @@ export default function StocksPage() {
               <div className="text-right">
                 <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1">
                   <PrivacyMask>
-                    ₹{Math.round(stock.value || 0).toLocaleString()}
+                    {stock.value > 0 ? (
+                      `₹${Math.round(stock.value).toLocaleString()}`
+                    ) : stock.quantity > 0 ? (
+                      <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                        <Loader2 size={12} className="animate-spin" />
+                        Updating...
+                      </span>
+                    ) : (
+                      "₹0"
+                    )}
                   </PrivacyMask>
                 </div>
                 <div className="text-xs text-neutral-500 font-medium">
@@ -392,7 +417,13 @@ export default function StocksPage() {
               <div className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
                 LTP:{" "}
                 <span className="text-neutral-900 dark:text-white">
-                  ₹{stock.current_price}
+                  {stock.current_price > 0 ? (
+                    `₹${stock.current_price}`
+                  ) : (
+                    <span className="text-xs text-neutral-400">
+                      Fetching...
+                    </span>
+                  )}
                 </span>
               </div>
             </div>

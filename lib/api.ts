@@ -224,21 +224,24 @@ export const api = {
     }),
 
   // CAS Upload
-  uploadCAS: (file: File, password: string) => {
+  uploadCAS: async (file: File, password: string) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("password", password);
     const token = localStorage.getItem("access_token");
-    return fetch(`${API_URL}/cas/upload`, {
+    const r = await fetch(`${API_URL}/cas/upload`, {
       method: "POST",
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: formData,
-    }).then((r) => {
-      if (!r.ok) throw new Error("Upload failed");
-      return r.json();
     });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Upload failed");
+    }
+    return r.json();
   },
   searchStocks: (query: string) => api.fetch(`/equity/search?q=${query}`, {}),
 
@@ -254,21 +257,24 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  importTrades: (file: File, broker: string) => {
+  importTrades: async (file: File, broker: string) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("broker", broker);
     const token = localStorage.getItem("access_token");
-    return fetch(`${API_URL}/equity/import`, {
+    const r = await fetch(`${API_URL}/equity/import`, {
       method: "POST",
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: formData,
-    }).then((r) => {
-      if (!r.ok) throw new Error("Import failed");
-      return r.json();
     });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Import failed" }));
+      throw new Error(err.detail || "Import failed");
+    }
+    return r.json();
   },
 
   // User Profile
