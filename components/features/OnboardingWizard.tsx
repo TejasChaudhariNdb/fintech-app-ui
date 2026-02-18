@@ -14,6 +14,7 @@ import {
   ExternalLink,
   ArrowRight,
   Gift,
+  Plus,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -23,13 +24,17 @@ import { useRouter } from "next/navigation";
 
 interface OnboardingWizardProps {
   userProfile?: any;
+  initialStep?: number;
+  onAddTransactionClick?: () => void;
 }
 
 export default function OnboardingWizard({
   userProfile,
+  initialStep = 1,
+  onAddTransactionClick,
 }: OnboardingWizardProps) {
   const router = useRouter();
-  const [step, setStep] = useState(1); // 1: Intro, 2: Upload
+  const [step, setStep] = useState(initialStep); // 1: Intro, 2: Upload
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -259,11 +264,21 @@ export default function OnboardingWizard({
             </ol>
           </div>
 
-          <button
-            onClick={() => setStep(1)}
-            className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline">
-            Back to Intro
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setStep(1)}
+              className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline">
+              Back to Intro
+            </button>
+
+            {onAddTransactionClick && (
+              <button
+                onClick={onAddTransactionClick}
+                className="text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 bg-primary-50 dark:bg-primary-500/10 px-3 py-2 rounded-lg transition-colors">
+                <Plus size={16} /> Add Manually
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Upload Column */}

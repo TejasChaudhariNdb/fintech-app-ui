@@ -245,6 +245,9 @@ export const api = {
   },
   searchStocks: (query: string) => api.fetch(`/equity/search?q=${query}`, {}),
 
+  searchMutualFunds: (query: string) =>
+    api.fetch(`/portfolio/search?q=${query}`),
+
   getStockQuote: (symbol: string) =>
     api.fetch(`/equity/quote?symbol=${symbol}`, {}),
 

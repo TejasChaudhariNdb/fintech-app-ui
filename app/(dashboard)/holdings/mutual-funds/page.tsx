@@ -13,6 +13,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
 
+import OnboardingWizard from "@/components/features/OnboardingWizard";
+
 const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 export default function MutualFundsPage() {
@@ -83,6 +85,25 @@ export default function MutualFundsPage() {
 
   if (isLoading) {
     return <AppSkeleton />;
+  }
+
+  if (schemes.length === 0) {
+    return (
+      <>
+        <OnboardingWizard
+          initialStep={2}
+          onAddTransactionClick={() => setShowAddTx(true)}
+        />
+        <AddTransactionModal
+          isOpen={showAddTx}
+          onClose={() => setShowAddTx(false)}
+          onSuccess={() => {
+            loadData();
+            showToast("Transaction added successfully", "success");
+          }}
+        />
+      </>
+    );
   }
 
   return (
