@@ -2,6 +2,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import GoogleAnalytics from "@/components/services/GoogleAnalytics";
 import { Suspense } from "react";
+import FcmManager from "@/components/FcmManager";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -57,6 +58,7 @@ export default function RootLayout({
             />
           </Suspense>
         )}
+        <FcmManager />
       </body>
     </html>
   );

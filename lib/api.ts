@@ -333,4 +333,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message, session_id: sessionId }),
     }),
+
+  updateFcmToken: (token: string) =>
+    api.fetch("/users/me/fcm-token", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
 };

@@ -1,5 +1,6 @@
 {
     "name": "Arthavi",
+    "gcm_sender_id": "103953800507",
     "short_name": "Arthavi",
     "start_url": "/",
     "display": "standalone",
