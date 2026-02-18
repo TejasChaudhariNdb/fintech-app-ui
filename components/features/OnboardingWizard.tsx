@@ -26,12 +26,14 @@ interface OnboardingWizardProps {
   userProfile?: any;
   initialStep?: number;
   onAddTransactionClick?: () => void;
+  onClose?: () => void;
 }
 
 export default function OnboardingWizard({
   userProfile,
   initialStep = 1,
   onAddTransactionClick,
+  onClose,
 }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(initialStep); // 1: Intro, 2: Upload
@@ -265,11 +267,19 @@ export default function OnboardingWizard({
           </div>
 
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => setStep(1)}
-              className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline">
-              Back to Intro
-            </button>
+            {onClose ? (
+              <button
+                onClick={onClose}
+                className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline">
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={() => setStep(1)}
+                className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline">
+                Back to Intro
+              </button>
+            )}
 
             {onAddTransactionClick && (
               <button

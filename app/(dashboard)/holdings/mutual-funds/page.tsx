@@ -8,12 +8,13 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, ArrowUpDown, Plus, Share2 } from "lucide-react";
+import { Search, ArrowUpDown, Plus, Share2, UploadCloud } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
 
 import OnboardingWizard from "@/components/features/OnboardingWizard";
+import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
 
 const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
 
@@ -43,6 +44,7 @@ export default function MutualFundsPage() {
   // Data State
   const [schemes, setSchemes] = useState<any[]>([]);
   const [amcAllocation, setAmcAllocation] = useState<any[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +53,9 @@ export default function MutualFundsPage() {
 
   // Share Modal State
   const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
+
+  // Onboarding State
+  const [showImportWizard, setShowImportWizard] = useState(false);
 
   const loadData = async () => {
     try {
@@ -61,6 +66,7 @@ export default function MutualFundsPage() {
       ]);
       setSchemes(schemesRes);
       setAmcAllocation(amcRes);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
       showToast("Failed to load mutual funds", "error");
@@ -87,18 +93,33 @@ export default function MutualFundsPage() {
     return <AppSkeleton />;
   }
 
-  if (schemes.length === 0) {
+  if (schemes.length === 0 && !isLoading) {
+    if (showImportWizard) {
+      return (
+        <OnboardingWizard
+          initialStep={2} // specific step for upload
+          onAddTransactionClick={() => {
+            setShowImportWizard(false);
+            setShowAddTx(true);
+          }}
+          onClose={() => setShowImportWizard(false)}
+        />
+      );
+    }
+
     return (
       <>
-        <OnboardingWizard
-          initialStep={2}
-          onAddTransactionClick={() => setShowAddTx(true)}
+        <MutualFundsZeroState
+          onImportClick={() => setShowImportWizard(true)}
+          onManualClick={() => setShowAddTx(true)}
         />
         <AddTransactionModal
           isOpen={showAddTx}
           onClose={() => setShowAddTx(false)}
           onSuccess={() => {
             loadData();
+            // If success, we likely have data now, so the parent re-render
+            // will show the main dashboard instead of zero state.
             showToast("Transaction added successfully", "success");
           }}
         />
@@ -118,9 +139,20 @@ export default function MutualFundsPage() {
       {/* AMC Allocation Chart */}
       <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
-            AMC Allocation
-          </h3>
+          <div className="flex flex-col">
+            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
+              AMC Allocation
+              {lastUpdated && (
+                <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                  Updated{" "}
+                  {lastUpdated.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+            </h3>
+          </div>
           <button
             onClick={() => {
               const totalCurrent = schemes.reduce(
@@ -221,13 +253,23 @@ export default function MutualFundsPage() {
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
             All Schemes ({schemes.length})
           </h3>
-          <button
-            onClick={() => {
-              setShowAddTx(true);
-            }}
-            className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-            <Plus size={16} /> Add Transaction
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setShowImportWizard(true);
+              }}
+              className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+              <UploadCloud size={16} />{" "}
+              <span className="hidden sm:inline">Import CAS</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowAddTx(true);
+              }}
+              className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium flex items-center gap-1 transition-colors shadow-lg shadow-primary-500/20">
+              <Plus size={16} /> Add Funds
+            </button>
+          </div>
         </div>
 
         {/* Search and Filter */}

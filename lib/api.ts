@@ -199,11 +199,20 @@ export const api = {
   // Schemesy: "portfolio-history" }),
   getInsights: () => api.fetch("/portfolio/insights", { cacheKey: "insights" }),
 
-  addManualTransaction: (data: any) =>
-    api.fetch("/portfolio/transactions/manual", {
+  addManualTransaction: async (data: any) => {
+    const res = await api.fetch("/portfolio/transactions/manual", {
       method: "POST",
       body: JSON.stringify(data),
-    }),
+    });
+    api.clearCache([
+      "portfolio-summary",
+      "schemes",
+      "amc-allocation",
+      "xirr",
+      "insights",
+    ]);
+    return res;
+  },
 
   // Goals
   // Goals
@@ -241,6 +250,13 @@ export const api = {
       const err = await r.json().catch(() => ({ detail: "Upload failed" }));
       throw new Error(err.detail || "Upload failed");
     }
+    api.clearCache([
+      "portfolio-summary",
+      "schemes",
+      "amc-allocation",
+      "xirr",
+      "insights",
+    ]);
     return r.json();
   },
   searchStocks: (query: string) => api.fetch(`/equity/search?q=${query}`, {}),
@@ -304,6 +320,13 @@ export const api = {
   createSession: () => api.fetch("/ai/sessions", { method: "POST" }),
   getSessionMessages: (sessionId: number) =>
     api.fetch(`/ai/sessions/${sessionId}/messages`),
+
+  // Utilities
+  clearCache: (keys: string[]) => {
+    if (typeof window !== "undefined") {
+      keys.forEach((key) => localStorage.removeItem(key));
+    }
+  },
 
   chatWithAI: (message: string, sessionId?: number) =>
     api.fetch("/ai/chat", {
