@@ -349,4 +349,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ token }),
     }),
+
+  submitFeedback: (data: { type: string; title: string; body?: string }) =>
+    api.fetch("/feedback/submit", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
