@@ -10,6 +10,7 @@ import {
   Clock,
   Plus,
   ChevronLeft,
+  ChevronDown,
   MessageSquare,
   Phone,
 } from "lucide-react";
@@ -47,6 +48,7 @@ export default function ChatWidget() {
   );
   const [showHistory, setShowHistory] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [disclaimerExpanded, setDisclaimerExpanded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -329,9 +331,30 @@ export default function ChatWidget() {
                 <Send size={16} />
               </button>
             </div>
-            <p className="text-neutral-400 text-[10px] text-center mt-2">
-              Values are generated based on your portfolio data.
-            </p>
+            <div className="mt-2 px-1">
+              <button
+                type="button"
+                onClick={() => setDisclaimerExpanded((v) => !v)}
+                className="w-full flex items-center gap-1 text-neutral-400 hover:text-neutral-500 transition-colors">
+                <span className="text-[10px] truncate flex-1 text-left">
+                  ⚠️ AI suggestions are for informational purposes only — not
+                  SEBI-registered advice.
+                </span>
+                <ChevronDown
+                  size={12}
+                  className={`shrink-0 transition-transform duration-200 ${disclaimerExpanded ? "rotate-180" : ""}`}
+                />
+              </button>
+              {disclaimerExpanded && (
+                <p className="text-neutral-400 text-[10px] leading-relaxed mt-1">
+                  AI-generated content is for informational purposes only and
+                  does not constitute SEBI-registered investment advice. Past
+                  performance is not indicative of future results. Please do
+                  your own research and consult a certified financial advisor
+                  before making any investment decisions.
+                </p>
+              )}
+            </div>
           </form>
         )}
       </div>
