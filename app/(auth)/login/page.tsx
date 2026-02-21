@@ -3,8 +3,15 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { useGoogleLogin } from "@react-oauth/google";
-import { Mail, Lock, ArrowRight, LayoutDashboard } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  ArrowRight,
+  LayoutDashboard,
+  Sparkles,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -18,16 +25,13 @@ function LoginForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Check for impersonation token from admin dashboard
     const impersonateToken = searchParams.get("impersonate_token");
     if (impersonateToken) {
       localStorage.setItem("access_token", impersonateToken);
       router.replace("/");
       return;
     }
-
     document.title = "Login - Arthavi";
-    // Redirect if already logged in
     if (localStorage.getItem("access_token")) {
       router.replace("/");
     }
@@ -54,7 +58,6 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
       const data = await api.login(email, password);
       localStorage.setItem("access_token", data.access_token);
@@ -68,10 +71,34 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative transition-colors duration-300">
+    <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex flex-col items-center justify-center p-4 overflow-hidden relative transition-colors duration-300">
       {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-5%] w-96 h-96 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* New User CTA Banner — high visibility */}
+      <div className="w-full max-w-md mb-4 z-10">
+        <Link
+          href="/register"
+          className="flex items-center justify-between gap-3 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-primary-500/20 to-indigo-500/20 border border-primary-500/30 hover:from-primary-500/30 hover:to-indigo-500/30 transition-all duration-200 group">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary-500/20 p-1.5 rounded-lg">
+              <Sparkles className="w-4 h-4 text-primary-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-neutral-800 dark:text-white">
+                New to Arthavi?
+              </p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Create your free account in 10 seconds
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-bold text-primary-600 dark:text-primary-400 group-hover:translate-x-1 transition-transform duration-200 whitespace-nowrap flex items-center gap-1">
+            Sign Up Free <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+        </Link>
+      </div>
 
       <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 rounded-3xl p-8 lg:p-10 w-full max-w-md z-10 shadow-xl shadow-neutral-200/50 dark:shadow-none animate-slide-up backdrop-blur-xl">
         <div className="text-center mb-8">
@@ -136,7 +163,8 @@ function LoginForm() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
               <span>{error}</span>
             </div>
@@ -151,9 +179,9 @@ function LoginForm() {
             {!loading && <ArrowRight className="w-5 h-5 ml-2 inline-block" />}
           </Button>
 
-          <div className="relative my-6">
+          <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-200 dark:border-neutral-800"></div>
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-800" />
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="px-3 bg-white dark:bg-[#151A23] text-neutral-500">
@@ -192,21 +220,22 @@ function LoginForm() {
           <button
             type="button"
             onClick={() => router.push("/demo")}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3.5 border border-indigo-200 dark:border-indigo-500/30 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors text-indigo-700 dark:text-indigo-300 font-medium bg-indigo-50/50 dark:bg-transparent mt-3 group">
+            className="w-full flex items-center justify-center gap-2 px-4 py-3.5 border border-indigo-200 dark:border-indigo-500/30 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors text-indigo-700 dark:text-indigo-300 font-medium bg-indigo-50/50 dark:bg-transparent group">
             <LayoutDashboard className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
             Try Demo Account
           </button>
         </form>
-
-        <p className="text-center text-sm text-neutral-500 dark:text-neutral-400 mt-8">
-          Don&apos;t have an account?{" "}
-          <button
-            onClick={() => router.push("/register")}
-            className="text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
-            Create Account
-          </button>
-        </p>
       </div>
+
+      {/* Bottom CTA — secondary fallback */}
+      <p className="text-center text-sm text-neutral-500 dark:text-neutral-400 mt-5 z-10">
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/register"
+          className="text-primary-600 dark:text-primary-400 font-bold hover:text-primary-700 dark:hover:text-primary-300 transition-colors underline underline-offset-2">
+          Create one free →
+        </Link>
+      </p>
     </div>
   );
 }
