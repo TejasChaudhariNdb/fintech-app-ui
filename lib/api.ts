@@ -156,6 +156,16 @@ export const api = {
   getSchemes: () => api.fetch("/portfolio/schemes", { cacheKey: "schemes" }),
   getSchemeDetail: (id: number) =>
     api.fetch(`/portfolio/schemes/${id}`, { cacheKey: `scheme-${id}` }),
+  updateScheme: (
+    id: number,
+    data: { units: number; invested_amount: number },
+  ) =>
+    api.fetch(`/portfolio/schemes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteScheme: (id: number) =>
+    api.fetch(`/portfolio/schemes/${id}`, { method: "DELETE" }),
   getAMCAllocation: () =>
     api.fetch("/portfolio/amc-allocation", { cacheKey: "amc-allocation" }),
   getTransactions: (skip = 0, limit = 50) =>

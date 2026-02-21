@@ -12,6 +12,9 @@ import { Search, ArrowUpDown, Plus, Share2, UploadCloud } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import Input from "@/components/ui/Input";
+import Button from "@/components/ui/Button";
 
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
@@ -57,6 +60,10 @@ export default function MutualFundsPage() {
   // Onboarding State
   const [showImportWizard, setShowImportWizard] = useState(false);
 
+  // Edit Scheme State
+  const [editingScheme, setEditingScheme] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -78,6 +85,36 @@ export default function MutualFundsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleDeleteScheme = async (schemeId: number) => {
+    if (!confirm("Are you sure you want to delete this mutual fund?")) return;
+    try {
+      showToast("Deleting scheme...", "loading");
+      await api.deleteScheme(schemeId);
+      await loadData();
+      showToast("Mutual fund deleted successfully", "success");
+    } catch (err) {
+      showToast("Failed to delete mutual fund", "error");
+    }
+  };
+
+  const handleUpdateScheme = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingScheme) return;
+    try {
+      showToast("Updating scheme...", "loading");
+      await api.updateScheme(editingScheme.scheme_id, {
+        units: Number(editingScheme.units),
+        invested_amount: Number(editingScheme.invested),
+      });
+      await loadData();
+      setIsEditModalOpen(false);
+      setEditingScheme(null);
+      showToast("Mutual fund updated successfully", "success");
+    } catch (err: any) {
+      showToast("Failed to update mutual fund", "error");
+    }
+  };
 
   const totalMFValue = schemes.reduce((sum, s) => sum + s.current, 0);
 
@@ -316,6 +353,7 @@ export default function MutualFundsPage() {
                 scheme={scheme.scheme}
                 amc={scheme.amc}
                 nav={scheme.nav}
+                units={scheme.units}
                 current={scheme.current}
                 returnPct={scheme.return_pct}
                 onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
@@ -326,6 +364,11 @@ export default function MutualFundsPage() {
                     value: scheme.current,
                   })
                 }
+                onEdit={() => {
+                  setEditingScheme({ ...scheme });
+                  setIsEditModalOpen(true);
+                }}
+                onDelete={() => handleDeleteScheme(scheme.scheme_id)}
               />
             ))
           ) : (
@@ -350,6 +393,55 @@ export default function MutualFundsPage() {
           showToast("Transaction added successfully", "success");
         }}
       />
+
+      {/* Edit Scheme Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingScheme(null);
+        }}
+        title="Edit Mutual Fund Holding">
+        <form onSubmit={handleUpdateScheme} className="space-y-4">
+          <Input
+            label="Scheme"
+            value={editingScheme?.scheme || ""}
+            disabled
+            className="bg-neutral-100 dark:bg-white/5 opacity-70"
+          />
+          <Input
+            label="Units"
+            type="number"
+            step="0.0001"
+            value={
+              editingScheme?.units !== undefined ? editingScheme.units : ""
+            }
+            onChange={(e) =>
+              setEditingScheme({ ...editingScheme, units: e.target.value })
+            }
+            required
+            autoComplete="off"
+          />
+          <Input
+            label="Total Invested Amount (₹)"
+            type="number"
+            step="0.01"
+            value={
+              editingScheme?.invested !== undefined
+                ? editingScheme.invested
+                : ""
+            }
+            onChange={(e) =>
+              setEditingScheme({ ...editingScheme, invested: e.target.value })
+            }
+            required
+            autoComplete="off"
+          />
+          <Button type="submit" className="w-full">
+            Update Mutual Fund
+          </Button>
+        </form>
+      </Modal>
     </div>
   );
 }

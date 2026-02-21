@@ -1,6 +1,6 @@
 "use client";
 
-import { Share2 } from "lucide-react";
+import { Share2, Pencil, Trash2 } from "lucide-react";
 import Card from "../ui/Card";
 import PrivacyMask from "../ui/PrivacyMask";
 
@@ -9,20 +9,26 @@ interface SchemeCardProps {
   scheme: string;
   amc: string;
   nav: number; // New Prop
+  units?: number;
   current: number;
   returnPct: number;
   onClick?: () => void;
   onShare?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export default function SchemeCard({
   scheme,
   amc,
   nav,
+  units,
   current,
   returnPct,
   onClick,
   onShare,
+  onEdit,
+  onDelete,
 }: SchemeCardProps) {
   const isPositive = returnPct >= 0;
 
@@ -47,6 +53,11 @@ export default function SchemeCard({
                 maximumFractionDigits: 4,
               })}
             </span>
+            {units !== undefined && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400 font-medium tracking-tight whitespace-nowrap">
+                {units.toFixed(2)} Units
+              </span>
+            )}
           </div>
         </div>
 
@@ -76,6 +87,31 @@ export default function SchemeCard({
           title="Share Performance">
           <Share2 size={16} />
         </button>
+      )}
+
+      {(onEdit || onDelete) && (
+        <div className="pt-3 mt-4 border-t border-neutral-100 dark:border-white/5 flex gap-5 opacity-80 hover:opacity-100 transition-opacity">
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-primary-500 transition-colors">
+              <Pencil size={14} /> Edit
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-red-500 transition-colors">
+              <Trash2 size={14} /> Delete
+            </button>
+          )}
+        </div>
       )}
     </Card>
   );
