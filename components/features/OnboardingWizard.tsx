@@ -338,9 +338,6 @@ export default function OnboardingWizard({
                   className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
-                <p className="text-[10px] text-neutral-400 mt-1 ml-1">
-                  Usually your PAN number (uppercase) or Date of Birth.
-                </p>
               </div>
 
               <Button
