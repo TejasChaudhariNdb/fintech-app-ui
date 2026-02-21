@@ -10,6 +10,7 @@ import { PrivacyProvider } from "@/context/PrivacyContext";
 import DemoRibbon from "@/components/ui/DemoRibbon";
 
 import ChatWidget from "@/components/features/AIChat/ChatWidget";
+import FcmManager from "@/components/FcmManager";
 
 export default function DashboardLayout({
   children,
@@ -110,6 +111,7 @@ export default function DashboardLayout({
         </div>
       </div>
       <ChatWidget />
+      <FcmManager />
     </PrivacyProvider>
   );
 }
