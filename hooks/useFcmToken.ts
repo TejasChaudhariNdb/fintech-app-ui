@@ -12,7 +12,11 @@ const useFcmToken = () => {
 
   const retrieveToken = async () => {
     try {
-      if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      if (
+        typeof window !== "undefined" &&
+        "serviceWorker" in navigator &&
+        "Notification" in window
+      ) {
         const messaging = getMessaging(app);
 
         // 1. Request Permission (this will prompt the user if not decided yet)
@@ -59,7 +63,7 @@ const useFcmToken = () => {
   };
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && "Notification" in window) {
       setPermission(Notification.permission);
 
       // If permission is already granted, retrieve the token silently

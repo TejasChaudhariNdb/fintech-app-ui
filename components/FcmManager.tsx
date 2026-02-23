@@ -33,10 +33,12 @@ const FcmManager = () => {
         // Background messages are handled by firebase-messaging-sw.js
         if (payload.notification) {
           const { title, body } = payload.notification;
-          new Notification(title || "New Message", {
-            body,
-            icon: "/icon-192x192.png",
-          });
+          if ("Notification" in window) {
+            new Notification(title || "New Message", {
+              body,
+              icon: "/icon-192x192.png",
+            });
+          }
         }
       });
 
