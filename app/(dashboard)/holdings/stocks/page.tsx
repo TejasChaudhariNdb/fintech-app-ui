@@ -232,7 +232,7 @@ export default function StocksPage() {
       />
 
       {/* Manual Stocks Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
             My Stocks
@@ -242,7 +242,7 @@ export default function StocksPage() {
             <PrivacyMask>₹{stockStats.current.toLocaleString()}</PrivacyMask>
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full sm:w-auto gap-2">
           <button
             onClick={async () => {
               showToast("Refreshing prices...", "loading");
@@ -264,17 +264,20 @@ export default function StocksPage() {
               setShowStockModal(true);
               setStockModalTab("IMPORT");
             }}
-            className="p-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors aspect-square flex items-center justify-center"
+            className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-1"
             title="Import Stocks">
-            <FileUp size={20} />
+            <FileUp size={16} />
+            Import CSV
           </button>
           <button
             onClick={() => {
               setShowStockModal(true);
               setStockModalTab("MANUAL");
             }}
-            className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-            <Plus size={16} /> Add Transaction
+            className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+            <Plus size={16} />
+            <span className="sm:hidden">Add Stock Txn</span>
+            <span className="hidden sm:inline">Add Stock Transaction</span>
           </button>
         </div>
       </div>
@@ -461,7 +464,7 @@ export default function StocksPage() {
                   setStockModalTab("MANUAL");
                 }}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add your first stock
+                Add Stock Transaction
               </Button>
               <Button
                 variant="secondary"
@@ -470,7 +473,7 @@ export default function StocksPage() {
                   setStockModalTab("IMPORT");
                 }}>
                 <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Upload Stock Excel Sheet
+                Import Holdings CSV
               </Button>
             </div>
           </div>
@@ -492,7 +495,7 @@ export default function StocksPage() {
                 ? "border-primary-500 text-primary-600 dark:text-primary-400"
                 : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
             }`}>
-            Manual Entry
+            Enter Manually
           </button>
           <button
             onClick={() => setStockModalTab("IMPORT")}
@@ -507,6 +510,33 @@ export default function StocksPage() {
 
         {stockModalTab === "MANUAL" ? (
           <form onSubmit={handleAddStock} className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 bg-neutral-100 dark:bg-white/5 p-1 rounded-lg">
+              <button
+                type="button"
+                onClick={() =>
+                  setStockForm({ ...stockForm, transaction_type: "BUY" })
+                }
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  stockForm.transaction_type === "BUY"
+                    ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                }`}>
+                Buy
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setStockForm({ ...stockForm, transaction_type: "SELL" })
+                }
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  stockForm.transaction_type === "SELL"
+                    ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                }`}>
+                Sell
+              </button>
+            </div>
+
             <div className="relative">
               <Input
                 label="Stock Symbol"
@@ -565,7 +595,7 @@ export default function StocksPage() {
                 required
               />
               <Input
-                label="Buy Price"
+                label={stockForm.transaction_type === "SELL" ? "Sell Price" : "Buy Price"}
                 type="number"
                 value={stockForm.price}
                 onChange={(e) =>
@@ -585,7 +615,9 @@ export default function StocksPage() {
               required
             />
             <Button type="submit" className="w-full">
-              Add Transaction
+              {stockForm.transaction_type === "SELL"
+                ? "Add Sell Transaction"
+                : "Add Buy Transaction"}
             </Button>
           </form>
         ) : (

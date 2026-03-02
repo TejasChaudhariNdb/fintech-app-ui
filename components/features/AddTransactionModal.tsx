@@ -116,7 +116,10 @@ export default function AddTransactionModal({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Add Mutual Fund Transaction">
       <form onSubmit={handleManualSubmit} className="space-y-4">
         {/* Transaction Type Toggle */}
         <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl mb-6">
@@ -148,7 +151,7 @@ export default function AddTransactionModal({
         <div>
           <div className="flex justify-between items-center mb-1.5 ml-1">
             <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              Select Asset
+              Select Mutual Fund
             </label>
             <button
               type="button"
@@ -168,7 +171,7 @@ export default function AddTransactionModal({
               }
               required={mode === "EXISTING"}
               className="w-full px-4 py-3 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500/20 appearance-none">
-              <option value="">Select a scheme/stock</option>
+              <option value="">Select a mutual fund scheme</option>
               {schemes.map((s) => (
                 <option key={s.scheme_id} value={s.scheme_id}>
                   {s.scheme}
@@ -276,7 +279,7 @@ export default function AddTransactionModal({
           className="w-full py-4 text-base"
           variant="primary">
           <Check className="w-5 h-5 mr-2" />
-          Save Transaction
+          Add Mutual Fund Transaction
         </Button>
       </form>
     </Modal>

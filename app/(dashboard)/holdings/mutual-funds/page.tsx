@@ -286,25 +286,27 @@ export default function MutualFundsPage() {
 
       {/* Schemes List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
             All Schemes ({schemes.length})
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center gap-2">
             <button
               onClick={() => {
                 setShowImportWizard(true);
               }}
-              className="px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-              <UploadCloud size={16} />{" "}
-              <span className="hidden sm:inline">Import CAS</span>
+              className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+              <UploadCloud size={16} />
+              <span>Import CAS</span>
             </button>
             <button
               onClick={() => {
                 setShowAddTx(true);
               }}
-              className="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium flex items-center gap-1 transition-colors shadow-lg shadow-primary-500/20">
-              <Plus size={16} /> Add Funds
+              className="flex-1 sm:flex-none px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition-colors shadow-lg shadow-primary-500/20">
+              <Plus size={16} />
+              <span className="sm:hidden">Add MF Txn</span>
+              <span className="hidden sm:inline">Add MF Transaction</span>
             </button>
           </div>
         </div>
