@@ -46,7 +46,12 @@ export default function ChatWidget() {
   const [inputValue, setInputValue] = useState("");
   const [isResponding, setIsResponding] = useState(false);
   const [isLoadingSession, setIsLoadingSession] = useState(false);
-  const [loadingStageIndex, setLoadingStageIndex] = useState(0);
+  const [liveLoadingStage, setLiveLoadingStage] = useState<{
+    stage: string;
+    title: string;
+    subtitle: string;
+  } | null>(null);
+  const [streamingText, setStreamingText] = useState("");
 
   // Session State
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -58,25 +63,6 @@ export default function ChatWidget() {
   const [disclaimerExpanded, setDisclaimerExpanded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const aiLoadingStages = [
-    {
-      title: "Understanding your question",
-      subtitle: "Interpreting your goal and context",
-    },
-    {
-      title: "Reviewing your portfolio context",
-      subtitle: "Matching available data with your query",
-    },
-    {
-      title: "Checking market context (if needed)",
-      subtitle: "Looking for supporting signals",
-    },
-    {
-      title: "Drafting your response",
-      subtitle: "Building a clear, useful answer",
-    },
-  ];
-
   useEffect(() => {
     if (isOpen) {
       loadSessions();
@@ -88,21 +74,6 @@ export default function ChatWidget() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, isOpen, showHistory]);
-
-  useEffect(() => {
-    if (!isResponding) {
-      setLoadingStageIndex(0);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setLoadingStageIndex((prev) =>
-        Math.min(prev + 1, aiLoadingStages.length - 1),
-      );
-    }, 1700);
-
-    return () => clearInterval(interval);
-  }, [isResponding, aiLoadingStages.length]);
 
   const loadSessions = async () => {
     try {
@@ -152,13 +123,42 @@ export default function ChatWidget() {
     setInputValue("");
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
     setIsResponding(true);
+    setLiveLoadingStage(null);
+    setStreamingText("");
 
     try {
-      const res = await api.chatWithAI(userMsg, currentSessionId);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: res.response },
-      ]);
+      let res;
+      let usedFallback = false;
+      try {
+        res = await api.chatWithAIStream(userMsg, currentSessionId, {
+          onStatus: (status) => {
+            setLiveLoadingStage({
+              stage: status.stage,
+              title: status.title,
+              subtitle: status.subtitle,
+            });
+          },
+          onToken: (tokenText) =>
+            setStreamingText((prev) => prev + (tokenText || "")),
+        });
+      } catch (streamErr) {
+        usedFallback = true;
+        console.warn(
+          "AI stream failed. Falling back to normal response.",
+          streamErr,
+        );
+        res = await api.chatWithAI(userMsg, currentSessionId);
+        setStreamingText("");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: res.response },
+        ]);
+      }
+
+      if (!usedFallback) {
+        setMessages((prev) => [...prev, { role: "assistant", content: res.response }]);
+        setStreamingText("");
+      }
 
       if (res.session_id) {
         if (res.session_id !== currentSessionId) {
@@ -192,6 +192,8 @@ export default function ChatWidget() {
       ]);
     } finally {
       setIsResponding(false);
+      setLiveLoadingStage(null);
+      setStreamingText("");
     }
   };
 
@@ -324,7 +326,7 @@ export default function ChatWidget() {
             {messages.map((m, i) => (
               <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
-            {isResponding && (
+            {isResponding && !streamingText && (
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
                   <Bot
@@ -339,46 +341,17 @@ export default function ChatWidget() {
                       className="text-primary-500 animate-pulse"
                     />
                     <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                      {aiLoadingStages[loadingStageIndex].title}
+                      {liveLoadingStage?.title ?? "Working on your request"}
                     </p>
                   </div>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-                    {aiLoadingStages[loadingStageIndex].subtitle}
+                    {liveLoadingStage?.subtitle ?? "Preparing response"}
                   </p>
-                  <div className="mt-2.5 space-y-1.5">
-                    {aiLoadingStages.map((stage, idx) => {
-                      const isDone = idx < loadingStageIndex;
-                      const isCurrent = idx === loadingStageIndex;
-
-                      return (
-                        <div
-                          key={stage.title}
-                          className="flex items-center gap-2">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isDone
-                                ? "bg-primary-500"
-                                : isCurrent
-                                  ? "bg-amber-500 animate-pulse"
-                                  : "bg-neutral-300 dark:bg-neutral-600"
-                            }`}
-                          />
-                          <span
-                            className={`text-[11px] ${
-                              isDone
-                                ? "text-primary-600 dark:text-primary-400"
-                                : isCurrent
-                                  ? "text-neutral-700 dark:text-neutral-300"
-                                  : "text-neutral-400 dark:text-neutral-500"
-                            }`}>
-                            {stage.title}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               </div>
+            )}
+            {streamingText && (
+              <ChatMessage role="assistant" content={streamingText} />
             )}
             <div ref={messagesEndRef} />
           </div>

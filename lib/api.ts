@@ -1,5 +1,23 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+type AIChatResponse = {
+  response: string;
+  session_id: number;
+  session_title: string;
+};
+
+type AIStreamStatus = {
+  stage: string;
+  title: string;
+  subtitle: string;
+};
+
+type AIStreamHandlers = {
+  onStatus?: (status: AIStreamStatus) => void;
+  onToken?: (token: string) => void;
+  onDone?: (payload: AIChatResponse) => void;
+};
+
 export const api = {
   async fetch(
     endpoint: string,
@@ -209,7 +227,7 @@ export const api = {
   // Schemesy: "portfolio-history" }),
   getInsights: () => api.fetch("/portfolio/insights", { cacheKey: "insights" }),
 
-  addManualTransaction: async (data: any) => {
+  addManualTransaction: async (data: Record<string, unknown>) => {
     const res = await api.fetch("/portfolio/transactions/manual", {
       method: "POST",
       body: JSON.stringify(data),
@@ -227,12 +245,12 @@ export const api = {
   // Goals
   // Goals
   getGoals: () => api.fetch("/goals/", { cacheKey: "goals" }),
-  createGoal: (data: any) =>
+  createGoal: (data: Record<string, unknown>) =>
     api.fetch("/goals/", {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  updateGoal: (id: number, data: any) =>
+  updateGoal: (id: number, data: Record<string, unknown>) =>
     api.fetch(`/goals/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -343,6 +361,102 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message, session_id: sessionId }),
     }),
+
+  chatWithAIStream: async (
+    message: string,
+    sessionId: number | undefined,
+    handlers: AIStreamHandlers = {},
+  ): Promise<AIChatResponse> => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("access_token")
+        : null;
+
+    const res = await fetch(`${API_URL}/ai/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({
+        message,
+        session_id: sessionId,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "Request failed");
+    }
+
+    if (!res.body) {
+      throw new Error("Streaming not supported by browser");
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let donePayload: AIChatResponse | null = null;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      while (true) {
+        const boundary = buffer.indexOf("\n\n");
+        if (boundary === -1) break;
+
+        const rawEvent = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        let eventName = "message";
+        const dataLines: string[] = [];
+
+        for (const line of rawEvent.split(/\r?\n/)) {
+          if (line.startsWith("event:")) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith("data:")) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+
+        if (dataLines.length === 0) continue;
+
+        const dataText = dataLines.join("\n");
+        let payload: unknown;
+        try {
+          payload = JSON.parse(dataText);
+        } catch {
+          payload = { text: dataText };
+        }
+
+        if (eventName === "status") {
+          handlers.onStatus?.(payload as AIStreamStatus);
+        } else if (eventName === "token") {
+          const tokenText = (payload as { text?: string }).text || "";
+          handlers.onToken?.(tokenText);
+        } else if (eventName === "done") {
+          donePayload = payload as AIChatResponse;
+          handlers.onDone?.(donePayload);
+        } else if (eventName === "error") {
+          const errDetail =
+            (payload as { detail?: string }).detail ||
+            "AI Service temporarily unavailable";
+          throw new Error(errDetail);
+        }
+      }
+    }
+
+    if (!donePayload) {
+      throw new Error("Streaming response ended unexpectedly");
+    }
+
+    return donePayload;
+  },
 
   updateFcmToken: (token: string) =>
     api.fetch("/users/me/fcm-token", {
