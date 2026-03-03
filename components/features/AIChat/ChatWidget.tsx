@@ -34,6 +34,12 @@ interface SessionMessage {
   content: string;
 }
 
+interface AIChatResult {
+  response: string;
+  session_id: number;
+  session_title: string;
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -127,7 +133,7 @@ export default function ChatWidget() {
     setStreamingText("");
 
     try {
-      let res;
+      let res: AIChatResult;
       let usedFallback = false;
       try {
         res = await api.chatWithAIStream(userMsg, currentSessionId, {
@@ -147,7 +153,7 @@ export default function ChatWidget() {
           "AI stream failed. Falling back to normal response.",
           streamErr,
         );
-        res = await api.chatWithAI(userMsg, currentSessionId);
+        res = (await api.chatWithAI(userMsg, currentSessionId)) as AIChatResult;
         setStreamingText("");
         setMessages((prev) => [
           ...prev,
