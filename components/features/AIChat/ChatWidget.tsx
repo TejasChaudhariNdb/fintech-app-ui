@@ -29,6 +29,11 @@ interface ChatSession {
   created_at: string;
 }
 
+interface SessionMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -39,7 +44,9 @@ export default function ChatWidget() {
     },
   ]);
   const [inputValue, setInputValue] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isResponding, setIsResponding] = useState(false);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [loadingStageIndex, setLoadingStageIndex] = useState(0);
 
   // Session State
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -51,6 +58,24 @@ export default function ChatWidget() {
   const [disclaimerExpanded, setDisclaimerExpanded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const aiLoadingStages = [
+    {
+      title: "Understanding your question",
+      subtitle: "Interpreting your goal and context",
+    },
+    {
+      title: "Reviewing your portfolio context",
+      subtitle: "Matching available data with your query",
+    },
+    {
+      title: "Checking market context (if needed)",
+      subtitle: "Looking for supporting signals",
+    },
+    {
+      title: "Drafting your response",
+      subtitle: "Building a clear, useful answer",
+    },
+  ];
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +89,21 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, showHistory]);
 
+  useEffect(() => {
+    if (!isResponding) {
+      setLoadingStageIndex(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setLoadingStageIndex((prev) =>
+        Math.min(prev + 1, aiLoadingStages.length - 1),
+      );
+    }, 1700);
+
+    return () => clearInterval(interval);
+  }, [isResponding, aiLoadingStages.length]);
+
   const loadSessions = async () => {
     try {
       const list = await api.getSessions();
@@ -74,18 +114,21 @@ export default function ChatWidget() {
   };
 
   const handleLoadSession = async (id: number) => {
-    setLoading(true);
+    setIsLoadingSession(true);
     try {
       const history = await api.getSessionMessages(id);
       setMessages(
-        history.map((h: any) => ({ role: h.role, content: h.content })),
+        history.map((h: SessionMessage) => ({
+          role: h.role,
+          content: h.content,
+        })),
       );
       setCurrentSessionId(id);
       setShowHistory(false);
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      setIsLoadingSession(false);
     }
   };
 
@@ -103,12 +146,12 @@ export default function ChatWidget() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || loading) return;
+    if (!inputValue.trim() || isResponding || isLoadingSession) return;
 
     const userMsg = inputValue.trim();
     setInputValue("");
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
-    setLoading(true);
+    setIsResponding(true);
 
     try {
       const res = await api.chatWithAI(userMsg, currentSessionId);
@@ -148,7 +191,7 @@ export default function ChatWidget() {
         },
       ]);
     } finally {
-      setLoading(false);
+      setIsResponding(false);
     }
   };
 
@@ -281,28 +324,58 @@ export default function ChatWidget() {
             {messages.map((m, i) => (
               <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
-            {loading && (
-              <div className="flex items-start gap-3 animate-pulse">
+            {isResponding && (
+              <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
                   <Bot
                     size={16}
                     className="text-neutral-500 dark:text-neutral-300"
                   />
                 </div>
-                <div className="bg-white dark:bg-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 border border-neutral-200 dark:border-white/10">
-                  <div className="flex gap-1 h-5 items-center">
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce"
-                      style={{ animationDelay: "0ms" }}
+                <div className="bg-white dark:bg-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 border border-neutral-200 dark:border-white/10 max-w-[85%] shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <Sparkles
+                      size={14}
+                      className="text-primary-500 animate-pulse"
                     />
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce"
-                      style={{ animationDelay: "150ms" }}
-                    />
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-neutral-400 animate-bounce"
-                      style={{ animationDelay: "300ms" }}
-                    />
+                    <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200">
+                      {aiLoadingStages[loadingStageIndex].title}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                    {aiLoadingStages[loadingStageIndex].subtitle}
+                  </p>
+                  <div className="mt-2.5 space-y-1.5">
+                    {aiLoadingStages.map((stage, idx) => {
+                      const isDone = idx < loadingStageIndex;
+                      const isCurrent = idx === loadingStageIndex;
+
+                      return (
+                        <div
+                          key={stage.title}
+                          className="flex items-center gap-2">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isDone
+                                ? "bg-primary-500"
+                                : isCurrent
+                                  ? "bg-amber-500 animate-pulse"
+                                  : "bg-neutral-300 dark:bg-neutral-600"
+                            }`}
+                          />
+                          <span
+                            className={`text-[11px] ${
+                              isDone
+                                ? "text-primary-600 dark:text-primary-400"
+                                : isCurrent
+                                  ? "text-neutral-700 dark:text-neutral-300"
+                                  : "text-neutral-400 dark:text-neutral-500"
+                            }`}>
+                            {stage.title}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -326,7 +399,9 @@ export default function ChatWidget() {
               />
               <button
                 type="submit"
-                disabled={!inputValue.trim() || loading}
+                disabled={
+                  !inputValue.trim() || isResponding || isLoadingSession
+                }
                 className="p-2 bg-primary-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors shadow-md">
                 <Send size={16} />
               </button>
