@@ -59,6 +59,8 @@ export default function ProfilePage() {
     is_ai_unlocked: false,
     feature_flags: {} as Record<string, boolean>,
     referred_by: "",
+    profile_completion_score: 0,
+    kyc_nudges: [] as Array<{ key: string; title: string; message: string }>,
   });
   const [referralInput, setReferralInput] = useState("");
   const [referralError, setReferralError] = useState("");
@@ -114,6 +116,8 @@ export default function ProfilePage() {
         feature_flags: data.feature_flags || {},
         is_ai_unlocked: data.feature_flags?.ai_unlocked || false,
         referred_by: data.referred_by || "",
+        profile_completion_score: data.profile_completion_score || 0,
+        kyc_nudges: data.kyc_nudges || [],
       });
       setOriginalProfile(data);
     } catch (err) {
@@ -132,7 +136,7 @@ export default function ProfilePage() {
       });
       showToast("Profile updated successfully", "success");
       setShowProfileModal(false); // Close modal on success
-      setOriginalProfile(userProfile);
+      await loadUserProfile();
     } catch (err: any) {
       showToast("Failed to update profile", "error");
     } finally {
@@ -154,6 +158,8 @@ export default function ProfilePage() {
         feature_flags: originalProfile.feature_flags || {},
         is_ai_unlocked: originalProfile.feature_flags?.ai_unlocked || false,
         referred_by: originalProfile.referred_by || "",
+        profile_completion_score: originalProfile.profile_completion_score || 0,
+        kyc_nudges: originalProfile.kyc_nudges || [],
       });
     }
     setShowProfileModal(false);
@@ -345,6 +351,38 @@ export default function ProfilePage() {
       </div>
 
       <div className="px-4 -mt-4 space-y-6">
+        {userProfile.kyc_nudges.length > 0 && (
+          <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl p-3.5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                  Profile {userProfile.profile_completion_score}% complete
+                </p>
+                <div className="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-white/10 overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-linear-to-r from-primary-500 to-emerald-500 transition-all duration-500"
+                    style={{ width: `${userProfile.profile_completion_score}%` }}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                  {userProfile.kyc_nudges.map((nudge) => (
+                    <span
+                      key={nudge.key}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                      Missing {nudge.key === "pan_card" ? "PAN" : "Phone"}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-500/25 transition-colors shrink-0">
+                Complete
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm">
           {/* Personal Details Button */}
           <button
@@ -360,9 +398,17 @@ export default function ProfilePage() {
                 <p className="font-semibold dark:text-white">
                   Personal Details
                 </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Name, Phone, PAN
-                </p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Name, Phone, PAN
+                  </p>
+                  {userProfile.kyc_nudges.length === 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                      <CheckCircle size={10} />
+                      Verified
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <ChevronRight className="text-neutral-400" size={20} />

@@ -247,6 +247,34 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-6">
+          {userProfile?.kyc_nudges?.length > 0 && (
+            <section>
+              <button
+                onClick={() => router.push("/profile")}
+                className="w-full text-left rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-3 py-2.5 hover:bg-amber-100 dark:hover:bg-amber-500/15 transition-colors">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 truncate">
+                      KYC {userProfile.profile_completion_score || 0}% complete
+                    </p>
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      Add PAN + phone for better recommendations
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {userProfile.kyc_nudges.map((n: { key: string }) => (
+                      <span
+                        key={n.key}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                        {n.key === "pan_card" ? "PAN" : "Phone"}
+                      </span>
+                    ))}
+                    <ArrowRight size={16} className="text-amber-700 dark:text-amber-300" />
+                  </div>
+                </div>
+              </button>
+            </section>
+          )}
           {/* Net Worth Card */}
           <section>
             <NetWorthCard

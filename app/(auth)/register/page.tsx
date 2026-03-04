@@ -13,6 +13,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [signupSource, setSignupSource] = useState("other");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,7 +53,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const data = await api.register(email, password);
+      const data = await api.register(email, password, signupSource);
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("user_email", email);
       router.push("/");
@@ -117,6 +118,24 @@ export default function RegisterPage() {
                 Must be at least 6 characters
               </p>
             )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              How did you hear about us? (optional)
+            </label>
+            <select
+              value={signupSource}
+              onChange={(e) => setSignupSource(e.target.value)}
+              className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-black/20 px-3 py-3 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500">
+              <option value="other">Other</option>
+              <option value="reddit">Reddit</option>
+              <option value="youtube">YouTube</option>
+              <option value="google">Google</option>
+              <option value="instagram">Instagram</option>
+              <option value="twitter">X / Twitter</option>
+              <option value="linkedin">LinkedIn</option>
+            </select>
           </div>
 
           {error && (

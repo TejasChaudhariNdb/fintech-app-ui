@@ -115,10 +115,10 @@ export const api = {
     return res.json();
   },
 
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, signup_source: string = "other") =>
     api.fetch("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, signup_source }),
     }),
 
   googleLogin: (token: string) =>
