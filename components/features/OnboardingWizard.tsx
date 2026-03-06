@@ -13,7 +13,6 @@ import {
   AlertCircle,
   ExternalLink,
   ArrowRight,
-  Gift,
   Plus,
 } from "lucide-react";
 import Button from "../ui/Button";
@@ -30,7 +29,6 @@ interface OnboardingWizardProps {
 }
 
 export default function OnboardingWizard({
-  userProfile,
   initialStep = 1,
   onAddTransactionClick,
   onClose,
@@ -58,7 +56,11 @@ export default function OnboardingWizard({
       setUploading(false);
       setSuccess(true);
       setTimeout(() => {
-        window.location.reload(); // Reload to fetch fresh data and exit onboarding
+        if (onClose) {
+          onClose();
+        }
+        router.replace("/holdings/mutual-funds");
+        router.refresh();
       }, 2000);
     } catch (err: any) {
       setError(err.message || "Upload failed. Check your password.");
@@ -90,32 +92,6 @@ export default function OnboardingWizard({
               .
             </p>
           </div>
-
-          {/* Referral Banner (Growth) */}
-          {userProfile && !userProfile.is_ai_unlocked && (
-            <div className="max-w-xl mx-auto mb-8">
-              <button
-                onClick={() => router.push("/profile")}
-                className="w-full bg-linear-to-r from-indigo-600 to-purple-600 rounded-2xl p-4 text-white hover:shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center justify-between gap-4 group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <Gift size={20} className="text-yellow-300" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-bold text-sm">
-                      No holdings yet? Invite friends!
-                    </p>
-                    <p className="text-xs text-indigo-100">
-                      Unlock unlimited AI insights while you set up.
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-white/20 p-2 rounded-full group-hover:bg-white/30 transition-colors">
-                  <ArrowRight size={16} />
-                </div>
-              </button>
-            </div>
-          )}
 
           {/* Main Actions */}
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto mb-12">
@@ -348,8 +324,30 @@ export default function OnboardingWizard({
                 {uploading ? "Importing Data..." : "Import Portfolio"}
               </Button>
 
+              <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-white/5 px-3 py-2">
+                <p className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+                  Need help uploading CAS?
+                </p>
+                <div className="mt-1.5 flex items-center gap-3 text-xs">
+                  <a
+                    href="https://wa.me/919158110065"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline">
+                    WhatsApp
+                  </a>
+                  <span className="text-neutral-300 dark:text-neutral-600">|</span>
+                  <a
+                    href="mailto:arthaviapp@gmail.com"
+                    className="text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                    Email Support
+                  </a>
+                </div>
+              </div>
+
               <div className="flex justify-between md:hidden">
                 <button
+                  type="button"
                   onClick={() => setStep(1)}
                   className="text-sm text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline mt-2">
                   Back

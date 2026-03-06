@@ -11,12 +11,16 @@ interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialSchemeId?: number | null;
+  initialTransactionType?: "PURCHASE" | "REDEMPTION";
 }
 
 export default function AddTransactionModal({
   isOpen,
   onClose,
   onSuccess,
+  initialSchemeId = null,
+  initialTransactionType = "PURCHASE",
 }: AddTransactionModalProps) {
   const [loading, setLoading] = useState(false);
 
@@ -28,6 +32,15 @@ export default function AddTransactionModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedNewScheme, setSelectedNewScheme] = useState<any>(null);
+
+  const defaultFormData = () => ({
+    scheme_id: "",
+    type: "PURCHASE" as "PURCHASE" | "REDEMPTION",
+    date: new Date().toISOString().split("T")[0],
+    units: "",
+    amount: "",
+    nav: "",
+  });
 
   const [formData, setFormData] = useState({
     scheme_id: "",
@@ -41,9 +54,26 @@ export default function AddTransactionModal({
   // Load schemes for dropdown
   useEffect(() => {
     if (isOpen) {
+      const nextType = initialTransactionType || "PURCHASE";
+      const nextMode: "EXISTING" | "NEW" = "EXISTING";
+      setMode(nextMode);
+      setSearchQuery("");
+      setSearchResults([]);
+      setSelectedNewScheme(null);
+      setFormData({
+        ...defaultFormData(),
+        scheme_id: initialSchemeId ? String(initialSchemeId) : "",
+        type: nextType,
+      });
       loadSchemes();
+    } else {
+      setMode("EXISTING");
+      setSearchQuery("");
+      setSearchResults([]);
+      setSelectedNewScheme(null);
+      setFormData(defaultFormData());
     }
-  }, [isOpen]);
+  }, [isOpen, initialSchemeId, initialTransactionType]);
 
   const loadSchemes = async () => {
     try {

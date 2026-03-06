@@ -27,26 +27,28 @@ export default function HoldingsLayout({
       </div>
 
       {/* Tab Switcher */}
-      <div className="px-4 mb-6">
-        <div className="bg-neutral-100 dark:bg-white/5 p-1 rounded-xl flex gap-1">
-          <button
-            onClick={() => handleTabChange("mutual-funds")}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
-              activeTab === "mutual-funds"
-                ? "bg-white dark:bg-primary-600 text-primary-600 dark:text-white shadow-sm"
-                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-            }`}>
-            Mutual Funds
-          </button>
-          <button
-            onClick={() => handleTabChange("stocks")}
-            className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
-              activeTab === "stocks"
-                ? "bg-white dark:bg-primary-600 text-primary-600 dark:text-white shadow-sm"
-                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-            }`}>
-            Stocks
-          </button>
+      <div className="sticky top-0 z-20 mb-6 border-b border-neutral-200/70 dark:border-white/5 bg-neutral-50/95 dark:bg-[#0B0E14]/90 backdrop-blur-xl">
+        <div className="px-4 py-3">
+          <div className="bg-neutral-100 dark:bg-white/5 p-1 rounded-xl flex gap-1">
+            <button
+              onClick={() => handleTabChange("mutual-funds")}
+              className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
+                activeTab === "mutual-funds"
+                  ? "bg-white dark:bg-primary-600 text-primary-600 dark:text-white shadow-sm"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              }`}>
+              Mutual Funds
+            </button>
+            <button
+              onClick={() => handleTabChange("stocks")}
+              className={`flex-1 py-2.5 px-4 rounded-lg font-medium text-sm transition-all duration-200 ${
+                activeTab === "stocks"
+                  ? "bg-white dark:bg-primary-600 text-primary-600 dark:text-white shadow-sm"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              }`}>
+              Stocks
+            </button>
+          </div>
         </div>
       </div>
 

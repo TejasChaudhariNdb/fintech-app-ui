@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
 import ContactSupportModal from "@/components/features/ContactSupportModal";
-import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import {
   Unlock,
@@ -37,12 +36,7 @@ export default function ProfilePage() {
   const { theme, setTheme } = useTheme();
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
   const [mounted, setMounted] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [appLockEnabled, setAppLockEnabled] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -275,27 +269,6 @@ export default function ProfilePage() {
     setTimeout(() => router.push("/login"), 500);
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !password) return;
-
-    setUploading(true);
-    showToast("Processing CAS file...", "loading");
-    try {
-      await api.uploadCAS(file, password);
-      setShowUploadModal(false);
-      setFile(null);
-      setPassword("");
-      showToast("CAS uploaded successfully!", "success");
-      // Delay refresh to show toast
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (err: any) {
-      showToast("Upload failed: " + err.message, "error");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleReset = async (type: "ALL" | "MF" | "STOCKS" = "ALL") => {
     // Confirmation
     const msg =
@@ -519,7 +492,7 @@ export default function ProfilePage() {
           </button>
 
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => router.push("/holdings/mutual-funds?import=1")}
             className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
@@ -832,116 +805,6 @@ export default function ProfilePage() {
         isOpen={showContactModal}
         onClose={() => setShowContactModal(false)}
       />
-
-      {/* Upload Modal */}
-      <Modal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        title="Upload CAS">
-        {/* ... existing upload modal content ... */}
-        <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl mb-4 text-sm text-blue-800 dark:text-blue-200">
-          <p className="font-semibold mb-1">How to get your CAS?</p>
-          <p>
-            Download detailed statement from{" "}
-            <a
-              href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
-              target="_blank"
-              className="underline font-bold"
-              rel="noreferrer">
-              CAMS Online
-            </a>
-            . Select &quot;Detailed&quot; and specific period.
-          </p>
-        </div>
-        <form onSubmit={handleUpload} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-3 text-neutral-700 dark:text-neutral-300">
-              Upload Statement (PDF)
-            </label>
-
-            <div className="relative">
-              <input
-                type="file"
-                accept=".pdf"
-                id="cas-file-upload"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
-                required
-              />
-              <div
-                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all ${
-                  file
-                    ? "border-primary-500 bg-primary-50 dark:bg-primary-500/10"
-                    : "border-neutral-300 dark:border-white/20 hover:border-primary-400 dark:hover:border-primary-400"
-                }`}>
-                {file ? (
-                  <>
-                    <div className="p-3 bg-primary-100 dark:bg-primary-500/20 rounded-full mb-3">
-                      <FileText
-                        className="text-primary-600 dark:text-primary-400"
-                        size={24}
-                      />
-                    </div>
-                    <p className="font-medium text-neutral-900 dark:text-white text-center break-all">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-primary-600 dark:text-primary-400 mt-1">
-                      Tap to change
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="p-3 bg-neutral-100 dark:bg-white/10 rounded-full mb-3">
-                      <FileText
-                        className="text-neutral-500 dark:text-neutral-400"
-                        size={24}
-                      />
-                    </div>
-                    <p className="font-medium text-neutral-900 dark:text-white mb-1">
-                      Tap to select PDF
-                    </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
-                      Select the CAS PDF sent by CAMS/KFintech
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="relative">
-            <Input
-              label="PDF Password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter PDF password"
-              required
-              className="dark:bg-black/20 dark:border-white/10 pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mb-2 text-xs text-neutral-500 dark:text-neutral-400 -mt-2">
-            <ShieldCheck size={12} className="text-green-500" />
-            <span>
-              Files are processed securely. We don&apos;t store your password.
-            </span>
-          </div>
-
-          <Button
-            type="submit"
-            isLoading={uploading}
-            className="w-full"
-            variant="primary">
-            {uploading ? "Uploading..." : "Upload CAS"}
-          </Button>
-        </form>
-      </Modal>
 
       {/* Reset Portfolio Modal */}
       <Modal

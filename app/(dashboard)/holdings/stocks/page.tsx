@@ -17,10 +17,12 @@ import {
   Trash2,
   Pencil,
   TrendingUp,
+  TrendingDown,
   Upload,
   FileUp,
   Share2,
   Download,
+  Search,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -49,6 +51,11 @@ export default function StocksPage() {
 
   // Data State
   const [manualStocks, setManualStocks] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"value" | "symbol" | "pnl" | "quantity">(
+    "value",
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Stock Modal State (Add/Import)
   const [showStockModal, setShowStockModal] = useState(false);
@@ -112,6 +119,40 @@ export default function StocksPage() {
     return { invested, current, pnl, pnlPct };
   }, [manualStocks]);
 
+  const filteredStocks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = manualStocks.filter((stock) => {
+      if (!query) return true;
+      return (
+        String(stock.symbol || "")
+          .toLowerCase()
+          .includes(query) ||
+        String(stock.company_name || "")
+          .toLowerCase()
+          .includes(query)
+      );
+    });
+
+    return filtered.sort((a, b) => {
+      const direction = sortOrder === "asc" ? 1 : -1;
+
+      if (sortBy === "symbol") {
+        return (
+          String(a.symbol || "").localeCompare(String(b.symbol || "")) *
+          direction
+        );
+      }
+      if (sortBy === "quantity") {
+        return ((a.quantity || 0) - (b.quantity || 0)) * direction;
+      }
+      if (sortBy === "pnl") {
+        return ((a.pnl_pct || 0) - (b.pnl_pct || 0)) * direction;
+      }
+
+      return ((a.value || 0) - (b.value || 0)) * direction;
+    });
+  }, [manualStocks, searchQuery, sortBy, sortOrder]);
+
   // Search Stocks
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -154,19 +195,27 @@ export default function StocksPage() {
         transaction_type: stockForm.transaction_type,
       });
       showToast("Transaction added successfully", "success");
-      setShowStockModal(false);
-      setStockForm({
-        symbol: "",
-        quantity: "",
-        price: "",
-        date: new Date().toISOString().split("T")[0],
-        transaction_type: "BUY",
-      });
-      setIsValidSymbol(false);
+      closeStockModal();
       await loadData();
     } catch (err) {
       showToast("Failed to add transaction", "error");
     }
+  };
+
+  const closeStockModal = () => {
+    setShowStockModal(false);
+    setStockModalTab("MANUAL");
+    setStockForm({
+      symbol: "",
+      quantity: "",
+      price: "",
+      date: new Date().toISOString().split("T")[0],
+      transaction_type: "BUY",
+    });
+    setImportFile(null);
+    setIsValidSymbol(false);
+    setShowSearchResults(false);
+    setSearchResults([]);
   };
 
   const handleImportStocks = async (e: React.FormEvent) => {
@@ -180,8 +229,7 @@ export default function StocksPage() {
       const res = await api.importTrades(importFile, broker);
       showToast(`Imported ${res.added} holdings successfully.`, "success");
       await loadData();
-      setShowStockModal(false);
-      setImportFile(null);
+      closeStockModal();
     } catch (err) {
       showToast("Failed to import trades", "error");
     } finally {
@@ -276,8 +324,7 @@ export default function StocksPage() {
             }}
             className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
             <Plus size={16} />
-            <span className="sm:hidden">Add Stock Txn</span>
-            <span className="hidden sm:inline">Add Stock Transaction</span>
+            <span>Buy / Sell Stock</span>
           </button>
         </div>
       </div>
@@ -347,14 +394,62 @@ export default function StocksPage() {
               </div>
             </Card>
           </div>
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search by symbol or company..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-16 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-sm outline-none transition-all dark:text-white"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/10">
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(
+                    e.target.value as "value" | "symbol" | "pnl" | "quantity",
+                  )
+                }
+                aria-label="Sort stocks"
+                className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
+                <option value="value">Sort: Value</option>
+                <option value="symbol">Sort: Symbol</option>
+                <option value="pnl">Sort: P&L %</option>
+                <option value="quantity">Sort: Quantity</option>
+              </select>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+                aria-label="Sort order"
+                className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
+                <option value="desc">High to Low</option>
+                <option value="asc">Low to High</option>
+              </select>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Stock List */}
       <div className="grid gap-4">
-        {manualStocks.map((stock, idx) => (
+        {filteredStocks.map((stock) => (
           <Card
-            key={idx}
+            key={stock.id || stock.symbol}
             className="p-5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-4 group hover:border-primary-500/20 transition-all">
             {/* Top Section: Header & Value */}
             <div className="flex justify-between items-start">
@@ -435,6 +530,40 @@ export default function StocksPage() {
             <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex justify-end gap-5 opacity-80 hover:opacity-100 transition-opacity">
               <button
                 onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("MANUAL");
+                  setStockForm({
+                    symbol: stock.symbol || "",
+                    quantity: "",
+                    price: stock.current_price ? String(stock.current_price) : "",
+                    date: new Date().toISOString().split("T")[0],
+                    transaction_type: "BUY",
+                  });
+                  setIsValidSymbol(true);
+                  setShowSearchResults(false);
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-emerald-500 transition-colors">
+                <TrendingUp size={14} /> Buy
+              </button>
+              <button
+                onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("MANUAL");
+                  setStockForm({
+                    symbol: stock.symbol || "",
+                    quantity: "",
+                    price: stock.current_price ? String(stock.current_price) : "",
+                    date: new Date().toISOString().split("T")[0],
+                    transaction_type: "SELL",
+                  });
+                  setIsValidSymbol(true);
+                  setShowSearchResults(false);
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-red-500 transition-colors">
+                <TrendingDown size={14} /> Sell
+              </button>
+              <button
+                onClick={() => {
                   setEditingStock({ ...stock });
                   setIsEditModalOpen(true);
                 }}
@@ -464,7 +593,7 @@ export default function StocksPage() {
                   setStockModalTab("MANUAL");
                 }}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Stock Transaction
+                Buy / Sell Stock
               </Button>
               <Button
                 variant="secondary"
@@ -478,14 +607,36 @@ export default function StocksPage() {
             </div>
           </div>
         )}
+        {manualStocks.length > 0 && filteredStocks.length === 0 && !isLoading && (
+          <div className="text-center py-10 text-neutral-500 space-y-2">
+            <p>No stocks match your search.</p>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                Clear search
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowStockModal(true);
+                  setStockModalTab("MANUAL");
+                }}
+                className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                Add New Stock
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Manual Stock/Import Modal */}
       <Modal
         isOpen={showStockModal}
-        onClose={() => setShowStockModal(false)}
+        onClose={closeStockModal}
         title={
-          stockModalTab === "MANUAL" ? "Add Stock Transaction" : "Import Stocks"
+          stockModalTab === "MANUAL" ? "Buy / Sell Stock" : "Import Stocks"
         }>
         <div className="flex border-b border-neutral-200 dark:border-white/10 mb-6">
           <button
@@ -582,6 +733,17 @@ export default function StocksPage() {
                   ))}
                 </div>
               )}
+              <p className="mt-1.5 ml-1 text-xs text-neutral-500 dark:text-neutral-400">
+                {isValidSymbol
+                  ? `Selected: ${stockForm.symbol}`
+                  : stockForm.symbol.length > 2
+                    ? isSearching
+                      ? "Searching symbols..."
+                      : searchResults.length > 0
+                        ? "Select one symbol from the list."
+                        : "No symbol found. Try company name or NSE symbol."
+                    : "Type at least 3 letters to search (example: REL)."}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -614,7 +776,10 @@ export default function StocksPage() {
               max={new Date().toISOString().split("T")[0]}
               required
             />
-            <Button type="submit" className="w-full">
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!isValidSymbol || !stockForm.quantity || !stockForm.price}>
               {stockForm.transaction_type === "SELL"
                 ? "Add Sell Transaction"
                 : "Add Buy Transaction"}

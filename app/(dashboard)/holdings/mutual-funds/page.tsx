@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import SchemeCard from "@/components/features/SchemeCard";
 import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, ArrowUpDown, Plus, Share2, UploadCloud } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -23,6 +23,7 @@ const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
 
 export default function MutualFundsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
 
   // Toast State
@@ -53,6 +54,10 @@ export default function MutualFundsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("name");
   const [showAddTx, setShowAddTx] = useState(false);
+  const [prefillSchemeId, setPrefillSchemeId] = useState<number | null>(null);
+  const [prefillMfType, setPrefillMfType] = useState<"PURCHASE" | "REDEMPTION">(
+    "PURCHASE",
+  );
 
   // Share Modal State
   const [selectedShareStock, setSelectedShareStock] = useState<any>(null);
@@ -85,6 +90,13 @@ export default function MutualFundsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("import") === "1") {
+      setShowImportWizard(true);
+      router.replace("/holdings/mutual-funds");
+    }
+  }, [searchParams, router]);
 
   const handleDeleteScheme = async (schemeId: number) => {
     if (!confirm("Are you sure you want to delete this mutual fund?")) return;
@@ -130,20 +142,23 @@ export default function MutualFundsPage() {
     return <AppSkeleton />;
   }
 
-  if (schemes.length === 0 && !isLoading) {
-    if (showImportWizard) {
-      return (
-        <OnboardingWizard
-          initialStep={2} // specific step for upload
-          onAddTransactionClick={() => {
-            setShowImportWizard(false);
-            setShowAddTx(true);
-          }}
-          onClose={() => setShowImportWizard(false)}
-        />
-      );
-    }
+  if (showImportWizard) {
+    return (
+      <OnboardingWizard
+        initialStep={2} // specific step for upload
+        onAddTransactionClick={() => {
+          setShowImportWizard(false);
+          setShowAddTx(true);
+        }}
+        onClose={() => {
+          setShowImportWizard(false);
+          router.replace("/holdings/mutual-funds");
+        }}
+      />
+    );
+  }
 
+  if (schemes.length === 0 && !isLoading) {
     return (
       <>
         <MutualFundsZeroState
@@ -301,12 +316,13 @@ export default function MutualFundsPage() {
             </button>
             <button
               onClick={() => {
+                setPrefillSchemeId(null);
+                setPrefillMfType("PURCHASE");
                 setShowAddTx(true);
               }}
               className="flex-1 sm:flex-none px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition-colors shadow-lg shadow-primary-500/20">
               <Plus size={16} />
-              <span className="sm:hidden">Add MF Txn</span>
-              <span className="hidden sm:inline">Add MF Transaction</span>
+              <span>Buy / Sell MF</span>
             </button>
           </div>
         </div>
@@ -323,27 +339,28 @@ export default function MutualFundsPage() {
               placeholder="Search schemes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-sm outline-none transition-all dark:text-white"
+              className="w-full pl-9 pr-16 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-sm outline-none transition-all dark:text-white"
             />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-md text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/10">
+                Clear
+              </button>
+            ) : null}
           </div>
-          <button
-            onClick={() =>
-              setSortBy(
-                sortBy === "value"
-                  ? "name"
-                  : sortBy === "name"
-                    ? "profit"
-                    : "value",
-              )
+          <select
+            value={sortBy}
+            onChange={(e) =>
+              setSortBy(e.target.value as "value" | "name" | "profit")
             }
-            className="px-3 py-2 bg-neutral-100 dark:bg-white/5 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
-            {sortBy === "value"
-              ? "Value"
-              : sortBy === "name"
-                ? "Name"
-                : "Profit"}
-            <ArrowUpDown size={14} />
-          </button>
+            aria-label="Sort schemes"
+            className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
+            <option value="name">Sort: Name</option>
+            <option value="value">Sort: Value</option>
+            <option value="profit">Sort: Profit</option>
+          </select>
         </div>
 
         <div className="space-y-4">
@@ -371,11 +388,41 @@ export default function MutualFundsPage() {
                   setIsEditModalOpen(true);
                 }}
                 onDelete={() => handleDeleteScheme(scheme.scheme_id)}
+                onBuy={() => {
+                  setPrefillSchemeId(scheme.scheme_id);
+                  setPrefillMfType("PURCHASE");
+                  setShowAddTx(true);
+                }}
+                onSell={() => {
+                  setPrefillSchemeId(scheme.scheme_id);
+                  setPrefillMfType("REDEMPTION");
+                  setShowAddTx(true);
+                }}
               />
             ))
           ) : (
-            <div className="text-center py-8 text-neutral-500 dark:text-neutral-400">
-              No schemes found
+            <div className="text-center py-8 text-neutral-500 dark:text-neutral-400 space-y-2">
+              <p>No schemes found. Try clearing search or changing sort.</p>
+              <div className="flex items-center justify-center gap-4">
+                {searchQuery ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                    Clear search
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrefillSchemeId(null);
+                    setPrefillMfType("PURCHASE");
+                    setShowAddTx(true);
+                  }}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                  Buy / Sell MF
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -389,11 +436,17 @@ export default function MutualFundsPage() {
 
       <AddTransactionModal
         isOpen={showAddTx}
-        onClose={() => setShowAddTx(false)}
+        onClose={() => {
+          setShowAddTx(false);
+          setPrefillSchemeId(null);
+          setPrefillMfType("PURCHASE");
+        }}
         onSuccess={() => {
           loadData();
           showToast("Transaction added successfully", "success");
         }}
+        initialSchemeId={prefillSchemeId}
+        initialTransactionType={prefillMfType}
       />
 
       {/* Edit Scheme Modal */}

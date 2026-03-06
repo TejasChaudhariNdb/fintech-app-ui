@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MessageSquarePlus,
   X,
@@ -76,15 +76,26 @@ export default function FeedbackButton() {
     }
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleOpenFeedback = () => setIsOpen(true);
+    window.addEventListener("arthavi-open-feedback", handleOpenFeedback);
+
+    return () => {
+      window.removeEventListener("arthavi-open-feedback", handleOpenFeedback);
+    };
+  }, []);
+
   return (
     <>
       {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(true)}
         title="Send Feedback"
-        className="fixed bottom-40 right-4 lg:bottom-24 z-30 flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-3 py-2.5 rounded-full shadow-lg shadow-primary-500/30 transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium">
+        className="bottom-40 flex fixed right-4 lg:bottom-24 z-30 items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-3 py-2.5 rounded-full shadow-lg shadow-primary-500/30 transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium">
         <MessageSquarePlus className="w-4 h-4" />
-        <span className="hidden sm:inline">Feedback</span>
+        <span>Feedback</span>
       </button>
 
       {/* Modal Backdrop */}

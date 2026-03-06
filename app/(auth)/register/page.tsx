@@ -132,9 +132,7 @@ export default function RegisterPage() {
               <option value="reddit">Reddit</option>
               <option value="youtube">YouTube</option>
               <option value="google">Google</option>
-              <option value="instagram">Instagram</option>
               <option value="twitter">X / Twitter</option>
-              <option value="linkedin">LinkedIn</option>
             </select>
           </div>
 

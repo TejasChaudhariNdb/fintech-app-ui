@@ -1,6 +1,6 @@
 "use client";
 
-import { Share2, Pencil, Trash2 } from "lucide-react";
+import { Share2, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
 import Card from "../ui/Card";
 import PrivacyMask from "../ui/PrivacyMask";
 
@@ -16,6 +16,8 @@ interface SchemeCardProps {
   onShare?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onBuy?: () => void;
+  onSell?: () => void;
 }
 
 export default function SchemeCard({
@@ -29,6 +31,8 @@ export default function SchemeCard({
   onShare,
   onEdit,
   onDelete,
+  onBuy,
+  onSell,
 }: SchemeCardProps) {
   const isPositive = returnPct >= 0;
 
@@ -89,8 +93,28 @@ export default function SchemeCard({
         </button>
       )}
 
-      {(onEdit || onDelete) && (
+      {(onBuy || onSell || onEdit || onDelete) && (
         <div className="pt-3 mt-4 border-t border-neutral-100 dark:border-white/5 flex gap-5 opacity-80 hover:opacity-100 transition-opacity">
+          {onBuy && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onBuy();
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-emerald-500 transition-colors">
+              <TrendingUp size={14} /> Buy
+            </button>
+          )}
+          {onSell && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSell();
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-red-500 transition-colors">
+              <TrendingDown size={14} /> Sell
+            </button>
+          )}
           {onEdit && (
             <button
               onClick={(e) => {
