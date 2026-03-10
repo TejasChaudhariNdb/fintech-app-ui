@@ -43,6 +43,9 @@ export default function ProfilePage() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isIos, setIsIos] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const { permission, requestPermission } = useFcmToken();
 
   // Profile State
@@ -97,6 +100,15 @@ export default function ProfilePage() {
 
     // PWA Install Prompt Listener
     if (typeof window !== "undefined") {
+      const ua = navigator.userAgent || "";
+      const ios = /iphone|ipad|ipod/i.test(ua);
+      const standalone =
+        (window.matchMedia &&
+          window.matchMedia("(display-mode: standalone)").matches) ||
+        (navigator as any).standalone === true;
+      setIsIos(ios);
+      setIsStandalone(standalone);
+
       const handler = (e: any) => {
         e.preventDefault();
         setDeferredPrompt(e);
@@ -379,7 +391,9 @@ export default function ProfilePage() {
                 <div className="h-1.5 w-full rounded-full bg-neutral-100 dark:bg-white/10 overflow-hidden mt-2">
                   <div
                     className="h-full bg-linear-to-r from-primary-500 to-emerald-500 transition-all duration-500"
-                    style={{ width: `${userProfile.profile_completion_score}%` }}
+                    style={{
+                      width: `${userProfile.profile_completion_score}%`,
+                    }}
                   />
                 </div>
                 <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -581,14 +595,17 @@ export default function ProfilePage() {
             <ChevronRight className="text-neutral-400" size={20} />
           </button>
 
-          {deferredPrompt && (
+          {(deferredPrompt || (isIos && !isStandalone)) && (
             <button
               onClick={async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === "accepted") {
-                  setDeferredPrompt(null);
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  const { outcome } = await deferredPrompt.userChoice;
+                  if (outcome === "accepted") {
+                    setDeferredPrompt(null);
+                  }
+                } else if (isIos) {
+                  setShowInstallModal(true);
                 }
               }}
               className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
@@ -935,6 +952,140 @@ export default function ProfilePage() {
               </div>
               <Trash2 className="text-red-500 dark:text-red-400" size={18} />
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* iOS Install Modal */}
+      <Modal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+        title="Install Arthavi on iPhone">
+        <div className="space-y-5">
+          {/* Header banner */}
+          <div className="bg-linear-to-r from-indigo-500/15 to-blue-500/10 dark:from-indigo-500/20 dark:to-blue-500/15 border border-indigo-200/60 dark:border-indigo-500/20 rounded-xl px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/30">
+              <Download size={16} className="text-white" />
+            </div>
+            <p className="text-xs text-indigo-800 dark:text-indigo-200 leading-snug">
+              Open this page in <span className="font-semibold">Safari</span>,
+              then follow these 3 steps to add Arthavi to your Home Screen.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {/* Step 1 */}
+            <div className="rounded-2xl overflow-hidden border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5">
+              <div className="flex items-center gap-3 px-3.5 pt-3.5 pb-2.5">
+                <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm">
+                  1
+                </div>
+                <div>
+                  <p className="text-sm font-semibold dark:text-white">
+                    Tap the Share button
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Bottom toolbar in Safari (box with arrow pointing up)
+                  </p>
+                </div>
+              </div>
+              <div className="relative mx-3 mb-3 rounded-xl overflow-hidden ring-2 ring-indigo-400/60">
+                <img
+                  src="/ios_add/first.PNG"
+                  alt="Safari share button"
+                  className="w-full object-cover"
+                  style={{ height: "160px", objectPosition: "50% 75%" }}
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-indigo-600/20 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  ↑ Tap Share here
+                </div>
+              </div>
+            </div>
+
+            {/* Connector */}
+            <div className="flex justify-center">
+              <div className="w-0.5 h-3 bg-neutral-200 dark:bg-white/15 rounded-full" />
+            </div>
+
+            {/* Step 2 */}
+            <div className="rounded-2xl overflow-hidden border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5">
+              <div className="flex items-center gap-3 px-3.5 pt-3.5 pb-2.5">
+                <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm">
+                  2
+                </div>
+                <div>
+                  <p className="text-sm font-semibold dark:text-white">
+                    Tap{" "}
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      &quot;More&quot;
+                    </span>{" "}
+                    in the share sheet
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Scroll right in the second row of icons
+                  </p>
+                </div>
+              </div>
+              <div className="relative mx-3 mb-3 rounded-xl overflow-hidden ring-2 ring-emerald-400/60">
+                <img
+                  src="/ios_add/second.jpg"
+                  alt="Share sheet with More option"
+                  className="w-full object-cover object-center"
+                  style={{ height: "110px" }}
+                />
+                <div className="absolute inset-0 bg-linear-to-l from-emerald-600/20 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-600 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  Tap More →
+                </div>
+              </div>
+            </div>
+
+            {/* Connector */}
+            <div className="flex justify-center">
+              <div className="w-0.5 h-3 bg-neutral-200 dark:bg-white/15 rounded-full" />
+            </div>
+
+            {/* Step 3 */}
+            <div className="rounded-2xl overflow-hidden border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5">
+              <div className="flex items-center gap-3 px-3.5 pt-3.5 pb-2.5">
+                <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm">
+                  3
+                </div>
+                <div>
+                  <p className="text-sm font-semibold dark:text-white">
+                    Tap{" "}
+                    <span className="text-amber-600 dark:text-amber-400">
+                      &quot;Add to Home Screen&quot;
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Then tap &quot;Add&quot; in the top-right corner to confirm
+                  </p>
+                </div>
+              </div>
+              <div className="relative mx-3 mb-3 rounded-xl overflow-hidden ring-2 ring-amber-400/60">
+                <img
+                  src="/ios_add/third.PNG"
+                  alt="Add to Home Screen option"
+                  className="w-full object-cover"
+                  style={{ height: "160px", objectPosition: "50% 55%" }}
+                />
+                <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-amber-500/10 pointer-events-none" />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 bg-amber-500 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full shadow-lg whitespace-nowrap">
+                  ← Tap this
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer tip */}
+          <div className="flex items-center gap-2 text-[11px] text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-white/5 rounded-xl px-3 py-2.5 border border-neutral-100 dark:border-white/5">
+            <span className="text-sm">💡</span>
+            <p>
+              After adding, open Arthavi from your Home Screen for the full app
+              experience.
+            </p>
           </div>
         </div>
       </Modal>
