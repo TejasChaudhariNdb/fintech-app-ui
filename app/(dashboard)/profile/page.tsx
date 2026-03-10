@@ -375,7 +375,7 @@ export default function ProfilePage() {
             }
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-colors text-xs font-medium text-white backdrop-blur-sm shrink-0">
             <Gift size={14} className="text-yellow-300" />
-            Refer & Earn
+            Refer &amp; Earn
           </button>
         </div>
       </div>
@@ -415,242 +415,267 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm">
-          {/* Personal Details Button */}
-          <button
-            onClick={() => {
-              setShowProfileModal(true);
-            }}
-            className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                <User size={20} />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">
-                  Personal Details
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    Name, Phone, PAN
+        {/* ── ACCOUNT ── */}
+        <div>
+          <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2 px-1">
+            Account
+          </p>
+          <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+            {/* Personal Details */}
+            <button
+              onClick={() => setShowProfileModal(true)}
+              className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                  <User size={18} />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-sm dark:text-white">
+                    Personal Details
                   </p>
-                  {userProfile.kyc_nudges.length === 0 && (
-                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                      <CheckCircle size={10} />
-                      Verified
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Name, Phone, PAN
+                    </p>
+                    {userProfile.kyc_nudges.length === 0 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle size={9} />
+                        Verified
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <ChevronRight className="text-neutral-400" size={20} />
-          </button>
+              <ChevronRight
+                className="text-neutral-300 dark:text-neutral-600"
+                size={18}
+              />
+            </button>
 
-          {/* Theme Toggle */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                {mounted && theme === "dark" ? (
-                  <Moon size={20} />
-                ) : (
-                  <Sun size={20} />
-                )}
+            {/* Upload CAS */}
+            <button
+              onClick={() => router.push("/holdings/mutual-funds?import=1")}
+              className="w-full flex items-center justify-between p-4 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                  <FileText size={18} />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-sm dark:text-white">
+                    Upload CAS Statement
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Import mutual fund data
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">Appearance</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {mounted && theme === "dark" ? "Dark Mode" : "Light Mode"}
-                </p>
-              </div>
-            </div>
+              <ChevronRight
+                className="text-neutral-300 dark:text-neutral-600"
+                size={18}
+              />
+            </button>
+          </div>
+        </div>
+
+        {/* ── PREFERENCES ── */}
+        <div>
+          <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2 px-1">
+            Preferences
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {/* Appearance toggle */}
             {mounted && (
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                  theme === "dark" ? "bg-primary-600" : "bg-neutral-200"
-                }`}>
-                <span
-                  className={`${
-                    theme === "dark" ? "translate-x-6" : "translate-x-1"
-                  } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                />
+                className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                    {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+                  </div>
+                  <div
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${theme === "dark" ? "bg-primary-600" : "bg-neutral-200"}`}>
+                    <span
+                      className={`${theme === "dark" ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold dark:text-white">
+                    Appearance
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    {theme === "dark" ? "Dark Mode" : "Light Mode"}
+                  </p>
+                </div>
               </button>
             )}
-          </div>
 
-          {/* Privacy Toggle */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                {isPrivacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
-              </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">Privacy Mode</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {isPrivacyMode
-                    ? "Prices & Values Hidden"
-                    : "Prices & Values Visible"}
-                </p>
-              </div>
-            </div>
+            {/* Privacy */}
             <button
               onClick={togglePrivacyMode}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                isPrivacyMode ? "bg-primary-600" : "bg-neutral-200"
-              }`}>
-              <span
-                className={`${
-                  isPrivacyMode ? "translate-x-6" : "translate-x-1"
-                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-              />
-            </button>
-          </div>
-
-          {/* App Lock Toggle */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                {appLockEnabled ? <Lock size={20} /> : <Unlock size={20} />}
+              className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                  {isPrivacyMode ? <EyeOff size={16} /> : <Eye size={16} />}
+                </div>
+                <div
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isPrivacyMode ? "bg-primary-600" : "bg-neutral-200"}`}>
+                  <span
+                    className={`${isPrivacyMode ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
+                  />
+                </div>
               </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">Biometric Lock</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <div>
+                <p className="text-sm font-semibold dark:text-white">
+                  Privacy Mode
+                </p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  {isPrivacyMode ? "Values Hidden" : "Values Visible"}
+                </p>
+              </div>
+            </button>
+
+            {/* Biometric */}
+            <button
+              onClick={toggleAppLock}
+              className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                  {appLockEnabled ? <Lock size={16} /> : <Unlock size={16} />}
+                </div>
+                <div
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${appLockEnabled ? "bg-primary-600" : "bg-neutral-200"}`}>
+                  <span
+                    className={`${appLockEnabled ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold dark:text-white">
+                  Biometric Lock
+                </p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
                   {appLockEnabled ? "Enabled" : "Disabled"}
                 </p>
               </div>
-            </div>
-            <button
-              onClick={toggleAppLock}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                appLockEnabled ? "bg-primary-600" : "bg-neutral-200"
-              }`}>
-              <span
-                className={`${
-                  appLockEnabled ? "translate-x-6" : "translate-x-1"
-                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-              />
             </button>
-          </div>
 
-          {/* Notifications Toggle */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                <Bell size={20} />
+            {/* Notifications */}
+            <button
+              onClick={toggleNotifications}
+              className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                  <Bell size={16} />
+                </div>
+                <div
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${notificationsEnabled ? "bg-primary-600" : "bg-neutral-200"}`}>
+                  <span
+                    className={`${notificationsEnabled ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
+                  />
+                </div>
               </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">Notifications</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              <div>
+                <p className="text-sm font-semibold dark:text-white">
+                  Notifications
+                </p>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
                   {notificationsEnabled ? "Enabled" : "Disabled"}
                 </p>
               </div>
-            </div>
-            <button
-              onClick={toggleNotifications}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                notificationsEnabled ? "bg-primary-600" : "bg-neutral-200"
-              }`}>
-              <span
-                className={`${
-                  notificationsEnabled ? "translate-x-6" : "translate-x-1"
-                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-              />
             </button>
           </div>
+        </div>
 
-          {/* Contact Support */}
-          <button
-            onClick={() => setShowContactModal(true)}
-            className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                <MessageCircle size={20} />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">Contact Support</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Get help or share feedback
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="text-neutral-400" size={20} />
-          </button>
-
-          <button
-            onClick={() => router.push("/holdings/mutual-funds?import=1")}
-            className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                <FileText size={20} />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold dark:text-white">
-                  Upload CAS Statement
-                </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Import mutual fund data
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="text-neutral-400" size={20} />
-          </button>
-
-          {(deferredPrompt || (isIos && !isStandalone)) && (
+        {/* ── MORE ── */}
+        <div>
+          <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2 px-1">
+            More
+          </p>
+          <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+            {/* Contact Support */}
             <button
-              onClick={async () => {
-                if (deferredPrompt) {
-                  deferredPrompt.prompt();
-                  const { outcome } = await deferredPrompt.userChoice;
-                  if (outcome === "accepted") {
-                    setDeferredPrompt(null);
-                  }
-                } else if (isIos) {
-                  setShowInstallModal(true);
-                }
-              }}
+              onClick={() => setShowContactModal(true)}
               className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                  <Download size={20} />
+                <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                  <MessageCircle size={18} />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-blue-600 dark:text-blue-400">
-                    Install App
+                  <p className="font-semibold text-sm dark:text-white">
+                    Contact Support
                   </p>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    Add to home screen
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Get help or share feedback
                   </p>
                 </div>
               </div>
-              <ChevronRight className="text-neutral-400" size={20} />
+              <ChevronRight
+                className="text-neutral-300 dark:text-neutral-600"
+                size={18}
+              />
             </button>
-          )}
 
-          <button
-            onClick={() => setShowResetModal(true)}
-            className="w-full flex items-center justify-between p-4 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
-                <Trash2 size={20} />
+            {/* Install App (conditional) */}
+            {(deferredPrompt || (isIos && !isStandalone)) && (
+              <button
+                onClick={async () => {
+                  if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === "accepted") setDeferredPrompt(null);
+                  } else if (isIos) {
+                    setShowInstallModal(true);
+                  }
+                }}
+                className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    <Download size={18} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-sm text-blue-600 dark:text-blue-400">
+                      Install App
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Add to home screen
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight
+                  className="text-neutral-300 dark:text-neutral-600"
+                  size={18}
+                />
+              </button>
+            )}
+
+            {/* About / Version */}
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm dark:text-white">
+                    About Arthavi
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Made with ❤️ for Indian investors
+                  </p>
+                </div>
               </div>
-              <div className="text-left">
-                <p className="font-semibold text-red-600 dark:text-red-400">
-                  Reset Portfolio
-                </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Clear MF, Stocks, or Everything
-                </p>
-              </div>
+              <span className="text-[10px] font-mono bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full">
+                v1.2.2
+              </span>
             </div>
-            <ChevronRight className="text-neutral-400" size={20} />
-          </button>
+          </div>
         </div>
 
         {/* Data Privacy Promise */}
         <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
           <ShieldCheck
             className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
-            size={20}
+            size={18}
           />
           <div>
             <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
@@ -674,7 +699,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Gift className="text-yellow-300" size={20} />
-                <h2 className="text-lg font-bold">Refer & Earn</h2>
+                <h2 className="text-lg font-bold">Refer &amp; Earn</h2>
               </div>
               {userProfile.is_ai_unlocked ? (
                 <div className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 border border-white/30">
@@ -750,22 +775,47 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* App Info */}
-        <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
-          <h3 className="font-semibold mb-3 dark:text-white">About</h3>
-          <div className="space-y-2 text-sm text-neutral-600 dark:text-neutral-400">
-            <p>Version 1.2.2</p>
-            <p>Made with ❤️ for Indian investors</p>
+        {/* ── DANGER ZONE ── */}
+        <div>
+          <p className="text-xs font-semibold text-red-400/70 dark:text-red-500/60 uppercase tracking-widest mb-2 px-1">
+            Danger Zone
+          </p>
+          <div className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+            <button
+              onClick={() => setShowResetModal(true)}
+              className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-red-50 dark:active:bg-red-500/5 hover:bg-red-50/50 dark:hover:bg-red-500/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                  <Trash2 size={18} />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-sm text-red-600 dark:text-red-400">
+                    Reset Portfolio
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Clear MF, Stocks, or Everything
+                  </p>
+                </div>
+              </div>
+              <ChevronRight
+                className="text-red-300 dark:text-red-600"
+                size={18}
+              />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 p-4 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400">
+                <LogOut size={18} />
+              </div>
+              <p className="font-semibold text-sm text-neutral-700 dark:text-neutral-300">
+                Log Out
+              </p>
+            </button>
           </div>
         </div>
-        {/* Logout */}
-        <Button
-          onClick={handleLogout}
-          variant="danger"
-          className="w-full flex items-center justify-center gap-2">
-          <LogOut size={18} />
-          Logout
-        </Button>
+
+        <div className="h-2" />
       </div>
 
       {/* Profile Edit Modal */}
