@@ -24,6 +24,7 @@ const useFcmToken = () => {
         setPermission(currentPermission);
 
         if (currentPermission === "granted") {
+          localStorage.setItem("fcm_permission", "granted");
           // Dynamic SW Registration with Versioning to force update
           const swUrl = `/firebase-messaging-sw.js?v=2&apiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`;
 
@@ -67,7 +68,11 @@ const useFcmToken = () => {
       setPermission(Notification.permission);
 
       // If permission is already granted, retrieve the token silently
-      if (Notification.permission === "granted") {
+      if (
+        Notification.permission === "granted" &&
+        localStorage.getItem("fcm_opt_out") !== "true"
+      ) {
+        localStorage.setItem("fcm_permission", "granted");
         retrieveToken();
       }
     }

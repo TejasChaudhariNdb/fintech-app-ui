@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Download,
   Lock,
+  Bell,
   MessageCircle,
   Copy,
   Gift,
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
+import useFcmToken from "@/hooks/useFcmToken";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -38,8 +40,10 @@ export default function ProfilePage() {
   const [mounted, setMounted] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [appLockEnabled, setAppLockEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { permission, requestPermission } = useFcmToken();
 
   // Profile State
   const [userProfile, setUserProfile] = useState({
@@ -82,6 +86,12 @@ export default function ProfilePage() {
     // Check initial state
     const lock = localStorage.getItem("app_lock_enabled") === "true";
     setAppLockEnabled(lock);
+    const optedOut = localStorage.getItem("fcm_opt_out") === "true";
+    const allowed =
+      typeof window !== "undefined" &&
+      "Notification" in window &&
+      Notification.permission === "granted";
+    setNotificationsEnabled(allowed && !optedOut);
 
     loadUserProfile();
 
@@ -95,6 +105,18 @@ export default function ProfilePage() {
       return () => window.removeEventListener("beforeinstallprompt", handler);
     }
   }, []);
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setNotificationsEnabled(false);
+      return;
+    }
+    const optedOut = localStorage.getItem("fcm_opt_out") === "true";
+    if (permission === "granted" && !optedOut) {
+      setNotificationsEnabled(true);
+    } else {
+      setNotificationsEnabled(false);
+    }
+  }, [permission]);
 
   const loadUserProfile = async () => {
     try {
@@ -208,6 +230,29 @@ export default function ProfilePage() {
     } catch (err: any) {
       console.error(err);
       showToast("Setup failed or cancelled", "error");
+    }
+  };
+
+  const toggleNotifications = async () => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      showToast("Notifications not supported", "error");
+      return;
+    }
+
+    if (notificationsEnabled) {
+      localStorage.setItem("fcm_opt_out", "true");
+      setNotificationsEnabled(false);
+      showToast("Notifications Disabled", "success");
+      return;
+    }
+
+    localStorage.removeItem("fcm_opt_out");
+    await requestPermission();
+    if (Notification.permission === "granted") {
+      setNotificationsEnabled(true);
+      showToast("Notifications Enabled", "success");
+    } else if (Notification.permission === "denied") {
+      showToast("Notification permission denied", "error");
     }
   };
 
@@ -468,6 +513,32 @@ export default function ProfilePage() {
               <span
                 className={`${
                   appLockEnabled ? "translate-x-6" : "translate-x-1"
+                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+              />
+            </button>
+          </div>
+
+          {/* Notifications Toggle */}
+          <div className="flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                <Bell size={20} />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold dark:text-white">Notifications</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {notificationsEnabled ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleNotifications}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                notificationsEnabled ? "bg-primary-600" : "bg-neutral-200"
+              }`}>
+              <span
+                className={`${
+                  notificationsEnabled ? "translate-x-6" : "translate-x-1"
                 } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
               />
             </button>

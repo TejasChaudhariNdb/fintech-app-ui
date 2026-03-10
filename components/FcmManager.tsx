@@ -11,13 +11,18 @@ const FcmManager = () => {
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
-    // Show banner only if permission is strictly default (not granted, not denied)
-    // and we are reasonably sure we are on client side.
-    if (typeof window !== "undefined" && permission === "default") {
-      // Maybe wait a bit before showing to not be too aggressive
-      const timer = setTimeout(() => setShowBanner(true), 3000);
-      return () => clearTimeout(timer);
-    }
+    console.log("Permission:", permission);
+    // Show banner only if permission is default, supported, and user hasn't already enabled.
+    if (typeof window === "undefined") return;
+    if (!("Notification" in window)) return;
+    if (permission !== "default") return;
+    if (localStorage.getItem("fcm_permission") === "granted") return;
+    if (localStorage.getItem("fcm_opt_out") === "true") return;
+    const laterUntil = localStorage.getItem("fcm_permission_later_until");
+    if (laterUntil && Number(laterUntil) > Date.now()) return;
+
+    const timer = setTimeout(() => setShowBanner(true), 3000);
+    return () => clearTimeout(timer);
   }, [permission]);
 
   useEffect(() => {
@@ -26,6 +31,7 @@ const FcmManager = () => {
       "serviceWorker" in navigator &&
       permission === "granted"
     ) {
+      if (localStorage.getItem("fcm_opt_out") === "true") return;
       const messaging = getMessaging(app);
       const unsubscribe = onMessage(messaging, (payload) => {
         console.log("Foreground Message received:", payload);
@@ -64,15 +70,21 @@ const FcmManager = () => {
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => {
+              onClick={async () => {
                 setShowBanner(false);
-                requestPermission();
+                await requestPermission();
               }}
               className="bg-white text-blue-700 hover:bg-blue-50 text-xs px-3 py-1.5 rounded-md font-medium transition-colors">
               Enable Now
             </button>
             <button
-              onClick={() => setShowBanner(false)}
+              onClick={() => {
+                localStorage.setItem(
+                  "fcm_permission_later_until",
+                  String(Date.now() + 12 * 60 * 60 * 1000),
+                );
+                setShowBanner(false);
+              }}
               className="bg-transparent hover:bg-white/10 text-white text-xs px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20">
               Maybe Later
             </button>
