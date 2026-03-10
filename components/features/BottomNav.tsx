@@ -1,12 +1,11 @@
 "use client";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, Briefcase, Activity, Target, User } from "lucide-react";
+import { Home, Briefcase, Activity, Target, Settings } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const { light } = useHaptic();
 
   const tabs = [
@@ -14,7 +13,7 @@ export default function BottomNav() {
     { id: "/holdings", label: "Holdings", icon: Briefcase },
     { id: "/activity", label: "Activity", icon: Activity },
     { id: "/goals", label: "Goals", icon: Target },
-    { id: "/profile", label: "Profile", icon: User },
+    { id: "/profile", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -32,20 +31,22 @@ export default function BottomNav() {
               onClick={() => {
                 light();
               }}
-              className={`flex flex-col items-center gap-1.5 px-3 py-2 transition-all duration-300 min-w-[64px] rounded-2xl ${
+              className={`flex flex-col items-center gap-1 px-2 py-2 transition-all duration-300 min-w-[58px] rounded-2xl ${
                 isActive
                   ? "text-primary-600 dark:text-primary-400"
-                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-300"
+                  : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
               }`}>
               <span
-                className={`transition-transform duration-300 ${
-                  isActive ? "-translate-y-1 scale-110" : ""
+                className={`transition-all duration-300 rounded-2xl px-3 py-1.5 ${
+                  isActive
+                    ? "bg-primary-100 dark:bg-primary-500/15 -translate-y-0.5"
+                    : "bg-transparent"
                 }`}>
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
               </span>
               <span
-                className={`text-[10px] font-medium transition-opacity ${
-                  isActive ? "opacity-100" : "opacity-70"
+                className={`text-[9.5px] font-semibold transition-all ${
+                  isActive ? "opacity-100" : "opacity-50"
                 }`}>
                 {tab.label}
               </span>
