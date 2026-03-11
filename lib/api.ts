@@ -295,6 +295,9 @@ export const api = {
   getStockQuote: (symbol: string) =>
     api.fetch(`/equity/quote?symbol=${symbol}`, {}),
 
+  getStockFundamentals: (symbol: string) =>
+    api.fetch(`/equity/fundamentals/${symbol}`),
+
   deleteHolding: (id: number) =>
     api.fetch(`/equity/holding/${id}`, { method: "DELETE" }),
 

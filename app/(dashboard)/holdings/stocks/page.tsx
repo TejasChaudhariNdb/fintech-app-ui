@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
@@ -23,6 +24,7 @@ import {
   Share2,
   Download,
   Search,
+  ChevronRight,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -452,43 +454,53 @@ export default function StocksPage() {
             key={stock.id || stock.symbol}
             className="p-5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-4 group hover:border-primary-500/20 transition-all">
             {/* Top Section: Header & Value */}
-            <div className="flex justify-between items-start">
+            <Link
+              href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
+              className="flex justify-between items-start group/header cursor-pointer">
               <div>
                 <div className="flex items-baseline gap-2 mb-1">
-                  <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white">
+                  <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover/header:text-primary-400 transition-colors">
                     {stock.symbol}
                   </h3>
                   <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide truncate max-w-[150px] hidden sm:inline-block">
                     {stock.company_name}
                   </span>
                 </div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {stock.company_name !== stock.symbol
-                    ? stock.company_name
-                    : "Equity Share"}
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
+                  <span>
+                    {stock.company_name !== stock.symbol
+                      ? stock.company_name
+                      : "Equity Share"}
+                  </span>
                 </div>
               </div>
 
-              <div className="text-right">
-                <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1">
-                  <PrivacyMask>
-                    {stock.value > 0 ? (
-                      `₹${Math.round(stock.value).toLocaleString()}`
-                    ) : stock.quantity > 0 ? (
-                      <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
-                        <Loader2 size={12} className="animate-spin" />
-                        Updating...
-                      </span>
-                    ) : (
-                      "₹0"
-                    )}
-                  </PrivacyMask>
+              <div className="text-right flex items-center gap-3">
+                <div>
+                  <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1">
+                    <PrivacyMask>
+                      {stock.value > 0 ? (
+                        `₹${Math.round(stock.value).toLocaleString()}`
+                      ) : stock.quantity > 0 ? (
+                        <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                          <Loader2 size={12} className="animate-spin" />
+                          Updating...
+                        </span>
+                      ) : (
+                        "₹0"
+                      )}
+                    </PrivacyMask>
+                  </div>
+                  <div className="text-xs text-neutral-500 font-medium">
+                    Avg: ₹{stock.avg_price?.toFixed(2)}
+                  </div>
                 </div>
-                <div className="text-xs text-neutral-500 font-medium">
-                  Avg: ₹{stock.avg_price?.toFixed(2)}
-                </div>
+                <ChevronRight
+                  className="text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all"
+                  size={20}
+                />
               </div>
-            </div>
+            </Link>
 
             {/* Middle Section: Stats & Badges */}
             <div className="flex items-center justify-between">
@@ -535,7 +547,9 @@ export default function StocksPage() {
                   setStockForm({
                     symbol: stock.symbol || "",
                     quantity: "",
-                    price: stock.current_price ? String(stock.current_price) : "",
+                    price: stock.current_price
+                      ? String(stock.current_price)
+                      : "",
                     date: new Date().toISOString().split("T")[0],
                     transaction_type: "BUY",
                   });
@@ -552,7 +566,9 @@ export default function StocksPage() {
                   setStockForm({
                     symbol: stock.symbol || "",
                     quantity: "",
-                    price: stock.current_price ? String(stock.current_price) : "",
+                    price: stock.current_price
+                      ? String(stock.current_price)
+                      : "",
                     date: new Date().toISOString().split("T")[0],
                     transaction_type: "SELL",
                   });
@@ -607,28 +623,30 @@ export default function StocksPage() {
             </div>
           </div>
         )}
-        {manualStocks.length > 0 && filteredStocks.length === 0 && !isLoading && (
-          <div className="text-center py-10 text-neutral-500 space-y-2">
-            <p>No stocks match your search.</p>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
-                Clear search
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowStockModal(true);
-                  setStockModalTab("MANUAL");
-                }}
-                className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
-                Add New Stock
-              </button>
+        {manualStocks.length > 0 &&
+          filteredStocks.length === 0 &&
+          !isLoading && (
+            <div className="text-center py-10 text-neutral-500 space-y-2">
+              <p>No stocks match your search.</p>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                  Clear search
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStockModal(true);
+                    setStockModalTab("MANUAL");
+                  }}
+                  className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                  Add New Stock
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </div>
 
       {/* Manual Stock/Import Modal */}
@@ -757,7 +775,11 @@ export default function StocksPage() {
                 required
               />
               <Input
-                label={stockForm.transaction_type === "SELL" ? "Sell Price" : "Buy Price"}
+                label={
+                  stockForm.transaction_type === "SELL"
+                    ? "Sell Price"
+                    : "Buy Price"
+                }
                 type="number"
                 value={stockForm.price}
                 onChange={(e) =>
@@ -779,7 +801,9 @@ export default function StocksPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={!isValidSymbol || !stockForm.quantity || !stockForm.price}>
+              disabled={
+                !isValidSymbol || !stockForm.quantity || !stockForm.price
+              }>
               {stockForm.transaction_type === "SELL"
                 ? "Add Sell Transaction"
                 : "Add Buy Transaction"}
