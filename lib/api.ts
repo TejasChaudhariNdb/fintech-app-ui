@@ -181,11 +181,35 @@ export const api = {
     api.fetch(`/portfolio/schemes/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
+    }).then((res) => {
+      api.clearCache([
+        "portfolio-summary",
+        "schemes",
+        "amc-allocation",
+        "scheme-allocation",
+        "xirr",
+        "insights",
+      ]);
+      return res;
     }),
   deleteScheme: (id: number) =>
-    api.fetch(`/portfolio/schemes/${id}`, { method: "DELETE" }),
+    api.fetch(`/portfolio/schemes/${id}`, { method: "DELETE" }).then((res) => {
+      api.clearCache([
+        "portfolio-summary",
+        "schemes",
+        "amc-allocation",
+        "scheme-allocation",
+        "xirr",
+        "insights",
+      ]);
+      return res;
+    }),
   getAMCAllocation: () =>
     api.fetch("/portfolio/amc-allocation", { cacheKey: "amc-allocation" }),
+  getSchemeAllocation: () =>
+    api.fetch("/portfolio/scheme-allocation", {
+      cacheKey: "scheme-allocation",
+    }),
   getTransactions: (skip = 0, limit = 50) =>
     api.fetch(`/portfolio/transactions?skip=${skip}&limit=${limit}`, {
       cacheKey: `transactions-${skip}-${limit}`,
@@ -236,6 +260,7 @@ export const api = {
       "portfolio-summary",
       "schemes",
       "amc-allocation",
+      "scheme-allocation",
       "xirr",
       "insights",
     ]);
@@ -282,6 +307,7 @@ export const api = {
       "portfolio-summary",
       "schemes",
       "amc-allocation",
+      "scheme-allocation",
       "xirr",
       "insights",
     ]);

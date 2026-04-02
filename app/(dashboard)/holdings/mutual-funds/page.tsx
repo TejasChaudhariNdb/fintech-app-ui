@@ -20,6 +20,7 @@ import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
 
 const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
+const SCHEME_CHART_LIMIT = 5;
 
 export default function MutualFundsPage() {
   const router = useRouter();
@@ -48,11 +49,13 @@ export default function MutualFundsPage() {
   // Data State
   const [schemes, setSchemes] = useState<any[]>([]);
   const [amcAllocation, setAmcAllocation] = useState<any[]>([]);
+  const [schemeAllocation, setSchemeAllocation] = useState<any[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("name");
+  const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
   const [prefillSchemeId, setPrefillSchemeId] = useState<number | null>(null);
   const [prefillMfType, setPrefillMfType] = useState<"PURCHASE" | "REDEMPTION">(
@@ -72,12 +75,14 @@ export default function MutualFundsPage() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [schemesRes, amcRes] = await Promise.all([
+      const [schemesRes, amcRes, schemeAllocationRes] = await Promise.all([
         api.getSchemes(),
         api.getAMCAllocation(),
+        api.getSchemeAllocation(),
       ]);
       setSchemes(schemesRes);
       setAmcAllocation(amcRes);
+      setSchemeAllocation(schemeAllocationRes);
       setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
@@ -129,6 +134,29 @@ export default function MutualFundsPage() {
   };
 
   const totalMFValue = schemes.reduce((sum, s) => sum + s.current, 0);
+  const topSchemeAllocation = schemeAllocation.slice(0, SCHEME_CHART_LIMIT);
+  const remainingSchemeAllocation = schemeAllocation.slice(SCHEME_CHART_LIMIT);
+  const otherSchemesValue = remainingSchemeAllocation.reduce(
+    (sum, entry) => sum + entry.current,
+    0,
+  );
+  const otherSchemesPercent = remainingSchemeAllocation.reduce(
+    (sum, entry) => sum + entry.percent,
+    0,
+  );
+  const schemeAllocationChartData =
+    otherSchemesValue > 0
+      ? [
+          ...topSchemeAllocation,
+          {
+            scheme_id: -1,
+            scheme: `Others (${remainingSchemeAllocation.length})`,
+            current: otherSchemesValue,
+            percent: Number(otherSchemesPercent.toFixed(2)),
+            xirr: null,
+          },
+        ]
+      : topSchemeAllocation;
 
   const filteredSchemes = schemes
     .filter((s) => s.scheme?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -137,6 +165,12 @@ export default function MutualFundsPage() {
       if (sortBy === "profit") return b.profit - a.profit;
       return a.scheme?.localeCompare(b.scheme);
     });
+  const allocationData =
+    allocationView === "amc" ? amcAllocation : schemeAllocationChartData;
+  const allocationNameKey = allocationView === "amc" ? "amc" : "scheme";
+  const allocationCenterLabel = allocationView === "amc" ? "AMCs" : "Funds";
+  const allocationLegendData =
+    allocationView === "amc" ? amcAllocation : schemeAllocation.slice(0, 6);
 
   if (isLoading) {
     return <AppSkeleton />;
@@ -188,113 +222,152 @@ export default function MutualFundsPage() {
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
 
-      {/* AMC Allocation Chart */}
       <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
-        <div className="flex justify-between items-start mb-2">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
-              AMC Allocation
-              {lastUpdated && (
-                <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                  Updated{" "}
-                  {lastUpdated.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              )}
-            </h3>
-          </div>
-          <button
-            onClick={() => {
-              const totalCurrent = schemes.reduce(
-                (sum, s) => sum + s.current,
-                0,
-              );
-              const totalInvested = schemes.reduce((sum, s) => {
-                return sum + s.current / (1 + (s.return_pct || 0) / 100);
-              }, 0);
-
-              const totalPnlPct =
-                totalInvested > 0
-                  ? ((totalCurrent - totalInvested) / totalInvested) * 100
-                  : 0;
-
-              setSelectedShareStock({
-                symbol: "My Mutual Fund Portfolio",
-                pnl_pct: totalPnlPct,
-                value: totalCurrent,
-              });
-            }}
-            className="p-2 text-neutral-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-full transition-all"
-            title="Share Portfolio Performance">
-            <Share2 size={20} />
-          </button>
-        </div>
-        <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="h-[200px] w-[200px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={amcAllocation}
-                  dataKey="current"
-                  nameKey="amc"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}>
-                  {amcAllocation.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                      stroke="none"
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1A1F2B",
-                    border: "none",
-                    borderRadius: "12px",
-                    color: "#fff",
-                  }}
-                  itemStyle={{ color: "#fff" }}
-                  formatter={(value: number | undefined) =>
-                    value !== undefined ? `₹${value.toLocaleString()}` : ""
-                  }
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Center Text */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
-                Total
-              </p>
-              <p className="text-sm font-bold text-neutral-900 dark:text-white">
-                <PrivacyMask>{(totalMFValue / 100000).toFixed(1)}L</PrivacyMask>
-              </p>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div className="flex-1 grid grid-cols-2 gap-x-8 gap-y-3">
-            {amcAllocation.map((entry, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                />
-                <div className="flex-1">
-                  <p
-                    className="text-sm font-medium text-neutral-700 dark:text-neutral-300 truncate max-w-[120px]"
-                    title={entry.amc}>
-                    {entry.amc}
-                  </p>
-                  <p className="text-xs text-neutral-500">{entry.percent}%</p>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
+                  Mutual Fund Allocation
+                </h3>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {lastUpdated && (
+                    <span className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
+                      Updated{" "}
+                      {lastUpdated.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  )}
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {allocationView === "amc"
+                      ? "Compare concentration by fund house"
+                      : "Compare concentration fund by fund"}
+                  </span>
                 </div>
               </div>
-            ))}
+              <button
+                onClick={() => {
+                  const totalCurrent = schemes.reduce(
+                    (sum, s) => sum + s.current,
+                    0,
+                  );
+                  const totalInvested = schemes.reduce((sum, s) => {
+                    return sum + s.current / (1 + (s.return_pct || 0) / 100);
+                  }, 0);
+
+                  const totalPnlPct =
+                    totalInvested > 0
+                      ? ((totalCurrent - totalInvested) / totalInvested) * 100
+                      : 0;
+
+                  setSelectedShareStock({
+                    symbol: "My Mutual Fund Portfolio",
+                    pnl_pct: totalPnlPct,
+                    value: totalCurrent,
+                  });
+                }}
+                className="shrink-0 rounded-full p-2 text-neutral-400 transition-all hover:bg-primary-500/10 hover:text-primary-500"
+                title="Share Portfolio Performance">
+                <Share2 size={20} />
+              </button>
+            </div>
+
+            <div className="flex w-full rounded-2xl bg-neutral-100 p-1 dark:bg-white/5 sm:w-fit">
+                {(["amc", "scheme"] as const).map((view) => (
+                  <button
+                    key={view}
+                    onClick={() => setAllocationView(view)}
+                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition-all sm:flex-none ${
+                      allocationView === view
+                        ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                    }`}>
+                    {view === "amc" ? "AMC Wise" : "Scheme Wise"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="h-[200px] w-[200px] relative shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={allocationData}
+                    dataKey="current"
+                    nameKey={allocationNameKey}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}>
+                    {allocationData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                        stroke="none"
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#1A1F2B",
+                      border: "none",
+                      borderRadius: "12px",
+                      color: "#fff",
+                    }}
+                    itemStyle={{ color: "#fff" }}
+                    formatter={(value: number | undefined) =>
+                      value !== undefined ? `₹${value.toLocaleString()}` : ""
+                    }
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  Total
+                </p>
+                <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                  {allocationView === "amc" ? (
+                    <PrivacyMask>
+                      {(totalMFValue / 100000).toFixed(1)}L
+                    </PrivacyMask>
+                  ) : (
+                    `${schemeAllocation.length} ${allocationCenterLabel}`
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-1 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+              {allocationLegendData.map((entry, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 rounded-2xl bg-neutral-50 px-3 py-3 dark:bg-white/[0.03]">
+                  <div
+                    className="mt-1 h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="truncate text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                      title={allocationView === "amc" ? entry.amc : entry.scheme}>
+                      {allocationView === "amc" ? entry.amc : entry.scheme}
+                    </p>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      {entry.percent}%
+                      {allocationView === "scheme" &&
+                      entry.xirr !== null &&
+                      entry.xirr !== undefined
+                        ? ` | XIRR ${entry.xirr.toFixed(2)}%`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </Card>
@@ -375,6 +448,7 @@ export default function MutualFundsPage() {
                 units={scheme.units}
                 current={scheme.current}
                 returnPct={scheme.return_pct}
+                xirr={scheme.xirr}
                 onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
                 onShare={() =>
                   setSelectedShareStock({

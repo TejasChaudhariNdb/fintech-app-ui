@@ -12,6 +12,7 @@ interface SchemeCardProps {
   units?: number;
   current: number;
   returnPct: number;
+  xirr?: number | null;
   onClick?: () => void;
   onShare?: () => void;
   onEdit?: () => void;
@@ -27,6 +28,7 @@ export default function SchemeCard({
   units,
   current,
   returnPct,
+  xirr,
   onClick,
   onShare,
   onEdit,
@@ -60,6 +62,11 @@ export default function SchemeCard({
             {units !== undefined && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400 font-medium tracking-tight whitespace-nowrap">
                 {units.toFixed(2)} Units
+              </span>
+            )}
+            {xirr !== undefined && xirr !== null && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium tracking-tight whitespace-nowrap">
+                XIRR: {xirr.toFixed(2)}%
               </span>
             )}
           </div>

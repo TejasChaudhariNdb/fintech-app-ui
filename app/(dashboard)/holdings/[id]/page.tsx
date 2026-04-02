@@ -154,7 +154,7 @@ export default function SchemeDetailPage({
           </div>
 
           {/* Bottom Section: Grid Stats */}
-          <div className="grid grid-cols-3 p-4 bg-neutral-50/50 dark:bg-white/5 divide-x divide-neutral-200 dark:divide-white/5">
+          <div className="grid grid-cols-4 p-4 bg-neutral-50/50 dark:bg-white/5 divide-x divide-neutral-200 dark:divide-white/5">
             <div className="px-2">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
                 Invested
@@ -185,6 +185,16 @@ export default function SchemeDetailPage({
               </p>
               <p className="text-sm font-bold text-neutral-900 dark:text-white">
                 {scheme.units.toFixed(2)}
+              </p>
+            </div>
+            <div className="px-2">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
+                XIRR
+              </p>
+              <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                {scheme.xirr !== null && scheme.xirr !== undefined
+                  ? `${scheme.xirr.toFixed(2)}%`
+                  : "NA"}
               </p>
             </div>
           </div>
