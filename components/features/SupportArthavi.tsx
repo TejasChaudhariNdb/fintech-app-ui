@@ -12,13 +12,13 @@ interface SupportArthaviProps {
 
 const SupportArthavi = ({
   vpa = "9158110065@ybl",
-  name = "Tejas Chaudhari",
+  name = "Tejas Sanjay Chaudhari",
   amount,
 }: SupportArthaviProps) => {
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
 
   const getUpiUrl = (scheme: string) => {
-    return `${scheme}?pa=${vpa}&pn=${encodeURIComponent(name)}${amount ? `&am=${amount}` : ""}&cu=INR&tn=${encodeURIComponent("Support Arthavi")}`;
+    return `${scheme}?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(name)}${amount ? `&am=${amount}` : ""}&cu=INR&tn=${encodeURIComponent("Support Arthavi")}`;
   };
 
   const handleAppSelect = async (scheme: string, appId: string) => {
@@ -105,9 +105,30 @@ const SupportArthavi = ({
             className="w-full h-full object-cover"
           />
         </div>
-        <p className="text-xs font-mono mt-3 text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-white/10 py-1.5 px-3 rounded-lg inline-block select-all">
-          {vpa}
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-3">
+          <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-white/10 py-1.5 px-3 rounded-lg select-all">
+            {vpa}
+          </p>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(vpa);
+              alert("UPI ID copied!");
+            }}
+            className="p-1.5 rounded-lg bg-neutral-200 hover:bg-neutral-300 dark:bg-white/10 dark:hover:bg-white/20 text-neutral-600 dark:text-neutral-400 transition-colors"
+            title="Copy UPI ID">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Modern Bottom Sheet Payment Options */}
