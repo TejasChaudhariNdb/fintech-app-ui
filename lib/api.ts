@@ -498,4 +498,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  trackSupportClick: (paymentApp: string) =>
+    api.fetch("/support/click", {
+      method: "POST",
+      body: JSON.stringify({ payment_app: paymentApp }),
+    }),
 };

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Heart, X, Link as LinkIcon } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface SupportArthaviProps {
   vpa?: string; // Your UPI ID
@@ -20,7 +21,13 @@ const SupportArthavi = ({
     return `${scheme}?pa=${vpa}&pn=${encodeURIComponent(name)}${amount ? `&am=${amount}` : ""}&cu=INR&tn=${encodeURIComponent("Support Arthavi")}`;
   };
 
-  const handleAppSelect = (scheme: string) => {
+  const handleAppSelect = async (scheme: string, appId: string) => {
+    try {
+      // Record click silently in background
+      await api.trackSupportClick(appId);
+    } catch {
+      // ignore
+    }
     window.location.assign(getUpiUrl(scheme));
     setShowPaymentSheet(false);
   };
@@ -83,7 +90,7 @@ const SupportArthavi = ({
           xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
         </svg>
-        Donate via UPI
+        Support Arthavi via UPI
       </button>
 
       {/* QR Code is always visible now */}
@@ -136,7 +143,7 @@ const SupportArthavi = ({
               {paymentApps.map((app) => (
                 <button
                   key={app.id}
-                  onClick={() => handleAppSelect(app.scheme)}
+                  onClick={() => handleAppSelect(app.scheme, app.id)}
                   className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-transform active:scale-[0.98] ${app.color}`}>
                   <div className="w-8 h-8 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs border border-black/5 dark:border-white/10">
                     {/* USER: Add your 1:1 square aspect ratio logos inside public/logos/ directory */}
