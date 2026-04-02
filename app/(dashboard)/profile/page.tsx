@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
 import ContactSupportModal from "@/components/features/ContactSupportModal";
+import SupportArthavi from "@/components/features/SupportArthavi";
 import Button from "@/components/ui/Button";
 import {
   Unlock,
@@ -813,6 +814,11 @@ export default function ProfilePage() {
               </p>
             </button>
           </div>
+        </div>
+
+        {/* ── SUPPORT ARTHAVI ── */}
+        <div className="mt-4">
+          <SupportArthavi />
         </div>
 
         <div className="h-2" />
