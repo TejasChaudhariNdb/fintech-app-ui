@@ -8,12 +8,22 @@ interface PortfolioHealthCardProps {
   score?: number; // 0-100
   diversificationScore?: number; // 0-100
   riskScore?: number; // 0-100
+  
+  // Real data inputs
+  mfValue?: number;
+  stockValue?: number;
+  returnPct?: number;
+  dayChangePct?: number;
 }
 
 export default function PortfolioHealthCard({
-  score = 84,
-  diversificationScore = 78,
-  riskScore = 45,
+  score,
+  diversificationScore,
+  riskScore,
+  mfValue = 0,
+  stockValue = 0,
+  returnPct = 0,
+  dayChangePct = 0,
 }: PortfolioHealthCardProps) {
   const getScoreStatus = (val: number) => {
     if (val >= 80)
@@ -39,9 +49,50 @@ export default function PortfolioHealthCard({
     return { label: "High", color: "text-red-500", bar: "bg-red-500" };
   };
 
-  const health = getScoreStatus(score);
-  const diversification = getScoreStatus(diversificationScore);
-  const risk = getRiskStatus(riskScore);
+
+
+  // Mathematics for Portfolio Health
+  const calculateScores = () => {
+    // If explicit overrides are provided, use them, or if no data exists, use defaults
+    const totalValue = mfValue + stockValue;
+    
+    if (totalValue === 0) {
+      return {
+        calcScore: score ?? 0,
+        calcDiv: diversificationScore ?? 0,
+        calcRisk: riskScore ?? 0,
+      };
+    }
+
+    const mfRatio = mfValue / totalValue;
+    const stockRatio = stockValue / totalValue;
+
+    // 1. Diversification Score: Target 65% MF / 35% Stock
+    const idealMfRatio = 0.65;
+    const deviation = Math.abs(mfRatio - idealMfRatio);
+    const calcDiv = Math.round(Math.max(0, 100 - deviation * 100));
+
+    // 2. Risk Score: MFs are base 30 risk, Stocks are 80. Add volatility.
+    const baseRisk = mfRatio * 30 + stockRatio * 80;
+    const volatilityPenalty = Math.min(20, Math.abs(dayChangePct) * 10);
+    const calcRisk = Math.round(Math.min(100, Math.max(10, baseRisk + volatilityPenalty)));
+
+    // 3. Health Score: Base + Div bonus + Return bounds
+    const returnBonus = Math.max(-20, Math.min(30, returnPct));
+    const calcScore = Math.round(Math.min(100, Math.max(0, 40 + calcDiv * 0.35 + returnBonus)));
+
+    return {
+      calcScore: score ?? calcScore,
+      calcDiv: diversificationScore ?? calcDiv,
+      calcRisk: riskScore ?? calcRisk,
+    };
+  };
+
+  const { calcScore, calcDiv, calcRisk } = calculateScores();
+
+  const health = getScoreStatus(calcScore);
+  const diversification = getScoreStatus(calcDiv);
+  const risk = getRiskStatus(calcRisk);
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none relative overflow-hidden group">
@@ -62,13 +113,13 @@ export default function PortfolioHealthCard({
 
       <div className="flex items-center gap-6 mb-8">
         {/* Main Score Circular display */}
-        <div className="relative flex items-center justify-center w-24 h-24 shrink-0">
+        <div className="relative flex items-center justify-center w-32 h-32 shrink-0">
           <svg
             className="w-full h-full transform -rotate-90"
             viewBox="0 0 100 100">
             <circle
               className="text-neutral-100 dark:text-white/5"
-              strokeWidth="10"
+              strokeWidth="8"
               stroke="currentColor"
               fill="transparent"
               r="40"
@@ -77,8 +128,8 @@ export default function PortfolioHealthCard({
             />
             <circle
               className={`${health.color} drop-shadow-md`}
-              strokeWidth="10"
-              strokeDasharray={`${score * 2.51} 251.2`} /* 2 * PI * 40 = 251.2 */
+              strokeWidth="8"
+              strokeDasharray={`${calcScore * 2.51} 251.2`} /* 2 * PI * 40 = 251.2 */
               strokeLinecap="round"
               stroke="currentColor"
               fill="transparent"
@@ -90,12 +141,12 @@ export default function PortfolioHealthCard({
               }}
             />
           </svg>
-          <div className="absolute flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold text-neutral-900 dark:text-white leading-none">
-              {score}
+          <div className="absolute flex flex-col items-center justify-center pt-1">
+            <span className="text-3xl font-bold text-neutral-900 dark:text-white leading-none">
+              {calcScore}
             </span>
             <span
-              className={`text-[10px] uppercase font-bold mt-1 ${health.color}`}>
+              className={`text-[9px] sm:text-[10px] tracking-wider uppercase font-bold mt-1.5 ${health.color}`}>
               {health.label}
             </span>
           </div>
@@ -124,14 +175,14 @@ export default function PortfolioHealthCard({
             </div>
             <div
               className={`text-xs font-bold px-2 py-0.5 rounded-full bg-neutral-200/50 dark:bg-white/10 ${diversification.color}`}>
-              {diversificationScore}/100
+              {calcDiv}/100
             </div>
           </div>
           <div>
             <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 mb-2 overflow-hidden">
               <div
                 className={`h-1.5 rounded-full ${diversification.bar}`}
-                style={{ width: `${diversificationScore}%` }}
+                style={{ width: `${calcDiv}%` }}
               />
             </div>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -155,14 +206,14 @@ export default function PortfolioHealthCard({
             </div>
             <div
               className={`text-xs font-bold px-2 py-0.5 rounded-full bg-neutral-200/50 dark:bg-white/10 ${risk.color}`}>
-              {riskScore}/100
+              {calcRisk}/100
             </div>
           </div>
           <div>
             <div className="w-full bg-neutral-200 dark:bg-neutral-800 rounded-full h-1.5 mb-2 overflow-hidden">
               <div
                 className={`h-1.5 rounded-full ${risk.bar}`}
-                style={{ width: `${riskScore}%` }}
+                style={{ width: `${calcRisk}%` }}
               />
             </div>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">

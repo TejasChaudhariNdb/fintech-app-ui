@@ -288,9 +288,16 @@ export default function HomePage() {
           </section>
 
           {/* Portfolio Health Score */}
-          <section className="animate-fade-in">
-            <PortfolioHealthCard />
-          </section>
+          {(netWorth?.mutual_funds > 0 || netWorth?.stocks > 0) && (
+            <section className="animate-fade-in">
+              <PortfolioHealthCard 
+                mfValue={netWorth?.mutual_funds || 0}
+                stockValue={netWorth?.stocks || 0}
+                returnPct={summary?.return_pct || 0}
+                dayChangePct={summary?.day_change_pct || 0}
+              />
+            </section>
+          )}
 
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />
