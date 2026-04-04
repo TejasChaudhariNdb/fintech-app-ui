@@ -11,7 +11,7 @@ import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
-import { FileText, AlertTriangle, ArrowRight, Gift } from "lucide-react";
+import { FileText, AlertTriangle, ArrowRight, Gift, Loader2 } from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
 import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
@@ -28,6 +28,7 @@ export default function HomePage() {
 
   const [benchmark, setBenchmark] = useState<any>(null); // New State
   const [loading, setLoading] = useState(true);
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>("");
 
@@ -61,7 +62,8 @@ export default function HomePage() {
 
         if (cachedNw && cachedPs) {
           try {
-            setNetWorth(JSON.parse(cachedNw).data);
+            const parsedNw = JSON.parse(cachedNw);
+            setNetWorth(parsedNw.data);
             setSummary({
               ...JSON.parse(cachedPs).data,
               xirr: cachedXirr ? JSON.parse(cachedXirr).data.xirr : 0,
@@ -71,6 +73,13 @@ export default function HomePage() {
             if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
 
             setLoading(false); // Show cached data immediately
+            
+            // Only show the syncing snackbar if cache is older than 6 hours
+            const cacheTimestamp = parsedNw.timestamp || 0;
+            const hoursSinceCache = (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
+            if (hoursSinceCache > 6) {
+              setIsBackgroundRefreshing(true); // Indicate background refresh
+            }
           } catch (e) {
             console.warn("Invalid cache data", e);
           }
@@ -137,6 +146,7 @@ export default function HomePage() {
       setError(err.message || "Failed to load data");
     } finally {
       setLoading(false);
+      setIsBackgroundRefreshing(false);
     }
   };
 
@@ -229,6 +239,16 @@ export default function HomePage() {
         type={toast.type}
         onClose={() => setToast((prev) => ({ ...prev, show: false }))}
       />
+
+      {/* Background Refreshing Snackbar */}
+      {isBackgroundRefreshing && (
+        <div className="fixed top-20 sm:top-8 left-1/2 -translate-x-1/2 z-[99] animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className="bg-neutral-900/95 dark:bg-neutral-800/95 backdrop-blur-xl text-white px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-3 border border-white/10 text-sm font-medium whitespace-nowrap">
+            <Loader2 className="w-4 h-4 animate-spin text-primary-400" />
+            Syncing fresh data...
+          </div>
+        </div>
+      )}
 
       <div className="px-4 pt-8 pb-32 animate-fade-in relative">
         {/* Header */}

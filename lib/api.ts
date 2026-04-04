@@ -54,6 +54,7 @@ export const api = {
 
       const res = await fetch(`${API_URL}${endpoint}`, {
         ...options,
+        cache: options.cache || "no-store",
         headers: {
           "Content-Type": "application/json",
           ...(token && { Authorization: `Bearer ${token}` }),
@@ -182,26 +183,12 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }).then((res) => {
-      api.clearCache([
-        "portfolio-summary",
-        "schemes",
-        "amc-allocation",
-        "scheme-allocation",
-        "xirr",
-        "insights",
-      ]);
+      api.clearPortfolioCache();
       return res;
     }),
   deleteScheme: (id: number) =>
     api.fetch(`/portfolio/schemes/${id}`, { method: "DELETE" }).then((res) => {
-      api.clearCache([
-        "portfolio-summary",
-        "schemes",
-        "amc-allocation",
-        "scheme-allocation",
-        "xirr",
-        "insights",
-      ]);
+      api.clearPortfolioCache();
       return res;
     }),
   getAMCAllocation: () =>
@@ -256,14 +243,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     });
-    api.clearCache([
-      "portfolio-summary",
-      "schemes",
-      "amc-allocation",
-      "scheme-allocation",
-      "xirr",
-      "insights",
-    ]);
+    api.clearPortfolioCache();
     return res;
   },
 
@@ -303,14 +283,7 @@ export const api = {
       const err = await r.json().catch(() => ({ detail: "Upload failed" }));
       throw new Error(err.detail || "Upload failed");
     }
-    api.clearCache([
-      "portfolio-summary",
-      "schemes",
-      "amc-allocation",
-      "scheme-allocation",
-      "xirr",
-      "insights",
-    ]);
+    api.clearPortfolioCache();
     return r.json();
   },
   searchStocks: (query: string) => api.fetch(`/equity/search?q=${query}`, {}),
@@ -350,6 +323,7 @@ export const api = {
       const err = await r.json().catch(() => ({ detail: "Import failed" }));
       throw new Error(err.detail || "Import failed");
     }
+    api.clearPortfolioCache();
     return r.json();
   },
 
@@ -383,6 +357,20 @@ export const api = {
     if (typeof window !== "undefined") {
       keys.forEach((key) => localStorage.removeItem(key));
     }
+  },
+
+  clearPortfolioCache: () => {
+    api.clearCache([
+      "net-worth",
+      "portfolio-summary",
+      "equity-summary",
+      "schemes",
+      "amc-allocation",
+      "scheme-allocation",
+      "xirr",
+      "insights",
+      "portfolio-history",
+    ]);
   },
 
   chatWithAI: (message: string, sessionId?: number) =>
