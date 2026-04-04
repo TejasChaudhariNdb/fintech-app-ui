@@ -14,7 +14,7 @@ import OnboardingWizard from "@/components/features/OnboardingWizard";
 import { FileText, AlertTriangle, ArrowRight, Gift } from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
-
+import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
 import BenchmarkCard from "@/components/features/BenchmarkCard";
 
 export default function HomePage() {
@@ -286,6 +286,12 @@ export default function HomePage() {
               stockInvested={summary?.stock_invested || 0}
             />
           </section>
+
+          {/* Portfolio Health Score */}
+          <section className="animate-fade-in">
+            <PortfolioHealthCard />
+          </section>
+
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />
           {/* Goals Preview */}
