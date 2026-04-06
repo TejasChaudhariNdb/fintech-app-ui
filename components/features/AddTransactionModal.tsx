@@ -281,7 +281,7 @@ export default function AddTransactionModal({
           />
           <Input
             type="number"
-            label="NAV / Price"
+            label="Transaction NAV / Price"
             step="0.01"
             value={formData.nav}
             onChange={(e) => {
