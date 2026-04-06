@@ -25,6 +25,7 @@ export default function RegisterPage() {
   }, [router]);
 
   const handleGoogleLogin = useGoogleLogin({
+    prompt: "select_account",
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);

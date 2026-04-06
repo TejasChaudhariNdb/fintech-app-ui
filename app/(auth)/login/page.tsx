@@ -38,6 +38,7 @@ function LoginForm() {
   }, [router, searchParams]);
 
   const handleGoogleLogin = useGoogleLogin({
+    prompt: "select_account",
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
