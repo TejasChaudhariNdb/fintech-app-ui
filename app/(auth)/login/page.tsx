@@ -39,6 +39,7 @@ function LoginForm() {
 
   const handleGoogleLogin = useGoogleLogin({
     prompt: "select_account",
+    scope: "openid profile email",
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
