@@ -79,6 +79,8 @@ export default function SchemeDetailPage({
   }
 
   const isPositive = scheme.profit >= 0;
+  const avgPrice =
+    typeof scheme.avg_price === "number" ? scheme.avg_price : 0;
 
   const shareData = {
     symbol: scheme.scheme,
@@ -154,7 +156,7 @@ export default function SchemeDetailPage({
           </div>
 
           {/* Bottom Section: Grid Stats */}
-          <div className="grid grid-cols-4 p-4 bg-neutral-50/50 dark:bg-white/5 divide-x divide-neutral-200 dark:divide-white/5">
+          <div className="grid grid-cols-2 gap-y-4 p-4 bg-neutral-50/50 dark:bg-white/5 sm:grid-cols-5 sm:gap-y-0 sm:divide-x sm:divide-neutral-200 sm:dark:divide-white/5">
             <div className="px-2">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
                 Invested
@@ -177,6 +179,14 @@ export default function SchemeDetailPage({
                   day: "numeric",
                   month: "short",
                 })}
+              </p>
+            </div>
+            <div className="px-2">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
+                Avg Price
+              </p>
+              <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                ₹{avgPrice.toFixed(2)}
               </p>
             </div>
             <div className="px-2">

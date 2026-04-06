@@ -445,6 +445,7 @@ export default function MutualFundsPage() {
                 scheme={scheme.scheme}
                 amc={scheme.amc}
                 nav={scheme.nav}
+                avgPrice={scheme.avg_price}
                 units={scheme.units}
                 current={scheme.current}
                 returnPct={scheme.return_pct}

@@ -8,7 +8,8 @@ interface SchemeCardProps {
   schemeId: number;
   scheme: string;
   amc: string;
-  nav: number; // New Prop
+  nav: number;
+  avgPrice?: number;
   units?: number;
   current: number;
   returnPct: number;
@@ -25,6 +26,7 @@ export default function SchemeCard({
   scheme,
   amc,
   nav,
+  avgPrice,
   units,
   current,
   returnPct,
@@ -78,6 +80,15 @@ export default function SchemeCard({
                 maximumFractionDigits: 4,
               })}
             </span>
+            {avgPrice !== undefined && (
+              <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
+                Avg Price: ₹
+                {avgPrice.toLocaleString("en-IN", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 4,
+                })}
+              </span>
+            )}
             {units !== undefined && (
               <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
                 {units.toFixed(2)} Units
