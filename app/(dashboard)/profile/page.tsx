@@ -708,7 +708,7 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-semibold border border-white/30">
-                  {5 - userProfile.ai_chats_used} Free Chats Left
+                  {Math.max(0, 8 - userProfile.ai_chats_used)} Free Chats Left
                 </div>
               )}
             </div>
