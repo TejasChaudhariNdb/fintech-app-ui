@@ -18,6 +18,10 @@ type AIStreamHandlers = {
   onDone?: (payload: AIChatResponse) => void;
 };
 
+type AIStreamOptions = {
+  signal?: AbortSignal;
+};
+
 export const api = {
   async fetch(
     endpoint: string,
@@ -383,6 +387,7 @@ export const api = {
     message: string,
     sessionId: number | undefined,
     handlers: AIStreamHandlers = {},
+    options: AIStreamOptions = {},
   ): Promise<AIChatResponse> => {
     const token =
       typeof window !== "undefined"
@@ -396,6 +401,7 @@ export const api = {
         Accept: "text/event-stream",
         ...(token && { Authorization: `Bearer ${token}` }),
       },
+      signal: options.signal,
       body: JSON.stringify({
         message,
         session_id: sessionId,

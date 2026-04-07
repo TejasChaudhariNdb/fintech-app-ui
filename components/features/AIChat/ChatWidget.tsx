@@ -5,14 +5,15 @@ import { useState, useRef, useEffect } from "react";
 import {
   X,
   Send,
+  Square,
   Sparkles,
   Bot,
-  Clock,
   Plus,
   ChevronLeft,
   ChevronDown,
   MessageSquare,
   Phone,
+  Search,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import ChatMessage from "./ChatMessage";
@@ -65,10 +66,14 @@ export default function ChatWidget() {
     undefined,
   );
   const [showHistory, setShowHistory] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
   const [showContactModal, setShowContactModal] = useState(false);
   const [disclaimerExpanded, setDisclaimerExpanded] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamingTextRef = useRef("");
+
   useEffect(() => {
     if (isOpen) {
       loadSessions();
@@ -81,6 +86,12 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, showHistory]);
 
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const loadSessions = async () => {
     try {
       const list = await api.getSessions();
@@ -89,6 +100,10 @@ export default function ChatWidget() {
       console.error("Failed to load sessions", e);
     }
   };
+
+  const filteredSessions = sessions.filter((session) =>
+    session.title.toLowerCase().includes(historySearch.toLowerCase()),
+  );
 
   const handleLoadSession = async (id: number) => {
     setIsLoadingSession(true);
@@ -110,6 +125,7 @@ export default function ChatWidget() {
   };
 
   const handleNewChat = () => {
+    abortControllerRef.current?.abort();
     setMessages([
       {
         role: "assistant",
@@ -119,6 +135,10 @@ export default function ChatWidget() {
     ]);
     setCurrentSessionId(undefined);
     setShowHistory(false);
+  };
+
+  const handleStopResponse = () => {
+    abortControllerRef.current?.abort();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +151,9 @@ export default function ChatWidget() {
     setIsResponding(true);
     setLiveLoadingStage(null);
     setStreamingText("");
+    streamingTextRef.current = "";
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     try {
       let res: AIChatResult;
@@ -145,15 +168,25 @@ export default function ChatWidget() {
             });
           },
           onToken: (tokenText) =>
-            setStreamingText((prev) => prev + (tokenText || "")),
+            setStreamingText((prev) => {
+              const next = prev + (tokenText || "");
+              streamingTextRef.current = next;
+              return next;
+            }),
+        }, {
+          signal: abortController.signal,
         });
       } catch (streamErr) {
+        if (streamErr instanceof Error && streamErr.name === "AbortError") {
+          throw streamErr;
+        }
         usedFallback = true;
         console.warn(
           "AI stream failed. Falling back to normal response.",
           streamErr,
         );
         res = (await api.chatWithAI(userMsg, currentSessionId)) as AIChatResult;
+        streamingTextRef.current = "";
         setStreamingText("");
         setMessages((prev) => [
           ...prev,
@@ -174,6 +207,16 @@ export default function ChatWidget() {
         loadSessions();
       }
     } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") {
+        if (streamingTextRef.current.trim()) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: streamingTextRef.current.trim() },
+          ]);
+        }
+        return;
+      }
+
       console.error(err);
       let errorMessage =
         "Sorry, I'm having trouble connecting right now. Please try again later.";
@@ -197,9 +240,11 @@ export default function ChatWidget() {
         },
       ]);
     } finally {
+      abortControllerRef.current = null;
       setIsResponding(false);
       setLiveLoadingStage(null);
       setStreamingText("");
+      streamingTextRef.current = "";
     }
   };
 
@@ -231,8 +276,8 @@ export default function ChatWidget() {
                   loadSessions();
                 }}
                 className="p-1.5 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-lg text-neutral-600 dark:text-neutral-400"
-                title="History">
-                <Clock size={18} />
+                title="Chats">
+                <MessageSquare size={18} />
               </button>
             )}
 
@@ -283,26 +328,70 @@ export default function ChatWidget() {
         <div className="flex-1 overflow-hidden relative flex flex-col">
           {/* History Overlay */}
           {showHistory && (
-            <div className="absolute inset-0 z-10 bg-white dark:bg-[#0B0E14] p-4 overflow-y-auto">
-              <div className="space-y-2">
-                {sessions.map((session) => (
+            <div className="absolute inset-0 z-10 bg-white dark:bg-[#0B0E14] overflow-y-auto">
+              <div className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-md dark:border-white/10 dark:bg-[#0B0E14]/95">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Chats
+                    </p>
+           
+                  </div>
+                  <button
+                    onClick={handleNewChat}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-primary-500 px-3 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-primary-600"
+                  >
+                    <Plus size={14} />
+                    New Chat
+                  </button>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-600 dark:bg-white/5 dark:text-neutral-400">
+                    {sessions.length} conversations
+                  </span>
+                  {currentSessionId && (
+                    <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium text-primary-600 dark:bg-primary-900/20 dark:text-primary-300">
+                      Current chat selected
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative mt-3">
+                  <Search
+                    size={14}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                  />
+                  <input
+                    type="text"
+                    value={historySearch}
+                    onChange={(e) => setHistorySearch(e.target.value)}
+                    placeholder="Search chat history..."
+                    className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2 pl-9 pr-3 text-sm text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 p-4">
+                {filteredSessions.map((session) => (
                   <button
                     key={session.id}
                     onClick={() => handleLoadSession(session.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3
+                    className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center gap-3
                                     ${
                                       currentSessionId === session.id
-                                        ? "bg-primary-50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-500/20"
-                                        : "bg-neutral-50 dark:bg-white/5 border-transparent hover:border-neutral-200 dark:hover:border-white/10"
+                                        ? "bg-primary-50 dark:bg-primary-900/10 border-primary-200 shadow-sm dark:border-primary-500/20"
+                                        : "bg-neutral-50 dark:bg-white/5 border-transparent hover:border-neutral-200 hover:bg-white dark:hover:border-white/10"
                                     }`}>
-                    <MessageSquare
-                      size={16}
-                      className={
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${
                         currentSessionId === session.id
-                          ? "text-primary-500"
-                          : "text-neutral-400"
-                      }
-                    />
+                          ? "bg-primary-100 text-primary-600 dark:bg-primary-900/20 dark:text-primary-300"
+                          : "bg-white text-neutral-400 dark:bg-white/5 dark:text-neutral-500"
+                      }`}
+                    >
+                      <MessageSquare size={16} />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <h4
                         className={`text-sm font-medium truncate ${
@@ -312,15 +401,23 @@ export default function ChatWidget() {
                         }`}>
                         {session.title}
                       </h4>
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        {new Date(session.created_at).toLocaleDateString()}
+                      <p className="mt-0.5 text-xs text-neutral-400">
+                        {new Date(session.created_at).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
                       </p>
                     </div>
                   </button>
                 ))}
-                {sessions.length === 0 && (
-                  <div className="text-center py-10 text-neutral-400 text-sm">
-                    <p>No history yet.</p>
+                {filteredSessions.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-10 text-center text-sm text-neutral-400 dark:border-white/10">
+                    <p>
+                      {sessions.length === 0
+                        ? "No chat history yet."
+                        : "No chats match your search."}
+                    </p>
                   </div>
                 )}
               </div>
@@ -377,14 +474,29 @@ export default function ChatWidget() {
                 className="flex-1 bg-transparent px-2 outline-none text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400"
               />
               <button
-                type="submit"
+                type={isResponding ? "button" : "submit"}
+                onClick={isResponding ? handleStopResponse : undefined}
                 disabled={
-                  !inputValue.trim() || isResponding || isLoadingSession
+                  isResponding
+                    ? false
+                    : !inputValue.trim() || isLoadingSession
                 }
-                className="p-2 bg-primary-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors shadow-md">
-                <Send size={16} />
+                className={`p-2 text-white rounded-lg transition-colors shadow-md ${
+                  isResponding
+                    ? "bg-rose-500 hover:bg-rose-600"
+                    : "bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                }`}>
+                {isResponding ? <Square size={16} /> : <Send size={16} />}
               </button>
             </div>
+            {isResponding && (
+              <p className="mt-2 px-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                Response is generating. Tap stop to cancel without waiting.
+              </p>
+            )}
+            <p className="mt-2 px-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+              Free plan responses can be a bit slower during busy times.
+            </p>
             <div className="mt-2 px-1">
               <button
                 type="button"
