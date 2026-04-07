@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { api } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
 import ContactSupportModal from "@/components/features/ContactSupportModal";
@@ -13,12 +14,12 @@ import {
   Smartphone,
   Mail,
   User,
-  FileText,
   Trash2,
   LogOut,
   Moon,
   Sun,
   ChevronRight,
+  ChevronDown,
   Eye,
   EyeOff,
   ShieldCheck,
@@ -34,6 +35,119 @@ import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
 import useFcmToken from "@/hooks/useFcmToken";
 
+function SectionCard({
+  title,
+  subtitle,
+  summary,
+  icon,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  title: string;
+  subtitle: string;
+  summary: string;
+  icon: ReactNode;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-white/5 dark:bg-white/5">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-neutral-50 dark:hover:bg-white/5"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="rounded-2xl bg-neutral-100 p-2.5 text-neutral-700 dark:bg-white/10 dark:text-white">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+              {title}
+            </p>
+            <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+              {subtitle}
+            </p>
+            <p className="mt-2 text-xs font-medium text-primary-600 dark:text-primary-400">
+              {summary}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
+            {isOpen ? "Hide" : "View"}
+          </span>
+          <ChevronDown
+            size={18}
+            className={`text-neutral-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </button>
+      {isOpen && <div className="border-t border-neutral-200 p-4 dark:border-white/5">{children}</div>}
+    </section>
+  );
+}
+
+function InfoRow({
+  title,
+  subtitle,
+  icon,
+  onClick,
+  rightSlot,
+}: {
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  onClick?: () => void;
+  rightSlot?: ReactNode;
+}) {
+  const content = (
+    <>
+      <div className="flex items-center gap-3">
+        <div className="rounded-xl bg-neutral-100 p-2 text-neutral-600 dark:bg-white/10 dark:text-neutral-300">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+            {title}
+          </p>
+          <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+      {rightSlot ?? (
+        <ChevronRight
+          className="shrink-0 text-neutral-300 dark:text-neutral-600"
+          size={18}
+        />
+      )}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 bg-white p-4 text-left transition-colors hover:bg-neutral-50 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white p-4 dark:border-white/10 dark:bg-white/5">
+      {content}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -47,6 +161,13 @@ export default function ProfilePage() {
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    account: true,
+    ai: true,
+    security: true,
+    app: true,
+    danger: true,
+  });
   const { permission, requestPermission } = useFcmToken();
 
   // Profile State
@@ -352,36 +473,61 @@ export default function ProfilePage() {
     }
   };
 
+  const toggleSection = (
+    key: "account" | "ai" | "security" | "app" | "danger",
+  ) => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const freeChatsLeft = Math.max(0, 8 - userProfile.ai_chats_used);
+
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-900 dark:to-[#0B0E14] border-b border-white/5 px-4 pt-12 pb-8 transition-colors duration-300">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-white/20 dark:bg-primary-500/20 flex items-center justify-center text-3xl border border-white/30 dark:border-primary-500/30 backdrop-blur-sm shrink-0">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-900 dark:to-[#0B0E14] border-b border-white/5 px-4 pt-10 pb-6 transition-colors duration-300">
+        <div className="mx-auto max-w-3xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-16 h-16 rounded-3xl bg-white/15 dark:bg-primary-500/20 flex items-center justify-center text-3xl border border-white/20 dark:border-primary-500/30 backdrop-blur-sm shrink-0">
               <User className="text-white dark:text-primary-400 h-8 w-8" />
             </div>
-            <div>
-              <h1 className="text-white text-xl font-bold">Profile</h1>
-              <p className="text-white/80 dark:text-neutral-400 text-sm mt-1">
+            <div className="min-w-0">
+              <h1 className="text-white text-2xl font-bold leading-tight">Profile</h1>
+              <p className="text-white/75 dark:text-neutral-400 text-sm mt-1 truncate">
                 {userProfile.email || "Loading..."}
               </p>
             </div>
           </div>
-          <button
-            onClick={() =>
-              document
-                .getElementById("refer-earn-section")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full transition-colors text-xs font-medium text-white backdrop-blur-sm shrink-0">
-            <Gift size={14} className="text-yellow-300" />
-            Refer &amp; Earn
-          </button>
+
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex sm:flex-col sm:items-end sm:text-right">
+            <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-xs text-white/90 backdrop-blur-sm">
+              <p className="font-semibold">
+                {userProfile.is_ai_unlocked
+                  ? "AI Unlocked"
+                  : `${freeChatsLeft} chats left`}
+              </p>
+              <p className="mt-0.5 text-[10px] text-white/65">AI access</p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("refer-earn-section")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="rounded-2xl border border-white/15 bg-white/10 px-3 py-2 text-left text-xs text-white/90 backdrop-blur-sm transition-colors hover:bg-white/15"
+            >
+              <p className="font-semibold">
+                Refer &amp; Earn
+              </p>
+              <p className="mt-0.5 text-[10px] text-white/65">
+                {userProfile.referral_count} referred
+              </p>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="px-4 -mt-4 space-y-6">
+      <div className="mx-auto max-w-3xl px-4 pt-4 space-y-5">
         {userProfile.kyc_nudges.length > 0 && (
           <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl p-3.5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
@@ -416,208 +562,173 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* ── ACCOUNT ── */}
-        <div>
-          <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2 px-1">
-            Account
-          </p>
-          <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
-            {/* Personal Details */}
+        <SectionCard
+          title="Account"
+          subtitle="Profile details and portfolio import"
+          summary={
+            userProfile.kyc_nudges.length === 0
+              ? "Profile details complete"
+              : `${userProfile.kyc_nudges.length} profile field(s) need attention`
+          }
+          icon={<User size={18} />}
+          isOpen={expandedSections.account}
+          onToggle={() => toggleSection("account")}
+        >
+          <div className="space-y-3">
             <button
               onClick={() => setShowProfileModal(true)}
-              className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                  <User size={18} />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-sm dark:text-white">
-                    Personal Details
+              className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 p-4 text-left transition-colors hover:bg-neutral-50 dark:border-white/10 dark:hover:bg-white/5"
+            >
+              <div>
+                <p className="text-sm font-semibold dark:text-white">
+                  Personal Details
+                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {userProfile.full_name || "Add your name"},{" "}
+                    {userProfile.phone_number || "phone pending"},{" "}
+                    {userProfile.pan_card || "PAN pending"}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Name, Phone, PAN
-                    </p>
-                    {userProfile.kyc_nudges.length === 0 && (
-                      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle size={9} />
-                        Verified
-                      </span>
-                    )}
-                  </div>
+                  {userProfile.kyc_nudges.length === 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                      <CheckCircle size={9} />
+                      Verified
+                    </span>
+                  )}
                 </div>
               </div>
-              <ChevronRight
-                className="text-neutral-300 dark:text-neutral-600"
-                size={18}
-              />
+              <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
             </button>
 
-            {/* Upload CAS */}
             <button
               onClick={() => router.push("/holdings/mutual-funds?import=1")}
-              className="w-full flex items-center justify-between p-4 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
-                  <FileText size={18} />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-sm dark:text-white">
-                    Upload CAS Statement
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Import mutual fund data
-                  </p>
-                </div>
+              className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 p-4 text-left transition-colors hover:bg-neutral-50 dark:border-white/10 dark:hover:bg-white/5"
+            >
+              <div>
+                <p className="text-sm font-semibold dark:text-white">
+                  Import Portfolio Data
+                </p>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  Add mutual funds or stocks to your portfolio
+                </p>
               </div>
-              <ChevronRight
-                className="text-neutral-300 dark:text-neutral-600"
-                size={18}
-              />
+              <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
             </button>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* ── PREFERENCES ── */}
-        <div>
-          <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2 px-1">
-            Preferences
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Appearance toggle */}
-            {mounted && (
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
-                    {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-                  </div>
-                  <div
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${theme === "dark" ? "bg-primary-600" : "bg-neutral-200"}`}>
-                    <span
-                      className={`${theme === "dark" ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold dark:text-white">
-                    Appearance
-                  </p>
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    {theme === "dark" ? "Dark Mode" : "Light Mode"}
-                  </p>
-                </div>
-              </button>
-            )}
-
-            {/* Privacy */}
+        <SectionCard
+          title="Security & Privacy"
+          subtitle="Visibility, biometric lock, and notifications"
+          summary={`${isPrivacyMode ? "Privacy on" : "Privacy off"} • ${appLockEnabled ? "Biometric lock on" : "Biometric lock off"}`}
+          icon={<ShieldCheck size={18} />}
+          isOpen={expandedSections.security}
+          onToggle={() => toggleSection("security")}
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               onClick={togglePrivacyMode}
-              className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
+              className="bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all"
+            >
               <div className="flex items-center justify-between">
-                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                <div className="p-2 rounded-xl bg-white dark:bg-white/10 text-neutral-600 dark:text-white">
                   {isPrivacyMode ? <EyeOff size={16} /> : <Eye size={16} />}
                 </div>
                 <div
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isPrivacyMode ? "bg-primary-600" : "bg-neutral-200"}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isPrivacyMode ? "bg-primary-600" : "bg-neutral-200"}`}
+                >
                   <span
                     className={`${isPrivacyMode ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
                   />
                 </div>
               </div>
               <div>
-                <p className="text-sm font-semibold dark:text-white">
-                  Privacy Mode
-                </p>
+                <p className="text-sm font-semibold dark:text-white">Privacy Mode</p>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  {isPrivacyMode ? "Values Hidden" : "Values Visible"}
+                  {isPrivacyMode ? "Values hidden" : "Values visible"}
                 </p>
               </div>
             </button>
 
-            {/* Biometric */}
             <button
               onClick={toggleAppLock}
-              className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
+              className="bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all"
+            >
               <div className="flex items-center justify-between">
-                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                <div className="p-2 rounded-xl bg-white dark:bg-white/10 text-neutral-600 dark:text-white">
                   {appLockEnabled ? <Lock size={16} /> : <Unlock size={16} />}
                 </div>
                 <div
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${appLockEnabled ? "bg-primary-600" : "bg-neutral-200"}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${appLockEnabled ? "bg-primary-600" : "bg-neutral-200"}`}
+                >
                   <span
                     className={`${appLockEnabled ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
                   />
                 </div>
               </div>
               <div>
-                <p className="text-sm font-semibold dark:text-white">
-                  Biometric Lock
-                </p>
+                <p className="text-sm font-semibold dark:text-white">Biometric Lock</p>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
                   {appLockEnabled ? "Enabled" : "Disabled"}
                 </p>
               </div>
             </button>
 
-            {/* Notifications */}
             <button
               onClick={toggleNotifications}
-              className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col gap-3 text-left active:scale-95 transition-all shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+              className="bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-4 flex items-center justify-between text-left active:scale-[0.99] transition-all sm:col-span-2"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-white dark:bg-white/10 text-neutral-600 dark:text-white">
                   <Bell size={16} />
                 </div>
-                <div
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${notificationsEnabled ? "bg-primary-600" : "bg-neutral-200"}`}>
-                  <span
-                    className={`${notificationsEnabled ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
-                  />
+                <div>
+                  <p className="text-sm font-semibold dark:text-white">Notifications</p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    {notificationsEnabled ? "Enabled" : "Disabled"}
+                  </p>
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold dark:text-white">
-                  Notifications
-                </p>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  {notificationsEnabled ? "Enabled" : "Disabled"}
-                </p>
+              <div
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${notificationsEnabled ? "bg-primary-600" : "bg-neutral-200"}`}
+              >
+                <span
+                  className={`${notificationsEnabled ? "translate-x-4" : "translate-x-1"} inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm`}
+                />
               </div>
             </button>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* ── MORE ── */}
-        <div>
-          <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-2 px-1">
-            More
-          </p>
-          <div className="bg-white dark:bg-white/5 dark:backdrop-blur-xl border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
-            {/* Contact Support */}
-            <button
-              onClick={() => setShowContactModal(true)}
-              className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400">
-                  <MessageCircle size={18} />
+        <SectionCard
+          title="App & Support"
+          subtitle="Appearance, install, support, and app info"
+          summary={`${mounted ? (theme === "dark" ? "Dark mode" : "Light mode") : "Theme"} • Help and install options`}
+          icon={<Download size={18} />}
+          isOpen={expandedSections.app}
+          onToggle={() => toggleSection("app")}
+        >
+          <div className="space-y-3">
+            {mounted && (
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 p-4 text-left transition-colors hover:bg-neutral-50 dark:border-white/10 dark:hover:bg-white/5"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                    {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold dark:text-white">Appearance</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      {theme === "dark" ? "Dark Mode" : "Light Mode"}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <p className="font-semibold text-sm dark:text-white">
-                    Contact Support
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Get help or share feedback
-                  </p>
-                </div>
-              </div>
-              <ChevronRight
-                className="text-neutral-300 dark:text-neutral-600"
-                size={18}
-              />
-            </button>
+                <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
+              </button>
+            )}
 
-            {/* Install App (conditional) */}
             {(deferredPrompt || (isIos && !isStandalone)) && (
               <button
                 onClick={async () => {
@@ -629,197 +740,196 @@ export default function ProfilePage() {
                     setShowInstallModal(true);
                   }
                 }}
-                className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
+                className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 p-4 text-left transition-colors hover:bg-neutral-50 dark:border-white/10 dark:hover:bg-white/5"
+              >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
                     <Download size={18} />
                   </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-sm text-blue-600 dark:text-blue-400">
+                  <div>
+                    <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                       Install App
                     </p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                      Add to home screen
+                      Add Arthavi to your home screen
                     </p>
                   </div>
                 </div>
-                <ChevronRight
-                  className="text-neutral-300 dark:text-neutral-600"
-                  size={18}
-                />
+                <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
               </button>
             )}
-
-            {/* About / Version */}
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400">
-                  <ShieldCheck size={18} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm dark:text-white">
-                    About Arthavi
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Made with ❤️ for Indian investors
-                  </p>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400 px-2 py-0.5 rounded-full">
-                v1.2.2
-              </span>
-            </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Data Privacy Promise */}
-        <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
-          <ShieldCheck
-            className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
-            size={18}
-          />
-          <div>
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-              Your Data is Yours
-            </p>
-            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
-              We don&apos;t sell your data. We don&apos;t spam. Your financial
-              data is encrypted.
-            </p>
-          </div>
-        </div>
+        <SectionCard
+          title="AI & Referral"
+          subtitle="Free chat usage, unlock status, and referral tools"
+          summary={
+            userProfile.is_ai_unlocked
+              ? "Unlimited AI unlocked"
+              : `${freeChatsLeft} of 8 free chats remaining`
+          }
+          icon={<Gift size={18} />}
+          isOpen={expandedSections.ai}
+          onToggle={() => toggleSection("ai")}
+        >
+          <div className="space-y-3">
+            <div
+              id="refer-earn-section"
+              className="bg-linear-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-800 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-xl animate-pulse" />
+              <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-black/10 rounded-full blur-xl" />
 
-        {/* Refer & Earn Card */}
-        <div
-          id="refer-earn-section"
-          className="bg-linear-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-800 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-xl animate-pulse" />
-          <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-black/10 rounded-full blur-xl" />
-
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Gift className="text-yellow-300" size={20} />
-                <h2 className="text-lg font-bold">Refer &amp; Earn</h2>
-              </div>
-              {userProfile.is_ai_unlocked ? (
-                <div className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 border border-white/30">
-                  <Unlock size={10} /> Premium Unlocked
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Gift className="text-yellow-300" size={20} />
+                    <h2 className="text-lg font-bold">Refer &amp; Earn</h2>
+                  </div>
+                  {userProfile.is_ai_unlocked ? (
+                    <div className="bg-white/20 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 border border-white/30">
+                      <Unlock size={10} /> Premium Unlocked
+                    </div>
+                  ) : (
+                    <div className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-semibold border border-white/30">
+                      {freeChatsLeft} Free Chats Left
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="bg-white/20 backdrop-blur-md px-2 py-0.5 rounded-full text-[10px] font-semibold border border-white/30">
-                  {Math.max(0, 8 - userProfile.ai_chats_used)} Free Chats Left
-                </div>
-              )}
-            </div>
 
-            <p className="text-indigo-100 text-xs mb-4 max-w-sm leading-relaxed">
-              Invite friends to Arthavi. Get unlimited AI chats and unlock
-              upcoming premium features for both of you!
-            </p>
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] text-indigo-200 uppercase font-semibold mb-1 tracking-wider">
-                  Your Code
-                </p>
-                <code className="text-xl font-mono font-bold tracking-wider">
-                  {userProfile.referral_code || "..."}
-                </code>
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <button
-                  onClick={() => copyToClipboard(userProfile.referral_code)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors active:scale-95 bg-white/10">
-                  <Copy size={16} />
-                </button>
-                <div className="text-[10px] text-indigo-200 flex items-center gap-1">
-                  <User size={10} />
-                  <span>{userProfile.referral_count} referred</span>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] text-indigo-200 uppercase font-semibold mb-1 tracking-wider">
+                      Your Code
+                    </p>
+                    <code className="text-xl font-mono font-bold tracking-wider">
+                      {userProfile.referral_code || "..."}
+                    </code>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <button
+                      onClick={() => copyToClipboard(userProfile.referral_code)}
+                      className="p-2 hover:bg-white/20 rounded-lg transition-colors active:scale-95 bg-white/10"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    <div className="text-[10px] text-indigo-200 flex items-center gap-1">
+                      <User size={10} />
+                      <span>{userProfile.referral_count} referred</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {!userProfile.referred_by && !userProfile.is_ai_unlocked && (
-              <div className="flex flex-col gap-1">
-                <div className="bg-black/20 rounded-xl p-1 flex items-center">
-                  <input
-                    type="text"
-                    value={referralInput}
-                    onChange={(e) => {
-                      setReferralInput(e.target.value);
-                      setReferralError("");
-                    }}
-                    placeholder="Enter friend's code"
-                    className="bg-transparent border-none text-white placeholder:text-white/40 text-xs focus:ring-0 w-full px-3 py-1.5"
-                  />
-                  <button
-                    onClick={handleApplyReferral}
-                    disabled={isApplyingReferral || !referralInput.trim()}
-                    className="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50 transition-colors shrink-0">
-                    {isApplyingReferral ? "..." : "Apply"}
-                  </button>
-                </div>
-                {referralError && (
-                  <p className="text-[10px] text-red-300 px-2 font-medium bg-red-500/10 rounded-md py-0.5">
-                    {referralError}
-                  </p>
+                {!userProfile.referred_by && !userProfile.is_ai_unlocked && (
+                  <div className="flex flex-col gap-1">
+                    <div className="bg-black/20 rounded-xl p-1 flex items-center">
+                      <input
+                        type="text"
+                        value={referralInput}
+                        onChange={(e) => {
+                          setReferralInput(e.target.value);
+                          setReferralError("");
+                        }}
+                        placeholder="Enter friend's code"
+                        className="bg-transparent border-none text-white placeholder:text-white/40 text-xs focus:ring-0 w-full px-3 py-1.5"
+                      />
+                      <button
+                        onClick={handleApplyReferral}
+                        disabled={isApplyingReferral || !referralInput.trim()}
+                        className="bg-white text-indigo-600 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50 transition-colors shrink-0"
+                      >
+                        {isApplyingReferral ? "..." : "Apply"}
+                      </button>
+                    </div>
+                    {referralError && (
+                      <p className="text-[10px] text-red-300 px-2 font-medium bg-red-500/10 rounded-md py-0.5">
+                        {referralError}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {userProfile.referred_by && (
+                  <div className="text-[10px] text-indigo-200 flex items-center gap-1 mt-2">
+                    <CheckCircle size={10} className="text-green-400" />
+                    Referred by {userProfile.referred_by}
+                  </div>
                 )}
               </div>
-            )}
-            {userProfile.referred_by && (
-              <div className="text-[10px] text-indigo-200 flex items-center gap-1 mt-2">
-                <CheckCircle size={10} className="text-green-400" />
-                Referred by {userProfile.referred_by}
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* ── DANGER ZONE ── */}
-        <div>
-          <p className="text-xs font-semibold text-red-400/70 dark:text-red-500/60 uppercase tracking-widest mb-2 px-1">
-            Danger Zone
-          </p>
-          <div className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+        <SectionCard
+          title="Danger Zone"
+          subtitle="Sensitive actions"
+          summary="Reset options are kept separately for safety"
+          icon={<Trash2 size={18} />}
+          isOpen={expandedSections.danger}
+          onToggle={() => toggleSection("danger")}
+        >
+          <div className="space-y-3">
             <button
               onClick={() => setShowResetModal(true)}
-              className="w-full flex items-center justify-between p-4 border-b border-neutral-100 dark:border-white/5 active:bg-red-50 dark:active:bg-red-500/5 hover:bg-red-50/50 dark:hover:bg-red-500/5 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
-                  <Trash2 size={18} />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-sm text-red-600 dark:text-red-400">
-                    Reset Portfolio
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Clear MF, Stocks, or Everything
-                  </p>
-                </div>
+              className="flex w-full items-center justify-between rounded-2xl border border-red-100 p-4 text-left transition-colors hover:bg-red-50 dark:border-red-500/20 dark:hover:bg-red-500/5"
+            >
+              <div>
+                <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                  Reset Portfolio
+                </p>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  Clear mutual funds, stocks, or everything
+                </p>
               </div>
-              <ChevronRight
-                className="text-red-300 dark:text-red-600"
-                size={18}
-              />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 p-4 active:bg-neutral-50 dark:active:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-              <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-500 dark:text-neutral-400">
-                <LogOut size={18} />
-              </div>
-              <p className="font-semibold text-sm text-neutral-700 dark:text-neutral-300">
-                Log Out
-              </p>
+              <ChevronRight className="text-red-300 dark:text-red-600" size={18} />
             </button>
           </div>
+        </SectionCard>
+
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-red-700"
+        >
+          <LogOut size={18} />
+          Log Out
+        </button>
+
+        <div className="space-y-3">
+          <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500">
+            More
+          </p>
+
+          <InfoRow
+            title="Contact Support"
+            subtitle="Get help or share feedback"
+            icon={<MessageCircle size={18} />}
+            onClick={() => setShowContactModal(true)}
+          />
+
+          <InfoRow
+            title="Your Data is Yours"
+            subtitle="Your financial data stays private and encrypted"
+            icon={<ShieldCheck size={18} />}
+            rightSlot={
+              <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                Private
+              </span>
+            }
+          />
+
+          <InfoRow
+            title="About Arthavi"
+            subtitle="Made with care for Indian investors"
+            icon={<ShieldCheck size={18} />}
+            rightSlot={
+              <span className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-mono text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
+                v1.2.2
+              </span>
+            }
+          />
         </div>
 
-        {/* ── SUPPORT ARTHAVI ── */}
-        <div className="mt-4">
-          <SupportArthavi />
-        </div>
+        <SupportArthavi />
 
         <div className="h-2" />
       </div>
