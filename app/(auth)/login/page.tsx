@@ -38,7 +38,6 @@ function LoginForm() {
   }, [router, searchParams]);
 
   const handleGoogleLogin = useGoogleLogin({
-    scope: "openid profile email",
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);

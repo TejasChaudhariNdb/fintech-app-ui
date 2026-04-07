@@ -25,7 +25,6 @@ export default function RegisterPage() {
   }, [router]);
 
   const handleGoogleLogin = useGoogleLogin({
-    scope: "openid profile email",
     onSuccess: async (tokenResponse) => {
       try {
         setLoading(true);
