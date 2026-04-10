@@ -63,10 +63,13 @@ export default function HomePage() {
         if (cachedNw && cachedPs) {
           try {
             const parsedNw = JSON.parse(cachedNw);
+            const parsedXirr = cachedXirr ? JSON.parse(cachedXirr).data : null;
             setNetWorth(parsedNw.data);
             setSummary({
               ...JSON.parse(cachedPs).data,
-              xirr: cachedXirr ? JSON.parse(cachedXirr).data.xirr : 0,
+              xirr: parsedXirr?.xirr || 0,
+              mf_xirr: parsedXirr?.mf_xirr || 0,
+              stock_xirr: parsedXirr?.stock_xirr || 0,
             });
             if (cachedGoals) setGoals(JSON.parse(cachedGoals).data.slice(0, 2));
             if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
@@ -135,6 +138,8 @@ export default function HomePage() {
       setSummary({
         ...ps,
         xirr: xirrData?.xirr || 0,
+        mf_xirr: xirrData?.mf_xirr || 0,
+        stock_xirr: xirrData?.stock_xirr || 0,
       });
       setGoals(g.slice(0, 2));
       setPerfData(history);
@@ -290,6 +295,8 @@ export default function HomePage() {
                 dayChange={summary.day_change || 0}
                 dayChangePct={summary.day_change_pct || 0}
                 xirr={summary.xirr}
+                mfXirr={summary.mf_xirr || 0}
+                stockXirr={summary.stock_xirr || 0}
                 mfProfit={summary.mf_profit || 0}
                 stockProfit={summary.stock_profit || 0}
                 mfInvested={summary.mf_invested || 0}

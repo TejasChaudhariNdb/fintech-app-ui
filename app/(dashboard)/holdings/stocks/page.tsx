@@ -31,6 +31,7 @@ import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 
 export default function StocksPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [portfolioXirr, setPortfolioXirr] = useState(0);
 
   // Toast State
   const [toast, setToast] = useState({
@@ -90,12 +91,22 @@ export default function StocksPage() {
   const [editingStock, setEditingStock] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  const formatCompactCurrency = (value: number) =>
+    `₹${Math.round(value).toLocaleString("en-IN")}`;
+
+  const formatPrice = (value?: number | null) =>
+    value && value > 0 ? `₹${value.toFixed(2)}` : "Fetching...";
+
+  const formatPercent = (value?: number | null, digits = 2) =>
+    `${(value || 0).toFixed(digits)}%`;
+
   const loadData = async () => {
     try {
       setIsLoading(true);
       const stocksRes = await api.getEquitySummary();
       // stocksRes is { total_value: ..., holdings: [...] }
       setManualStocks(stocksRes.holdings || []);
+      setPortfolioXirr(stocksRes.xirr || 0);
     } catch (err) {
       console.error(err);
       showToast("Failed to load stocks", "error");
@@ -337,49 +348,56 @@ export default function StocksPage() {
           <PortfolioAnalysisCard />
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center">
-              <p className="text-sm text-neutral-500 mb-1">Total Value</p>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
+                Total Value
+              </p>
+              <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
                 <PrivacyMask>
-                  ₹
-                  {stockStats.current.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })}
+                  {formatCompactCurrency(stockStats.current)}
                 </PrivacyMask>
               </p>
             </Card>
-            <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center">
-              <p className="text-sm text-neutral-500 mb-1">Total Investment</p>
-              <p className="text-2xl font-bold text-neutral-900 dark:text-white">
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
+                Total Investment
+              </p>
+              <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
                 <PrivacyMask>
-                  ₹
-                  {stockStats.invested.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })}
+                  {formatCompactCurrency(stockStats.invested)}
                 </PrivacyMask>
               </p>
             </Card>
-            <Card className="col-span-1 md:col-span-2 p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between">
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
+                XIRR
+              </p>
+              <p
+                className={`text-lg sm:text-2xl font-bold ${
+                  portfolioXirr >= 0 ? "text-green-500" : "text-red-500"
+                }`}>
+                {formatPercent(portfolioXirr)}
+              </p>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between rounded-2xl col-span-2">
               <div>
-                <p className="text-sm text-neutral-500 mb-1">
-                  Total Profit/Loss
+                <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
+                  Total P&L
                 </p>
                 <div
                   className={`flex items-baseline gap-2 ${
                     stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
                   }`}>
-                  <p className="text-2xl font-bold">
+                  <p className="text-lg sm:text-2xl font-bold">
                     <PrivacyMask>
-                      {stockStats.pnl >= 0 ? "+" : ""}₹
-                      {Math.abs(stockStats.pnl).toLocaleString(undefined, {
-                        maximumFractionDigits: 0,
-                      })}
+                      {stockStats.pnl >= 0 ? "+" : ""}
+                      {formatCompactCurrency(Math.abs(stockStats.pnl))}
                     </PrivacyMask>
                   </p>
                   <p className="text-sm font-medium">
                     ({stockStats.pnl >= 0 ? "+" : ""}
-                    {stockStats.pnlPct.toFixed(2)}%)
+                    {formatPercent(stockStats.pnlPct)})
                   </p>
                 </div>
               </div>
@@ -452,35 +470,34 @@ export default function StocksPage() {
         {filteredStocks.map((stock) => (
           <Card
             key={stock.id || stock.symbol}
-            className="p-5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-4 group hover:border-primary-500/20 transition-all">
-            {/* Top Section: Header & Value */}
+            className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-3.5 group hover:border-primary-500/20 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all rounded-3xl overflow-hidden">
             <Link
               href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
-              className="flex justify-between items-start group/header cursor-pointer">
-              <div>
-                <div className="flex items-baseline gap-2 mb-1">
+              className="flex items-start justify-between gap-3 group/header cursor-pointer">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
                   <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover/header:text-primary-400 transition-colors">
                     {stock.symbol}
                   </h3>
-                  <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide truncate max-w-[150px] hidden sm:inline-block">
-                    {stock.company_name}
-                  </span>
+                  {stock.sector && (
+                    <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5 max-w-[120px] truncate">
+                      {stock.sector}
+                    </span>
+                  )}
                 </div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
-                  <span>
-                    {stock.company_name !== stock.symbol
-                      ? stock.company_name
-                      : "Equity Share"}
-                  </span>
-                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate pr-2">
+                  {stock.company_name !== stock.symbol
+                    ? stock.company_name
+                    : "Equity Share"}
+                </p>
               </div>
 
-              <div className="text-right flex items-center gap-3">
-                <div>
-                  <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1">
+              <div className="flex items-start gap-2 shrink-0">
+                <div className="text-right">
+                  <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1.5">
                     <PrivacyMask>
                       {stock.value > 0 ? (
-                        `₹${Math.round(stock.value).toLocaleString()}`
+                        formatCompactCurrency(stock.value)
                       ) : stock.quantity > 0 ? (
                         <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
                           <Loader2 size={12} className="animate-spin" />
@@ -491,55 +508,64 @@ export default function StocksPage() {
                       )}
                     </PrivacyMask>
                   </div>
-                  <div className="text-xs text-neutral-500 font-medium">
-                    Avg: ₹{stock.avg_price?.toFixed(2)}
+                  <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-neutral-500">
+                    Avg {formatPrice(stock.avg_price)}
                   </div>
                 </div>
                 <ChevronRight
-                  className="text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all"
-                  size={20}
+                  className="mt-0.5 text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all shrink-0"
+                  size={18}
                 />
               </div>
             </Link>
 
-            {/* Middle Section: Stats & Badges */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {stock.sector && (
-                  <span className="px-2 py-1 rounded bg-neutral-100 dark:bg-white/10 text-[10px] font-semibold text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5">
-                    {stock.sector}
-                  </span>
-                )}
-                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                  Quantity
+                </p>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
                   {stock.quantity} shares
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    (stock.pnl || 0) >= 0
-                      ? "bg-green-500/10 text-green-500"
-                      : "bg-red-500/10 text-red-500"
-                  }`}>
-                  {(stock.pnl || 0) >= 0 ? "+" : ""}
-                  {stock.pnl_pct?.toFixed(2)}%
-                </span>
+                </p>
               </div>
-
-              <div className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
-                LTP:{" "}
-                <span className="text-neutral-900 dark:text-white">
-                  {stock.current_price > 0 ? (
-                    `₹${stock.current_price}`
-                  ) : (
-                    <span className="text-xs text-neutral-400">
-                      Fetching...
-                    </span>
-                  )}
-                </span>
+              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                  XIRR
+                </p>
+                <p
+                  className={`text-sm font-semibold ${
+                    (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
+                  }`}>
+                  {stock.xirr !== null && stock.xirr !== undefined
+                    ? formatPercent(stock.xirr)
+                    : "--"}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                  P&amp;L
+                </p>
+                <div
+                  className={`flex items-baseline gap-2 ${
+                    (stock.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
+                  }`}>
+                  <p className="text-sm font-semibold">
+                    {stock.pnl >= 0 ? "+" : ""}
+                    {formatPercent(stock.pnl_pct)}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                  LTP
+                </p>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                  {formatPrice(stock.current_price)}
+                </p>
               </div>
             </div>
 
-            {/* Footer: Actions */}
-            <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex justify-end gap-5 opacity-80 hover:opacity-100 transition-opacity">
+            <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-wrap gap-2">
               <button
                 onClick={() => {
                   setShowStockModal(true);
@@ -556,7 +582,7 @@ export default function StocksPage() {
                   setIsValidSymbol(true);
                   setShowSearchResults(false);
                 }}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-emerald-500 transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
                 <TrendingUp size={14} /> Buy
               </button>
               <button
@@ -575,7 +601,7 @@ export default function StocksPage() {
                   setIsValidSymbol(true);
                   setShowSearchResults(false);
                 }}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-red-500 transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                 <TrendingDown size={14} /> Sell
               </button>
               <button
@@ -583,17 +609,17 @@ export default function StocksPage() {
                   setEditingStock({ ...stock });
                   setIsEditModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-primary-500 transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors">
                 <Pencil size={14} /> Edit
               </button>
               <button
                 onClick={() => handleDeleteStock(stock.id)}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-red-500 transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                 <Trash2 size={14} /> Delete
               </button>
               <button
                 onClick={() => setSelectedShareStock(stock)}
-                className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors">
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
                 <Share2 size={14} /> Share
               </button>
             </div>

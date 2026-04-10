@@ -13,6 +13,8 @@ interface PortfolioSummaryProps {
   dayChange?: number;
   dayChangePct?: number;
   xirr?: number;
+  mfXirr?: number;
+  stockXirr?: number;
   mfProfit?: number;
   stockProfit?: number;
   mfInvested?: number;
@@ -27,6 +29,8 @@ export default function PortfolioSummary({
   dayChange = 0,
   dayChangePct = 0,
   xirr,
+  mfXirr = 0,
+  stockXirr = 0,
   mfProfit,
   stockProfit,
   mfInvested = 0,
@@ -35,6 +39,7 @@ export default function PortfolioSummary({
   const isPositive = profit >= 0;
   const isDayPositive = dayChange >= 0;
   const [isInvestedExpanded, setIsInvestedExpanded] = useState(false);
+  const [isXirrExpanded, setIsXirrExpanded] = useState(false);
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -131,20 +136,66 @@ export default function PortfolioSummary({
         </div>
 
         {xirr !== undefined && xirr !== null && (
-          <div className="flex justify-between items-center group">
-            <span
-              className="text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors cursor-help flex items-center gap-1"
-              title="XIRR calculation currently includes Mutual Funds only">
-              XIRR <span className="text-[10px] opacity-70">(MF only)</span>
-            </span>
-            <span
-              className={`font-semibold ${
-                xirr >= 0
-                  ? "text-emerald-500 dark:text-emerald-400"
-                  : "text-red-500 dark:text-red-400"
-              }`}>
-              {xirr.toFixed(2)}%
-            </span>
+          <div className="flex flex-col">
+            <div
+              className="flex justify-between items-center group cursor-pointer select-none"
+              onClick={() => setIsXirrExpanded(!isXirrExpanded)}>
+              <span
+                className="text-neutral-500 dark:text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors cursor-help flex items-center gap-1.5"
+                title="Annualized return across your portfolio, including mutual funds and stocks">
+                XIRR
+                <div
+                  className={`p-0.5 rounded-full bg-neutral-100 dark:bg-white/5 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 transition-colors duration-200`}>
+                  <ChevronDown
+                    size={12}
+                    className={`transition-transform duration-200 ${
+                      isXirrExpanded
+                        ? "rotate-180 text-primary-600 dark:text-primary-400"
+                        : ""
+                    }`}
+                  />
+                </div>
+              </span>
+              <span
+                className={`font-semibold ${
+                  xirr >= 0
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-red-500 dark:text-red-400"
+                }`}>
+                {xirr.toFixed(2)}%
+              </span>
+            </div>
+
+            {isXirrExpanded && (
+              <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Mutual Funds
+                  </span>
+                  <span
+                    className={`font-medium ${
+                      mfXirr >= 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-500 dark:text-red-400"
+                    }`}>
+                    {mfXirr.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Stocks
+                  </span>
+                  <span
+                    className={`font-medium ${
+                      stockXirr >= 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-500 dark:text-red-400"
+                    }`}>
+                    {stockXirr.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
