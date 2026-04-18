@@ -141,11 +141,10 @@ export default function ChatWidget() {
     abortControllerRef.current?.abort();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim() || isResponding || isLoadingSession) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isResponding || isLoadingSession) return;
 
-    const userMsg = inputValue.trim();
+    const userMsg = text.trim();
     setInputValue("");
     setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
     setIsResponding(true);
@@ -246,6 +245,11 @@ export default function ChatWidget() {
       setStreamingText("");
       streamingTextRef.current = "";
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(inputValue);
   };
 
   return (
@@ -429,6 +433,24 @@ export default function ChatWidget() {
             {messages.map((m, i) => (
               <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
+            {messages.length === 1 && !isResponding && !streamingText && (
+              <div className="flex flex-col gap-2 mt-4 pl-[44px] pr-4">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mb-1">Quick Questions</p>
+                {[
+                  "Analyze my portfolio",
+                  "Are my investments diversified?",
+                  "Top large cap mutual funds in India",
+                ].map((q, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => sendMessage(q)}
+                    className="text-left text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500 rounded-xl px-4 py-2.5 text-neutral-700 dark:text-neutral-300 transition-colors shadow-sm cursor-pointer"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
+            )}
             {isResponding && !streamingText && (
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
