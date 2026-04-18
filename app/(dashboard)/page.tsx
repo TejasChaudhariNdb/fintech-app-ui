@@ -16,6 +16,7 @@ import { FileText, AlertTriangle, ArrowRight, Gift, Loader2 } from "lucide-react
 import InsightsCard from "@/components/features/InsightsCard";
 import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
 import BenchmarkCard from "@/components/features/BenchmarkCard";
+import MarketPredictionCard from "@/components/features/MarketPredictionCard";
 
 export default function HomePage() {
   const router = useRouter();
@@ -325,6 +326,11 @@ export default function HomePage() {
               />
             </section>
           )}
+
+          {/* Daily Prediction Card */}
+          <section className="animate-fade-in">
+            <MarketPredictionCard />
+          </section>
 
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />

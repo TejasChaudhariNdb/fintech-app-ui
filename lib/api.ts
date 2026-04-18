@@ -498,4 +498,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ payment_app: paymentApp }),
     }),
+
+  // Predictions
+  getPredictionStats: () => api.fetch("/predictions/today", { cacheKey: "prediction-stats" }),
+  makePrediction: (prediction: 'BULL' | 'BEAR') =>
+    api.fetch("/predictions/", {
+      method: "POST",
+      body: JSON.stringify({ prediction }),
+    }).then((res) => {
+      api.clearCache(["prediction-stats"]);
+      return res;
+    }),
 };
