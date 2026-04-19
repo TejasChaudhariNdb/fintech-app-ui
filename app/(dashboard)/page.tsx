@@ -11,7 +11,13 @@ import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
-import { FileText, AlertTriangle, ArrowRight, Gift, Loader2 } from "lucide-react";
+import {
+  FileText,
+  AlertTriangle,
+  ArrowRight,
+  Gift,
+  Loader2,
+} from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
 import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
@@ -77,10 +83,11 @@ export default function HomePage() {
             if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
 
             setLoading(false); // Show cached data immediately
-            
+
             // Only show the syncing snackbar if cache is older than 6 hours
             const cacheTimestamp = parsedNw.timestamp || 0;
-            const hoursSinceCache = (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
+            const hoursSinceCache =
+              (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
             if (hoursSinceCache > 6) {
               setIsBackgroundRefreshing(true); // Indicate background refresh
             }
@@ -315,10 +322,15 @@ export default function HomePage() {
             />
           </section>
 
+          {/* Daily Prediction Card */}
+          <section className="animate-fade-in">
+            <MarketPredictionCard />
+          </section>
+
           {/* Portfolio Health Score */}
           {(netWorth?.mutual_funds > 0 || netWorth?.stocks > 0) && (
             <section className="animate-fade-in">
-              <PortfolioHealthCard 
+              <PortfolioHealthCard
                 mfValue={netWorth?.mutual_funds || 0}
                 stockValue={netWorth?.stocks || 0}
                 returnPct={summary?.return_pct || 0}
@@ -326,11 +338,6 @@ export default function HomePage() {
               />
             </section>
           )}
-
-          {/* Daily Prediction Card */}
-          <section className="animate-fade-in">
-            <MarketPredictionCard />
-          </section>
 
           {/* Smart Insights (Nudges) */}
           <InsightsCard insights={insights} />
