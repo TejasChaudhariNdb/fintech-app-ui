@@ -290,6 +290,8 @@ export default function HomePage() {
               isRefreshing={refreshing}
               dayChangePct={summary?.day_change_pct || 0}
               lastUpdated={netWorth?.last_updated}
+              onAddMF={() => router.push("/holdings/mutual-funds")}
+              onAddStock={() => router.push("/holdings/stocks")}
             />
           </section>
           {/* Portfolio Summary */}
