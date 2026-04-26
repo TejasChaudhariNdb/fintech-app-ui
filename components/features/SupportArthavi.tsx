@@ -1,72 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
-import { Heart, X, Link as LinkIcon } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import { Heart } from "lucide-react";
 import { api } from "@/lib/api";
 
-interface SupportArthaviProps {
-  vpa?: string; // Your UPI ID
-  name?: string; // Your Name or 'Arthavi'
-  amount?: string; // Optional: preset amount
-}
+const SupportArthavi = () => {
+  const formRef = useRef<HTMLFormElement>(null);
 
-const SupportArthavi = ({
-  vpa = "9158110065@ybl",
-  name = "Tejas Sanjay Chaudhari",
-  amount,
-}: SupportArthaviProps) => {
-  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+  useEffect(() => {
+    if (!formRef.current) return;
+    
+    // Check if the script is already added to prevent duplicates in React Strict Mode
+    if (formRef.current.querySelector('script')) return;
 
-  const getUpiUrl = (scheme: string) => {
-    return `${scheme}?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(name)}${amount ? `&am=${amount}` : ""}&cu=INR&tn=${encodeURIComponent("Support Arthavi")}`;
-  };
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/payment-button.js";
+    script.setAttribute("data-payment_button_id", "pl_SiE7rcPLrynvsT");
+    script.async = true;
 
-  const handleAppSelect = async (scheme: string, appId: string) => {
+    formRef.current.appendChild(script);
+  }, []);
+
+  const handleIntentTrack = async () => {
     try {
       // Record click silently in background
-      await api.trackSupportClick(appId);
+      await api.trackSupportClick("razorpay");
     } catch {
       // ignore
     }
-    window.location.assign(getUpiUrl(scheme));
-    setShowPaymentSheet(false);
   };
-
-  const paymentApps = [
-    {
-      id: "phonepe",
-      name: "PhonePe",
-      scheme: "phonepe://pay",
-      color: "bg-[#5f259f] text-white border-transparent",
-    },
-    {
-      id: "gpay",
-      name: "Google Pay",
-      scheme: "tez://upi/pay",
-      color:
-        "bg-white text-neutral-800 border-neutral-200 dark:bg-neutral-800 dark:text-white dark:border-neutral-700",
-    },
-    {
-      id: "paytm",
-      name: "Paytm",
-      scheme: "paytmmp://pay",
-      color: "bg-[#002e6e] text-white border-transparent",
-    },
-    {
-      id: "cred",
-      name: "CRED",
-      scheme: "credpay://upi/pay",
-      color:
-        "bg-black text-white border-transparent dark:bg-neutral-800 dark:border-neutral-700",
-    },
-    {
-      id: "other",
-      name: "Other UPI Apps",
-      scheme: "upi://pay",
-      color:
-        "bg-neutral-100 text-neutral-800 border-transparent dark:bg-white/10 dark:text-white",
-    },
-  ];
 
   return (
     <div className="bg-white dark:bg-white/5 border border-pink-100 dark:border-pink-500/10 rounded-2xl p-5 shadow-sm text-center">
@@ -76,134 +38,15 @@ const SupportArthavi = ({
       <h3 className="font-bold text-neutral-900 dark:text-white mb-2">
         Support Arthavi
       </h3>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 px-2 leading-relaxed">
+      <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 px-2 leading-relaxed">
         If Arthavi helps you track and grow your investments, you can support
         us. It helps us build better features.
       </p>
 
-      <button
-        onClick={() => setShowPaymentSheet(true)}
-        className="w-full flex justify-center items-center gap-2 px-4 py-3 bg-pink-600 hover:bg-pink-700 text-white text-sm font-semibold rounded-xl transition-all shadow-md active:scale-95">
-        <svg
-          viewBox="0 0 24 24"
-          className="w-4 h-4 fill-current"
-          xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-        </svg>
-        Support Arthavi via UPI
-      </button>
-
-      {/* QR Code is always visible now */}
-      <div className="mt-5 p-4 border border-dashed border-neutral-300 dark:border-white/20 rounded-xl bg-neutral-50 dark:bg-white/5">
-        <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-3">
-          Or scan QR code to donate
-        </p>
-        <div className="w-40 h-40 bg-neutral-200 dark:bg-white/10 mx-auto rounded-lg flex items-center justify-center relative overflow-hidden shadow-xs ring-1 ring-black/5 dark:ring-white/10">
-          <img
-            src="/tejas_qr_phonepe.jpg"
-            alt="UPI QR"
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <div className="flex items-center justify-center gap-2 mt-3">
-          <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-white/10 py-1.5 px-3 rounded-lg select-all">
-            {vpa}
-          </p>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(vpa);
-              alert("UPI ID copied!");
-            }}
-            className="p-1.5 rounded-lg bg-neutral-200 hover:bg-neutral-300 dark:bg-white/10 dark:hover:bg-white/20 text-neutral-600 dark:text-neutral-400 transition-colors"
-            title="Copy UPI ID">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
-        </div>
+      <div className="flex justify-center min-h-[50px]" onClick={handleIntentTrack}>
+        {/* Razorpay Button Container */}
+        <form ref={formRef} className="w-full flex justify-center items-center m-0"></form>
       </div>
-
-      {/* Modern Bottom Sheet Payment Options */}
-      {showPaymentSheet && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/60 z-50 transition-opacity backdrop-blur-sm"
-            onClick={() => setShowPaymentSheet(false)}
-          />
-
-          {/* Sheet */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#121212] rounded-t-3xl z-50 p-6 pb-safe animate-in slide-in-from-bottom duration-300 border-t border-white/10 shadow-2xl">
-            {/* Handle */}
-            <div className="w-12 h-1.5 bg-neutral-300 dark:bg-neutral-700 rounded-full mx-auto mb-6" />
-
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-bold text-neutral-900 dark:text-white">
-                Choose Payment App
-              </h4>
-              <button
-                onClick={() => setShowPaymentSheet(false)}
-                className="p-2 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-500 hover:bg-neutral-200 dark:hover:bg-white/20 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6 text-left">
-              Select any UPI app below to proceed securely.
-            </p>
-
-            <div className="space-y-3">
-              {paymentApps.map((app) => (
-                <button
-                  key={app.id}
-                  onClick={() => handleAppSelect(app.scheme, app.id)}
-                  className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border font-semibold text-sm transition-transform active:scale-[0.98] ${app.color}`}>
-                  <div className="w-8 h-8 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shrink-0 overflow-hidden shadow-xs border border-black/5 dark:border-white/10">
-                    {/* USER: Add your 1:1 square aspect ratio logos inside public/logos/ directory */}
-                    {app.id === "other" ? (
-                      <LinkIcon
-                        size={16}
-                        className="text-neutral-500 dark:text-neutral-400"
-                      />
-                    ) : (
-                      <img
-                        src={`/upiapps/${app.id}.webp`}
-                        alt={`${app.name} logo`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to a default icon if the image fails to load
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                    )}
-                  </div>
-                  {app.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-8 mb-2 pb-6 flex justify-center">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-3.5 h-3.5 fill-current"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                </svg>
-                100% Safe & Secure UPI Payment
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 };
