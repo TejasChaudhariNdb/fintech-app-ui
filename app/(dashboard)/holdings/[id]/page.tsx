@@ -201,7 +201,13 @@ export default function SchemeDetailPage({
               <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
                 XIRR
               </p>
-              <p className="text-sm font-bold text-neutral-900 dark:text-white">
+              <p className={`text-sm font-bold ${
+                scheme.xirr !== null && scheme.xirr !== undefined
+                  ? scheme.xirr >= 0
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-red-500 dark:text-red-400"
+                  : "text-neutral-900 dark:text-white"
+              }`}>
                 {scheme.xirr !== null && scheme.xirr !== undefined
                   ? `${scheme.xirr.toFixed(2)}%`
                   : "NA"}

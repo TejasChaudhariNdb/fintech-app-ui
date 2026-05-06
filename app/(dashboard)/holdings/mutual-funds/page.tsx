@@ -360,9 +360,14 @@ export default function MutualFundsPage() {
                       {entry.percent}%
                       {allocationView === "scheme" &&
                       entry.xirr !== null &&
-                      entry.xirr !== undefined
-                        ? ` | XIRR ${entry.xirr.toFixed(2)}%`
-                        : ""}
+                      entry.xirr !== undefined && (
+                        <>
+                          {" | "}
+                          <span className={entry.xirr >= 0 ? "text-emerald-500" : "text-red-500"}>
+                            XIRR {entry.xirr.toFixed(2)}%
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
