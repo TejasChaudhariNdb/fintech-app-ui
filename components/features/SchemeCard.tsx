@@ -95,7 +95,11 @@ export default function SchemeCard({
               </span>
             )}
             {xirr !== undefined && xirr !== null && (
-              <span className="rounded-xl bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300">
+              <span className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold tracking-tight ${
+                xirr >= 0 
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300" 
+                  : "bg-red-50 text-red-600 dark:bg-red-500/12 dark:text-red-300"
+              }`}>
                 XIRR: {xirr.toFixed(2)}%
               </span>
             )}
