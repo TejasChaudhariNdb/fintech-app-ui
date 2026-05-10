@@ -170,6 +170,8 @@ export const api = {
 
   getEquitySummary: () =>
     api.fetch("/equity/summary", { cacheKey: "equity-summary" }),
+  getEquityJourney: (range: string = "ALL") =>
+    api.fetch(`/equity/journey?range=${range}`),
   getStockTransactions: (symbol?: string) =>
     api.fetch(
       symbol

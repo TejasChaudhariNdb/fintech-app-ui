@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import Card from "@/components/ui/Card";
@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
+import StockJourneyChart from "@/components/features/StockJourneyChart";
 
 export default function StocksPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -90,6 +91,41 @@ export default function StocksPage() {
   // Edit Stock State
   const [editingStock, setEditingStock] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Journey Chart State
+  const [journeyRange, setJourneyRange] = useState("6M");
+  const [journeyHistory, setJourneyHistory] = useState<any[] | null>(null);
+  const [journeyMeta, setJourneyMeta] = useState<any>(null);
+  const [isJourneyLoading, setIsJourneyLoading] = useState(false);
+  const journeyRequestRef = useRef<number>(0);
+
+  const loadJourneyData = async (range: string) => {
+    const requestId = ++journeyRequestRef.current;
+    try {
+      setIsJourneyLoading(true);
+      const res = await api.getEquityJourney(range);
+      if (requestId !== journeyRequestRef.current) return;
+      setJourneyHistory(res.series || []);
+      setJourneyMeta(res.meta || {});
+    } catch (err) {
+      console.error("Failed to load journey data", err);
+    } finally {
+      if (requestId === journeyRequestRef.current) {
+        setIsJourneyLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (manualStocks.length > 0) {
+      loadJourneyData(journeyRange);
+    }
+  }, [manualStocks.length]);
+
+  const handleJourneyRangeChange = (range: string) => {
+    setJourneyRange(range);
+    loadJourneyData(range);
+  };
 
   const formatCompactCurrency = (value: number) =>
     `₹${Math.round(value).toLocaleString("en-IN")}`;
@@ -291,6 +327,17 @@ export default function StocksPage() {
         isVisible={toast.isVisible}
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
+
+      {manualStocks.length > 0 && (
+        <StockJourneyChart
+          data={journeyHistory || undefined}
+          coverageStart={journeyMeta?.coverage_start || null}
+          coveredStocks={journeyMeta?.covered_stocks || 0}
+          onRangeChange={handleJourneyRangeChange}
+          selectedRange={journeyRange}
+          isRefetching={isJourneyLoading}
+        />
+      )}
 
       {/* Manual Stocks Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

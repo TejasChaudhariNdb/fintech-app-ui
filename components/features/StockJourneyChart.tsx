@@ -21,10 +21,10 @@ type JourneyPoint = {
   value: number;
 };
 
-interface MutualFundJourneyChartProps {
+interface StockJourneyChartProps {
   data?: JourneyPoint[];
   coverageStart?: string | null;
-  coveredSchemes?: number;
+  coveredStocks?: number;
   onRangeChange?: (range: string) => void;
   selectedRange?: string;
   isRefetching?: boolean;
@@ -32,14 +32,14 @@ interface MutualFundJourneyChartProps {
 
 const ranges = ["1W", "1M", "6M", "1Y", "ALL"] as const;
 
-export default function MutualFundJourneyChart({
+export default function StockJourneyChart({
   data,
   coverageStart,
-  coveredSchemes = 0,
+  coveredStocks = 0,
   onRangeChange,
   selectedRange = "6M",
   isRefetching = false,
-}: MutualFundJourneyChartProps) {
+}: StockJourneyChartProps) {
   const [activePoint, setActivePoint] = useState<JourneyPoint | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -242,9 +242,8 @@ export default function MutualFundJourneyChart({
           </div>
         </div>
         <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-          Historical value vs invested amount across your portfolio.
+          Historical value vs invested amount across your stock portfolio.
         </p>
-
         <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-white/5">
           <div>
             <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
@@ -292,7 +291,7 @@ export default function MutualFundJourneyChart({
             </span>
           ) : null}
           <span className="inline-flex rounded-full bg-neutral-100 px-3 py-1 dark:bg-white/8">
-            {coveredSchemes} schemes covered
+            {coveredStocks} stocks covered
           </span>
           <span className="text-neutral-400">
             Scroll to pan • Pinch to zoom • Ctrl+scroll to zoom
@@ -301,19 +300,18 @@ export default function MutualFundJourneyChart({
       </div>
       <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-neutral-100 dark:border-white/5">
         <button
-          onClick={handleReset}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-surface transition-colors">
-          <RotateCcw size={14} />
-          Reset
-        </button>
-        <button
           onClick={handleZoomOut}
           disabled={scale <= 1}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-surface disabled:opacity-30 transition-colors">
           <ZoomOut size={14} />
           Zoom Out
         </button>
-
+        <button
+          onClick={handleReset}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-surface transition-colors">
+          <RotateCcw size={14} />
+          Reset
+        </button>
         <button
           onClick={handleZoomIn}
           disabled={scale >= 3}
@@ -352,9 +350,14 @@ export default function MutualFundJourneyChart({
               }}
               onMouseLeave={() => setActivePoint(null)}>
               <defs>
-                <linearGradient id="mfJourneyValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563EB" stopOpacity={0.28} />
-                  <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                <linearGradient
+                  id="stockJourneyValue"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.28} />
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -409,15 +412,15 @@ export default function MutualFundJourneyChart({
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="#2563EB"
+                stroke="#10B981"
                 strokeWidth={2}
                 fillOpacity={1}
-                fill="url(#mfJourneyValue)"
+                fill="url(#stockJourneyValue)"
               />
               {selected ? (
                 <ReferenceLine
                   y={selected.value}
-                  stroke="#2563EB"
+                  stroke="#10B981"
                   strokeDasharray="3 3"
                   label={{
                     position: "right",
@@ -427,7 +430,7 @@ export default function MutualFundJourneyChart({
                         : selected.value >= 100000
                           ? `${(selected.value / 100000).toFixed(1)}L`
                           : `${Math.round(selected.value)}`,
-                    fill: "#2563EB",
+                    fill: "#10B981",
                     fontSize: 11,
                     fontWeight: "bold",
                   }}
