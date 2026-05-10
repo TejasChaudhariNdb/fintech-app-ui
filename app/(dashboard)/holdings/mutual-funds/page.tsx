@@ -15,6 +15,7 @@ import Toast from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import MutualFundJourneyChart from "@/components/features/MutualFundJourneyChart";
 
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
@@ -50,11 +51,15 @@ export default function MutualFundsPage() {
   const [schemes, setSchemes] = useState<any[]>([]);
   const [amcAllocation, setAmcAllocation] = useState<any[]>([]);
   const [schemeAllocation, setSchemeAllocation] = useState<any[]>([]);
+  const [journeyHistory, setJourneyHistory] = useState<any[] | null>(null);
+  const [journeyMeta, setJourneyMeta] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"value" | "name" | "profit">("name");
+  const [sortBy, setSortBy] = useState<
+    "value" | "name" | "profit" | "dayChange" | "rank"
+  >("name");
   const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
   const [prefillSchemeId, setPrefillSchemeId] = useState<number | null>(null);
@@ -75,14 +80,17 @@ export default function MutualFundsPage() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [schemesRes, amcRes, schemeAllocationRes] = await Promise.all([
+      const [schemesRes, amcRes, schemeAllocationRes, journeyRes] = await Promise.all([
         api.getSchemes(),
         api.getAMCAllocation(),
         api.getSchemeAllocation(),
+        api.getMutualFundJourney(),
       ]);
       setSchemes(schemesRes);
       setAmcAllocation(amcRes);
       setSchemeAllocation(schemeAllocationRes);
+      setJourneyHistory(journeyRes.series || []);
+      setJourneyMeta(journeyRes.meta || null);
       setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
@@ -163,6 +171,11 @@ export default function MutualFundsPage() {
     .sort((a, b) => {
       if (sortBy === "value") return b.current - a.current;
       if (sortBy === "profit") return b.profit - a.profit;
+      if (sortBy === "dayChange") return b.day_change - a.day_change;
+      if (sortBy === "rank") {
+        return (a.overall_rank || Number.MAX_SAFE_INTEGER) -
+          (b.overall_rank || Number.MAX_SAFE_INTEGER);
+      }
       return a.scheme?.localeCompare(b.scheme);
     });
   const allocationData =
@@ -220,6 +233,12 @@ export default function MutualFundsPage() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
+      />
+
+      <MutualFundJourneyChart
+        data={journeyHistory || undefined}
+        coverageStart={journeyMeta?.coverage_start || null}
+        coveredSchemes={journeyMeta?.covered_schemes || 0}
       />
 
       <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -431,13 +450,22 @@ export default function MutualFundsPage() {
           <select
             value={sortBy}
             onChange={(e) =>
-              setSortBy(e.target.value as "value" | "name" | "profit")
+              setSortBy(
+                e.target.value as
+                  | "value"
+                  | "name"
+                  | "profit"
+                  | "dayChange"
+                  | "rank",
+              )
             }
             aria-label="Sort schemes"
             className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
             <option value="name">Sort: Name</option>
             <option value="value">Sort: Value</option>
             <option value="profit">Sort: Profit</option>
+            <option value="dayChange">Sort: Daily Change</option>
+            <option value="rank">Sort: Rank</option>
           </select>
         </div>
 
@@ -455,6 +483,13 @@ export default function MutualFundsPage() {
                 current={scheme.current}
                 returnPct={scheme.return_pct}
                 xirr={scheme.xirr}
+                dayChange={scheme.day_change}
+                dayChangePct={scheme.day_change_pct}
+                categoryLabel={scheme.category_label}
+                overallRank={scheme.overall_rank}
+                totalHoldings={scheme.total_holdings}
+                categoryRank={scheme.category_rank}
+                categoryTotal={scheme.category_total}
                 onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
                 onShare={() =>
                   setSelectedShareStock({

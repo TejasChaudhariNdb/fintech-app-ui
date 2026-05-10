@@ -14,6 +14,13 @@ interface SchemeCardProps {
   current: number;
   returnPct: number;
   xirr?: number | null;
+  dayChange?: number;
+  dayChangePct?: number;
+  categoryLabel?: string;
+  overallRank?: number;
+  totalHoldings?: number;
+  categoryRank?: number;
+  categoryTotal?: number;
   onClick?: () => void;
   onShare?: () => void;
   onEdit?: () => void;
@@ -31,6 +38,13 @@ export default function SchemeCard({
   current,
   returnPct,
   xirr,
+  dayChange = 0,
+  dayChangePct = 0,
+  categoryLabel,
+  overallRank,
+  totalHoldings,
+  categoryRank,
+  categoryTotal,
   onClick,
   onShare,
   onEdit,
@@ -42,6 +56,7 @@ export default function SchemeCard({
   const performanceTone = isPositive
     ? "text-emerald-600 dark:text-emerald-400"
     : "text-red-500 dark:text-red-400";
+  const isDayPositive = dayChange >= 0;
 
   return (
     <Card
@@ -57,8 +72,18 @@ export default function SchemeCard({
           <p className="mt-2 truncate text-sm font-medium text-neutral-500 dark:text-neutral-400">
             {amc}
           </p>
-
-       
+          <div className="mt-3 flex flex-wrap gap-2">
+            {categoryLabel && (
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+                {categoryLabel}
+              </span>
+            )}
+            {overallRank ? (
+              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                Rank #{overallRank}/{totalHoldings || overallRank}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="shrink-0 text-right">
@@ -70,6 +95,12 @@ export default function SchemeCard({
             {isPositive ? "+" : ""}
             {returnPct.toFixed(2)}%
           </div>
+          <p
+            className={`mt-2 text-[12px] font-medium ${
+              isDayPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
+            }`}>
+            {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")} ({dayChangePct.toFixed(2)}%)
+          </p>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -103,6 +134,11 @@ export default function SchemeCard({
                 XIRR: {xirr.toFixed(2)}%
               </span>
             )}
+            {categoryRank ? (
+              <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
+                Category Rank: #{categoryRank}/{categoryTotal || categoryRank}
+              </span>
+            ) : null}
           </div>
 
       {onShare && (

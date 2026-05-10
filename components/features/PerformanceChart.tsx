@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import {
   AreaChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,11 +16,28 @@ import Card from "@/components/ui/Card";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 interface PerformanceChartProps {
-  data?: { date: string; value: number }[];
+  data?: PerfPoint[];
   investedAmount?: number;
   mfInvested?: number;
   stockInvested?: number;
 }
+
+type PerfPoint = {
+  date: string;
+  value: number;
+  invested?: number;
+  mf?: number;
+  mf_invested?: number;
+  equity?: number;
+  equity_invested?: number;
+  displayDate?: string;
+};
+
+type ChartEventState = {
+  activePayload?: Array<{
+    payload: PerfPoint;
+  }>;
+};
 
 const ranges = ["1M", "6M", "1Y", "ALL"];
 
@@ -37,6 +55,7 @@ export default function PerformanceChart({
   const [range, setRange] = useState("ALL");
   const [assetType, setAssetType] = useState("ALL"); // ALL, MF, STOCK
   const [hoveredValue, setHoveredValue] = useState<number | null>(null);
+  const [activePoint, setActivePoint] = useState<PerfPoint | null>(null);
   const { light } = useHaptic();
 
   // Determine active data key based on asset type
@@ -49,6 +68,18 @@ export default function PerformanceChart({
       case "ALL":
       default:
         return "value";
+    }
+  }, [assetType]);
+
+  const activeInvestedKey = useMemo(() => {
+    switch (assetType) {
+      case "MF":
+        return "mf_invested";
+      case "STOCK":
+        return "equity_invested";
+      case "ALL":
+      default:
+        return "invested";
     }
   }, [assetType]);
 
@@ -69,7 +100,7 @@ export default function PerformanceChart({
   const sourceData = useMemo(() => {
     if (!propData) return [];
 
-    return propData.map((d: any) => ({
+    return propData.map((d) => ({
       ...d,
       displayDate: new Date(d.date).toLocaleDateString("en-IN", {
         month: "short",
@@ -101,7 +132,7 @@ export default function PerformanceChart({
     if (range === "ALL") return sourceData;
 
     const now = new Date();
-    let cutoff = new Date();
+    const cutoff = new Date();
     if (range === "1M") cutoff.setMonth(now.getMonth() - 1);
     if (range === "6M") cutoff.setMonth(now.getMonth() - 6);
     if (range === "1Y") cutoff.setFullYear(now.getFullYear() - 1);
@@ -114,7 +145,10 @@ export default function PerformanceChart({
     if (!chartData.length) return ["auto", "auto"];
 
     // Extract values for the currently visible series
-    const values = chartData.map((d: any) => Number(d[activeDataKey] || 0));
+    const values = chartData.flatMap((d) => [
+      Number(d[activeDataKey] || 0),
+      Number(d[activeInvestedKey] || 0),
+    ]);
 
     // Include the reference line value in the domain calculation
     if (activeReferenceValue && activeReferenceValue > 0) {
@@ -152,7 +186,14 @@ export default function PerformanceChart({
     const finalMin = min >= 0 && niceMin < 0 ? 0 : niceMin;
 
     return [finalMin, niceMax];
-  }, [chartData, activeDataKey, activeReferenceValue]);
+  }, [chartData, activeDataKey, activeInvestedKey, activeReferenceValue]);
+
+  const selectedPoint = activePoint || chartData[chartData.length - 1] || null;
+  const selectedValue = Number(selectedPoint?.[activeDataKey] || 0);
+  const selectedInvested = Number(selectedPoint?.[activeInvestedKey] || 0);
+  const selectedGain = selectedValue - selectedInvested;
+  const selectedGainPct =
+    selectedInvested > 0 ? (selectedGain / selectedInvested) * 100 : 0;
 
   if (!propData) {
     return (
@@ -234,29 +275,67 @@ export default function PerformanceChart({
             Stocks
           </button>
         </div>
+
+        <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-white/5">
+          <div>
+            <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+              {selectedPoint?.displayDate || "Latest"}
+            </p>
+            <p className="mt-1 text-xl font-bold text-neutral-900 dark:text-white">
+              ₹{selectedValue.toLocaleString("en-IN")}
+            </p>
+          </div>
+          <div className="flex gap-5 text-sm">
+            <div>
+              <p className="text-neutral-500 dark:text-neutral-400">Invested</p>
+              <p className="font-semibold text-neutral-900 dark:text-white">
+                ₹{selectedInvested.toLocaleString("en-IN")}
+              </p>
+            </div>
+            <div>
+              <p className="text-neutral-500 dark:text-neutral-400">Gain</p>
+              <p
+                className={`font-semibold ${
+                  selectedGain >= 0 ? "text-emerald-500" : "text-red-500"
+                }`}>
+                {selectedGain >= 0 ? "+" : ""}₹
+                {Math.abs(selectedGain).toLocaleString("en-IN")} ({selectedGainPct.toFixed(2)}%)
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            onMouseMove={(e: any) => {
+            onMouseMove={(e: ChartEventState) => {
               if (e.activePayload && e.activePayload.length) {
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
+                setActivePoint(e.activePayload[0].payload);
               }
             }}
-            onMouseLeave={() => setHoveredValue(null)}
-            onTouchStart={(e: any) => {
+            onMouseLeave={() => {
+              setHoveredValue(null);
+              setActivePoint(null);
+            }}
+            onTouchStart={(e: ChartEventState) => {
               if (e.activePayload && e.activePayload.length) {
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
+                setActivePoint(e.activePayload[0].payload);
               }
             }}
-            onTouchMove={(e: any) => {
+            onTouchMove={(e: ChartEventState) => {
               if (e.activePayload && e.activePayload.length) {
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
+                setActivePoint(e.activePayload[0].payload);
               }
             }}
-            onTouchEnd={() => setHoveredValue(null)}>
+            onTouchEnd={() => {
+              setHoveredValue(null);
+              setActivePoint(null);
+            }}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
@@ -310,13 +389,27 @@ export default function PerformanceChart({
                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
               }}
               itemStyle={{ color: "#fff" }}
-              formatter={(value: any, name: any) => {
+              formatter={(value: number | string, name: string) => {
                 let label = "Total Value";
                 if (name === "mf") label = "Mutual Funds";
                 if (name === "equity") label = "Stocks";
+                if (name === "invested") label = "Invested";
+                if (name === "mf_invested") label = "MF Invested";
+                if (name === "equity_invested") label = "Stock Invested";
                 return [`₹${(Number(value) || 0).toLocaleString()}`, label];
               }}
               labelStyle={{ color: "#9CA3AF", marginBottom: "0.5rem" }}
+            />
+
+            <Line
+              type="monotone"
+              dataKey={activeInvestedKey}
+              name={activeInvestedKey}
+              stroke="#94A3B8"
+              strokeWidth={2}
+              dot={false}
+              strokeDasharray="4 4"
+              animationDuration={500}
             />
 
             {/* 1. TOTAL VALUE (Purple) - Show only if ALL is selected */}

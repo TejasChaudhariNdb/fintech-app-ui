@@ -170,6 +170,27 @@ export const api = {
 
   getEquitySummary: () =>
     api.fetch("/equity/summary", { cacheKey: "equity-summary" }),
+  getStockTransactions: (symbol?: string) =>
+    api.fetch(
+      symbol
+        ? `/equity/transactions?symbol=${encodeURIComponent(symbol)}`
+        : "/equity/transactions",
+    ),
+  updateStockTransaction: (
+    id: number,
+    data: {
+      quantity: number;
+      price: number;
+      date: string;
+      transaction_type: "BUY" | "SELL";
+    },
+  ) =>
+    api.fetch(`/equity/transaction/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  deleteStockTransaction: (id: number) =>
+    api.fetch(`/equity/transaction/${id}`, { method: "DELETE" }),
 
   getEquityAllocation: () => api.fetch("/equity/allocation"),
 
@@ -236,6 +257,7 @@ export const api = {
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
 
   getPortfolioHistory: () => api.fetch("/portfolio/timeseries"),
+  getMutualFundJourney: () => api.fetch("/portfolio/mf-journey"),
 
   getBenchmark: () => api.fetch("/portfolio/benchmark"),
 

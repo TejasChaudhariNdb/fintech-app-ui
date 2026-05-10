@@ -122,7 +122,7 @@ export default function FeedbackButton() {
                   <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                 </div>
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                  Thanks for your feedback!
+                  tejas
                 </h3>
                 <p className="text-sm text-neutral-500">
                   We&apos;ll review it soon.

@@ -153,10 +153,28 @@ export default function SchemeDetailPage({
                 <span>{scheme.return_pct.toFixed(2)}%</span>
               </div>
             </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {scheme.category_label ? (
+                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
+                  {scheme.category_label}
+                </span>
+              ) : null}
+              {scheme.overall_rank ? (
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                  Portfolio Rank #{scheme.overall_rank}/{scheme.total_holdings}
+                </span>
+              ) : null}
+              {scheme.category_rank ? (
+                <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-700 dark:bg-white/8 dark:text-neutral-300">
+                  Category Rank #{scheme.category_rank}/{scheme.category_total}
+                </span>
+              ) : null}
+            </div>
           </div>
 
           {/* Bottom Section: Grid Stats */}
-          <div className="grid grid-cols-2 gap-y-4 p-4 bg-neutral-50/50 dark:bg-white/5 sm:grid-cols-5 sm:gap-y-0 sm:divide-x sm:divide-neutral-200 sm:dark:divide-white/5">
+          <div className="grid grid-cols-2 gap-y-4 p-4 bg-neutral-50/50 dark:bg-white/5 sm:grid-cols-6 sm:gap-y-0 sm:divide-x sm:divide-neutral-200 sm:dark:divide-white/5">
             <div className="px-2">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
                 Invested
@@ -211,6 +229,25 @@ export default function SchemeDetailPage({
                 {scheme.xirr !== null && scheme.xirr !== undefined
                   ? `${scheme.xirr.toFixed(2)}%`
                   : "NA"}
+              </p>
+            </div>
+            <div className="px-2">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
+                Daily Change
+              </p>
+              <p
+                className={`text-sm font-bold ${
+                  (scheme.day_change || 0) >= 0
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-red-500 dark:text-red-400"
+                }`}>
+                {(scheme.day_change || 0) >= 0 ? "+" : ""}₹
+                {Math.abs(scheme.day_change || 0).toLocaleString("en-IN", {
+                  maximumFractionDigits: 0,
+                })}
+              </p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">
+                {scheme.day_change_pct?.toFixed(2) || "0.00"}%
               </p>
             </div>
           </div>
