@@ -77,27 +77,50 @@ export default function MutualFundsPage() {
   const [editingScheme, setEditingScheme] = useState<any>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Journey State
+  const [journeyRange, setJourneyRange] = useState("6M");
+  const [isJourneyRefetching, setIsJourneyRefetching] = useState(false);
+
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [schemesRes, amcRes, schemeAllocationRes, journeyRes] = await Promise.all([
+      // Fetch core data first
+      const [schemesRes, amcRes, schemeAllocationRes] = await Promise.all([
         api.getSchemes(),
         api.getAMCAllocation(),
         api.getSchemeAllocation(),
-        api.getMutualFundJourney(),
       ]);
       setSchemes(schemesRes);
       setAmcAllocation(amcRes);
       setSchemeAllocation(schemeAllocationRes);
-      setJourneyHistory(journeyRes.series || []);
-      setJourneyMeta(journeyRes.meta || null);
       setLastUpdated(new Date());
+      setIsLoading(false); // Unlock page for core data
+
+      // Fetch journey data separately (non-blocking)
+      loadJourneyData(journeyRange);
     } catch (err) {
       console.error(err);
       showToast("Failed to load mutual funds", "error");
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadJourneyData = async (range: string) => {
+    try {
+      setIsJourneyRefetching(true);
+      const journeyRes = await api.getMutualFundJourney(range);
+      setJourneyHistory(journeyRes.series || []);
+      setJourneyMeta(journeyRes.meta || null);
+    } catch (err) {
+      console.error("Failed to load MF journey:", err);
+    } finally {
+      setIsJourneyRefetching(false);
+    }
+  };
+
+  const handleRangeChange = (range: string) => {
+    setJourneyRange(range);
+    loadJourneyData(range);
   };
 
   useEffect(() => {
@@ -239,6 +262,9 @@ export default function MutualFundsPage() {
         data={journeyHistory || undefined}
         coverageStart={journeyMeta?.coverage_start || null}
         coveredSchemes={journeyMeta?.covered_schemes || 0}
+        onRangeChange={handleRangeChange}
+        selectedRange={journeyRange}
+        isRefetching={isJourneyRefetching}
       />
 
       <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">

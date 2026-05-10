@@ -26,14 +26,25 @@ interface MutualFundJourneyChartProps {
   coveredSchemes?: number;
 }
 
-const ranges = ["1Y", "3Y", "5Y", "ALL"] as const;
+const ranges = ["1W", "1M", "6M", "1Y", "ALL"] as const;
+
+interface MutualFundJourneyChartProps {
+  data?: JourneyPoint[];
+  coverageStart?: string | null;
+  coveredSchemes?: number;
+  onRangeChange?: (range: string) => void;
+  selectedRange?: string;
+  isRefetching?: boolean;
+}
 
 export default function MutualFundJourneyChart({
   data,
   coverageStart,
   coveredSchemes = 0,
+  onRangeChange,
+  selectedRange = "6M",
+  isRefetching = false,
 }: MutualFundJourneyChartProps) {
-  const [range, setRange] = useState<(typeof ranges)[number]>("ALL");
   const [activePoint, setActivePoint] = useState<JourneyPoint | null>(null);
 
   const sourceData = useMemo(() => {
@@ -47,25 +58,28 @@ export default function MutualFundJourneyChart({
     }));
   }, [data]);
 
-  const chartData = useMemo(() => {
-    if (range === "ALL") return sourceData;
-    const cutoff = new Date();
-    if (range === "1Y") cutoff.setFullYear(cutoff.getFullYear() - 1);
-    if (range === "3Y") cutoff.setFullYear(cutoff.getFullYear() - 3);
-    if (range === "5Y") cutoff.setFullYear(cutoff.getFullYear() - 5);
-    return sourceData.filter((point) => new Date(point.date) >= cutoff);
-  }, [range, sourceData]);
+  // Remove frontend filtering since backend now handles it
+  const chartData = sourceData;
 
   const selected = activePoint || chartData[chartData.length - 1] || null;
   const gain = (selected?.value || 0) - (selected?.invested || 0);
   const gainPct =
     (selected?.invested || 0) > 0 ? (gain / (selected?.invested || 1)) * 100 : 0;
 
-  if (!data) {
+  if (!data || isRefetching) {
     return (
       <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
-        <div className="h-[280px] flex items-center justify-center text-sm text-neutral-400">
-          Loading full history...
+        <div className="h-[280px] flex flex-col items-center justify-center gap-4">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-2 border-neutral-100 dark:border-white/5" />
+            <div className="absolute inset-0 w-12 h-12 rounded-full border-t-2 border-primary-500 animate-spin" />
+          </div>
+          <div className="space-y-1 text-center">
+            <p className="text-sm font-medium text-neutral-900 dark:text-white">Analyzing Portfolio History</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                {isRefetching ? "Refreshing range..." : "This might take a moment depending on your transaction volume..."}
+            </p>
+          </div>
         </div>
       </Card>
     );
@@ -75,11 +89,25 @@ export default function MutualFundJourneyChart({
     return (
       <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
         <div className="h-[280px] flex flex-col items-center justify-center gap-2 text-center">
+            <div className="flex bg-neutral-100 dark:bg-white/5 rounded-lg p-1 mb-4">
+                {ranges.map((item) => (
+                <button
+                    key={item}
+                    onClick={() => onRangeChange?.(item)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+                    selectedRange === item
+                        ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
+                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                    }`}>
+                    {item}
+                </button>
+                ))}
+            </div>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Full mutual fund history is not available yet for this portfolio.
+            Investment history is not available for this range.
           </p>
           <p className="text-xs text-neutral-400">
-            Uploading a detailed CAS with transactions gives the best journey chart.
+            Try a longer time range or ensure you have uploaded transactions.
           </p>
         </div>
       </Card>
@@ -92,19 +120,19 @@ export default function MutualFundJourneyChart({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white">
-              Mutual Fund Journey
+              Investment History
             </h3>
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              Full-history value vs invested built from transaction records.
+              Historical value vs invested amount across your portfolio.
             </p>
           </div>
           <div className="flex bg-neutral-100 dark:bg-white/5 rounded-lg p-1 shrink-0">
             {ranges.map((item) => (
               <button
                 key={item}
-                onClick={() => setRange(item)}
+                onClick={() => onRangeChange?.(item)}
                 className={`px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
-                  range === item
+                  selectedRange === item
                     ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
                     : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
                 }`}>
@@ -168,7 +196,7 @@ export default function MutualFundJourneyChart({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            onMouseMove={(state) => {
+            onMouseMove={(state: any) => {
               const payload = state.activePayload?.[0]?.payload as JourneyPoint | undefined;
               if (payload) setActivePoint(payload);
             }}

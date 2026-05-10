@@ -1,21 +1,30 @@
 import React from "react";
+import { Trash2, Pencil } from "lucide-react";
 
 interface TransactionItemProps {
+  id?: number;
   date: string;
   type: string;
   amount: number;
   schemeName: string;
   amc: string;
   units?: number;
+  category?: "MF" | "STOCK";
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export default function TransactionItem({
+  id,
   date,
   type,
   amount,
   schemeName,
   amc,
   units,
+  category = "MF",
+  onEdit,
+  onDelete,
 }: TransactionItemProps) {
   const formatType = (type: string) => {
     switch (type) {
@@ -29,14 +38,18 @@ export default function TransactionItem({
         return "Redemption";
       case "PURCHASE":
         return "Purchase";
+      case "BUY":
+        return "Buy";
+      case "SELL":
+        return "Sell";
       default:
         return type.replace(/_/g, " ");
     }
   };
 
-  const isPurchase = type.includes("PURCHASE");
+  const isPurchase = type.includes("PURCHASE") || type === "BUY";
   const isTax = type.includes("TAX") || type.includes("STAMP_DUTY");
-  const isRedemption = type === "REDEMPTION";
+  const isRedemption = type === "REDEMPTION" || type === "SELL";
 
   // Determine the color theme for the item
   let statusColor =
@@ -59,7 +72,10 @@ export default function TransactionItem({
   }
 
   return (
-    <div className="flex items-center justify-between p-3.5 border border-neutral-100 dark:border-white/5 bg-neutral-50 dark:bg-white/5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
+    <div 
+      onClick={() => onEdit?.()}
+      className={`flex items-center justify-between p-3.5 border border-neutral-100 dark:border-white/5 bg-neutral-50 dark:bg-white/5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors group relative overflow-hidden ${onEdit ? "cursor-pointer" : ""}`}
+    >
       {/* Visual Indicator Icon */}
       <div
         className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 shrink-0 ${iconColor}`}>
@@ -73,9 +89,14 @@ export default function TransactionItem({
             {isTax ? formatType(type) : schemeName}
           </p>
           <span
-            className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${statusColor}`}>
+            className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight ${statusColor}`}>
             {isTax ? "Tax" : formatType(type)}
           </span>
+          {category === "STOCK" && (
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              Stock
+            </span>
+          )}
         </div>
 
         {/* Secondary Info: AMC if purchase/sell, or Scheme Name if Tax */}
@@ -91,17 +112,51 @@ export default function TransactionItem({
               year: "numeric",
             })}
           </span>
-          {units && units > 0 && <span className="ml-1"> • {units} Units</span>}
+          {units && units > 0 && (
+            <span className="ml-1">
+              {" "}
+              • {units} {category === "STOCK" ? "Shares" : "Units"}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Amount Section */}
-      <div className="text-right ml-4">
-        <p className={`text-sm font-bold ${amountColor}`}>
-          {isPurchase ? "+" : "-"}₹
-          {amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-        </p>
+      {/* Amount Section & Actions */}
+      <div className="text-right ml-4 flex items-center gap-3">
+        <div className="group-hover:opacity-0 transition-opacity">
+          <p className={`text-sm font-bold ${amountColor}`}>
+            {isPurchase ? "+" : "-"}₹
+            {amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+          </p>
+        </div>
+
+        {/* Action Buttons (Visible on Hover) */}
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-neutral-100 dark:bg-[#1A1F2B] p-1.5 rounded-lg shadow-sm border border-neutral-200 dark:border-white/10">
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+              className="p-1.5 text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              title="Edit Transaction">
+              <Pencil size={14} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1.5 text-neutral-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              title="Delete Transaction">
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

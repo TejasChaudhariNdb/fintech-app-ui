@@ -39,7 +39,7 @@ export default function SideNav() {
   const mainTabs = [
     { id: "/", label: "Home", icon: Home },
     { id: "/holdings", label: "Holdings", icon: Briefcase },
-    { id: "/activity", label: "Activity", icon: Activity },
+    { id: "/activity", label: "Transactions", icon: Activity },
     { id: "/goals", label: "Goals", icon: Target },
   ];
 

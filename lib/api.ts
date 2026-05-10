@@ -226,6 +226,13 @@ export const api = {
     api.fetch(`/portfolio/transactions?skip=${skip}&limit=${limit}`, {
       cacheKey: `transactions-${skip}-${limit}`,
     }),
+  deleteMFTransaction: (id: number) =>
+    api.fetch(`/portfolio/transaction/${id}`, { method: "DELETE" }),
+  updateMFTransaction: (id: number, data: any) =>
+    api.fetch(`/portfolio/transaction/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
 
   exportTransactions: async () => {
     const token =
@@ -257,7 +264,8 @@ export const api = {
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
 
   getPortfolioHistory: () => api.fetch("/portfolio/timeseries"),
-  getMutualFundJourney: () => api.fetch("/portfolio/mf-journey"),
+  getMutualFundJourney: (range: string = "ALL") =>
+    api.fetch(`/portfolio/mf-journey?range=${range}`),
 
   getBenchmark: () => api.fetch("/portfolio/benchmark"),
 

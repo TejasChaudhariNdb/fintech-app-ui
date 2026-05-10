@@ -32,7 +32,7 @@ export default function DashboardLayout({
       if (path.includes("/holdings/stocks")) return "Stocks - Arthavi";
       if (path.startsWith("/holdings")) return "Holdings - Arthavi";
       if (path.startsWith("/goals")) return "Goals - Arthavi";
-      if (path.startsWith("/activity")) return "Activity - Arthavi";
+      if (path.startsWith("/transactions")) return "Transactions - Arthavi";
       if (path.startsWith("/profile")) return "Profile - Arthavi";
       return "Arthavi";
     };

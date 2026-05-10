@@ -11,7 +11,7 @@ export default function BottomNav() {
   const tabs = [
     { id: "/", label: "Home", icon: Home },
     { id: "/holdings", label: "Holdings", icon: Briefcase },
-    { id: "/activity", label: "Activity", icon: Activity },
+    { id: "/activity", label: "Transactions", icon: Activity },
     { id: "/goals", label: "Goals", icon: Target },
     { id: "/profile", label: "Settings", icon: Settings },
   ];
