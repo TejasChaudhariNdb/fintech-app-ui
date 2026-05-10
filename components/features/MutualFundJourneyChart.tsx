@@ -226,7 +226,7 @@ export default function MutualFundJourneyChart({
               tickLine={false}
               width={56}
               tick={{ fill: "#9CA3AF", fontSize: 11 }}
-              tickFormatter={(value) => {
+              tickFormatter={(value: any) => {
                 if (value >= 10000000) return `${(value / 10000000).toFixed(1)}Cr`;
                 if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
                 if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
@@ -241,7 +241,7 @@ export default function MutualFundJourneyChart({
                 borderRadius: "12px",
                 color: "#fff",
               }}
-              formatter={(value: number | string, name: string) => [
+              formatter={(value: any, name: any) => [
                 `₹${Math.round(Number(value) || 0).toLocaleString("en-IN")}`,
                 name === "invested" ? "Invested" : "Value",
               ]}
