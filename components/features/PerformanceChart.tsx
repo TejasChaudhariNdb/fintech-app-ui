@@ -310,7 +310,7 @@ export default function PerformanceChart({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
-            onMouseMove={(e: ChartEventState) => {
+            onMouseMove={(e: any) => {
               if (e.activePayload && e.activePayload.length) {
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
                 setActivePoint(e.activePayload[0].payload);
@@ -320,13 +320,13 @@ export default function PerformanceChart({
               setHoveredValue(null);
               setActivePoint(null);
             }}
-            onTouchStart={(e: ChartEventState) => {
+            onTouchStart={(e: any) => {
               if (e.activePayload && e.activePayload.length) {
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
                 setActivePoint(e.activePayload[0].payload);
               }
             }}
-            onTouchMove={(e: ChartEventState) => {
+            onTouchMove={(e: any) => {
               if (e.activePayload && e.activePayload.length) {
                 setHoveredValue(e.activePayload[0].payload[activeDataKey]);
                 setActivePoint(e.activePayload[0].payload);
@@ -371,7 +371,7 @@ export default function PerformanceChart({
               padding={{ bottom: 20 }}
               width={50}
               tick={{ fill: "#9CA3AF", fontSize: 11 }}
-              tickFormatter={(value) => {
+              tickFormatter={(value: any) => {
                 if (value >= 10000000)
                   return `${(value / 10000000).toFixed(1)}Cr`;
                 if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
@@ -389,7 +389,7 @@ export default function PerformanceChart({
                 boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
               }}
               itemStyle={{ color: "#fff" }}
-              formatter={(value: number | string, name: string) => {
+              formatter={(value: any, name: any) => {
                 let label = "Total Value";
                 if (name === "mf") label = "Mutual Funds";
                 if (name === "equity") label = "Stocks";
