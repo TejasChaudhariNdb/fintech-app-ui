@@ -17,6 +17,12 @@ import {
   Search,
   Settings2,
   Check,
+  BarChart2,
+  PieChart,
+  AlertCircle,
+  Layers,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import ChatMessage from "./ChatMessage";
@@ -539,27 +545,72 @@ export default function ChatWidget() {
               <ChatMessage key={i} role={m.role} content={m.content} />
             ))}
             {messages.length === 1 && !isResponding && !streamingText && (
-              <div className="flex flex-col gap-3 mt-8 pl-[48px] pr-4">
-                <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-col gap-4 mt-8 px-2 sm:px-4 sm:ml-[40px]">
+                <div className="flex items-center gap-3 px-2">
                   <div className="h-px flex-1 bg-neutral-200 dark:bg-white/5" />
-                  <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
-                    Quick Insights
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] whitespace-nowrap">
+                    Quick Portfolio Insights
                   </p>
                   <div className="h-px flex-1 bg-neutral-200 dark:bg-white/5" />
                 </div>
-                {[
-                  "Analyze my portfolio performance",
-                  "Are my investments well-diversified?",
-                  "Recommend top large cap funds",
-                ].map((q, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => sendMessage(q)}
-                    className="group text-left text-sm bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:border-primary-500/50 hover:bg-primary-50/30 dark:hover:bg-primary-500/5 rounded-2xl px-5 py-4 text-neutral-800 dark:text-neutral-200 transition-all duration-300 shadow-sm hover:shadow-xl cursor-pointer flex items-center justify-between">
-                    <span className="font-medium">{q}</span>
-                    <ChevronLeft size={16} className="rotate-180 opacity-0 group-hover:opacity-100 transition-all text-primary-500 translate-x-[-8px] group-hover:translate-x-0" />
-                  </button>
-                ))}
+                
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { 
+                      text: "Analyze my portfolio", 
+                      icon: <BarChart2 size={16} />, 
+                      color: "text-blue-500",
+                      bg: "bg-blue-50 dark:bg-blue-500/5",
+                      border: "border-blue-100 dark:border-blue-500/20"
+                    },
+                    { 
+                      text: "Are my investments well diversified?", 
+                      icon: <PieChart size={16} />, 
+                      color: "text-purple-500",
+                      bg: "bg-purple-50 dark:bg-purple-500/5",
+                      border: "border-purple-100 dark:border-purple-500/20"
+                    },
+                    { 
+                      text: "What’s missing in my portfolio?", 
+                      icon: <AlertCircle size={16} />, 
+                      color: "text-amber-500",
+                      bg: "bg-amber-50 dark:bg-amber-500/5",
+                      border: "border-amber-100 dark:border-amber-500/20"
+                    },
+                    { 
+                      text: "Which funds overlap in my portfolio?", 
+                      icon: <Layers size={16} />, 
+                      color: "text-emerald-500",
+                      bg: "bg-emerald-50 dark:bg-emerald-500/5",
+                      border: "border-emerald-100 dark:border-emerald-500/20"
+                    },
+                    { 
+                      text: "Recommend strong large cap funds", 
+                      icon: <TrendingUp size={16} />, 
+                      color: "text-indigo-500",
+                      bg: "bg-indigo-50 dark:bg-indigo-500/5",
+                      border: "border-indigo-100 dark:border-indigo-500/20"
+                    },
+                    { 
+                      text: "Suggest a SIP plan for me", 
+                      icon: <Wallet size={16} />, 
+                      color: "text-rose-500",
+                      bg: "bg-rose-50 dark:bg-rose-500/5",
+                      border: "border-rose-100 dark:border-rose-500/20"
+                    },
+                  ].map((q, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => sendMessage(q.text)}
+                      className={`group text-left text-xs sm:text-sm ${q.bg} border ${q.border} hover:border-primary-500/50 hover:bg-white dark:hover:bg-primary-500/10 rounded-2xl p-3 sm:p-4 text-neutral-800 dark:text-neutral-200 transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer flex items-center gap-3 active:scale-[0.98]`}>
+                      <div className={`p-2 rounded-xl bg-white dark:bg-black/20 shadow-sm group-hover:scale-110 transition-transform ${q.color}`}>
+                        {q.icon}
+                      </div>
+                      <span className="font-semibold flex-1 leading-tight">{q.text}</span>
+                      <ChevronLeft size={14} className="rotate-180 opacity-40 group-hover:opacity-100 transition-all text-primary-500 group-hover:translate-x-1" />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {isResponding && !streamingText && (
