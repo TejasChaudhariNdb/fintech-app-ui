@@ -599,7 +599,7 @@ export default function ChatWidget() {
             {/* Model Selector */}
             {/* Model Selector Dropdown */}
             {showModelSelector && (
-              <div className="mb-3 p-2 bg-[#1A1D24] border border-white/5 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-2xl overflow-hidden">
+              <div className="mb-3 p-2 bg-white dark:bg-[#1A1D24] border border-neutral-200 dark:border-white/5 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-2xl overflow-hidden">
                 <div className="space-y-0.5">
                   {AVAILABLE_MODELS.map((model) => {
                     const isSoon = model.status === "soon";
@@ -614,24 +614,24 @@ export default function ChatWidget() {
                         className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group text-left ${
                           isSoon 
                             ? "opacity-40 cursor-not-allowed grayscale" 
-                            : "hover:bg-white/5 active:scale-[0.98]"
+                            : "hover:bg-neutral-100 dark:hover:bg-white/5 active:scale-[0.98]"
                         }`}>
                         <div className="flex items-center gap-3">
-                          <div className="text-white">
+                          <div className="text-neutral-700 dark:text-white">
                             {model.provider === "Anthropic" && <ClaudeLogo className="w-5 h-5" />}
                             {model.provider === "OpenAI" && <ChatGPTLogo className="w-5 h-5" />}
                             {model.provider === "Google" && <GeminiLogo className="w-5 h-5" />}
                             {model.provider === "xAI" && <GrokLogo className="w-5 h-5" />}
                           </div>
                           <h4 className={`text-sm font-semibold transition-colors ${
-                            selectedModel.id === model.id ? "text-primary-500" : "text-white"
+                            selectedModel.id === model.id ? "text-primary-500" : "text-neutral-900 dark:text-white"
                           }`}>
                             {model.name}
                           </h4>
                         </div>
                         <div className="flex items-center gap-2">
                           {isSoon && (
-                            <span className="px-2 py-0.5 rounded-full bg-neutral-800 text-[9px] font-bold text-neutral-500 uppercase tracking-widest">
+                            <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
                               Soon
                             </span>
                           )}
@@ -645,13 +645,6 @@ export default function ChatWidget() {
                     );
                   })}
                 </div>
-                {/* 
-                <div className="mt-2 pt-2 border-t border-white/5">
-                  <button className="w-full p-2 text-[10px] font-bold text-primary-500 hover:text-primary-400 uppercase tracking-widest">
-                    Upgrade for premium models
-                  </button>
-                </div>
-                */}
               </div>
             )}
 

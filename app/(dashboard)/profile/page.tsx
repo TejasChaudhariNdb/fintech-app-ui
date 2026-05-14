@@ -479,7 +479,7 @@ export default function ProfilePage() {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const freeChatsLeft = Math.max(0, 8 - userProfile.ai_chats_used);
+  const freeChatsLeft = Math.max(0, 15 - userProfile.ai_chats_used);
 
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
@@ -767,7 +767,7 @@ export default function ProfilePage() {
           summary={
             userProfile.is_ai_unlocked
               ? "Unlimited AI unlocked"
-              : `${freeChatsLeft} of 8 free chats remaining`
+              : `${freeChatsLeft} of 15 free chats remaining`
           }
           icon={<Gift size={18} />}
           isOpen={expandedSections.ai}
