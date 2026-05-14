@@ -40,29 +40,16 @@ export default function NetWorthCard({
       })
     : "Never";
 
-  // Calculate next refresh time (2 PM and 11 PM IST)
+  // Calculate next refresh time (11 PM IST)
   const getNextRefreshText = () => {
-    // Current time
     const now = new Date();
-
-    // We assume the local time of the user is IST (or they just care about their local 2 PM / 11 PM)
-    // The prompt mentions 2 PM and 11 PM. Let's build targets for today.
-    const today2PM = new Date(now);
-    today2PM.setHours(14, 0, 0, 0);
-
     const today11PM = new Date(now);
     today11PM.setHours(23, 0, 0, 0);
 
-    const tomorrow2PM = new Date(now);
-    tomorrow2PM.setDate(tomorrow2PM.getDate() + 1);
-    tomorrow2PM.setHours(14, 0, 0, 0);
-
-    if (now < today2PM) {
-      return "Today 2 PM";
-    } else if (now < today11PM) {
+    if (now < today11PM) {
       return "Today 11 PM";
     } else {
-      return "Tomorrow 2 PM";
+      return "Tomorrow 11 PM";
     }
   };
 
