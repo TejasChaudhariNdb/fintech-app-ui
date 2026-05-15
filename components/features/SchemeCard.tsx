@@ -108,29 +108,51 @@ export default function SchemeCard({
               <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
             </p>
             
-            {/* Return Badge */}
-            <div 
-              className={`
-                mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1
-                text-xs font-semibold tabular-nums
-                ${isPositive 
-                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400" 
-                  : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400"
-                }
-              `}
-            >
-              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {isPositive ? "+" : ""}{returnPct.toFixed(2)}%
-            </div>
+            {/* Two Return Indicators - Overall & Day */}
+            <div className="mt-2 flex items-center justify-end gap-2">
+              {/* Overall Return */}
+              <div className="flex flex-col items-end">
+                <span className="text-[9px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                  Overall
+                </span>
+                <div 
+                  className={`
+                    mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5
+                    text-[11px] font-semibold tabular-nums
+                    ${isPositive 
+                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400" 
+                      : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400"
+                    }
+                  `}
+                >
+                  {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {isPositive ? "+" : ""}{returnPct.toFixed(2)}%
+                </div>
+              </div>
 
-            {/* Day Change */}
-            <p className={`mt-1.5 text-[11px] font-medium tabular-nums ${
-              isDayPositive 
-                ? "text-emerald-600 dark:text-emerald-400" 
-                : "text-red-500 dark:text-red-400"
-            }`}>
-              {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")} ({dayChangePct.toFixed(2)}%)
-            </p>
+              {/* Divider */}
+              <div className="h-8 w-px bg-neutral-200 dark:bg-white/10" />
+
+              {/* Day Change */}
+              <div className="flex flex-col items-end">
+                <span className="text-[9px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                  Today
+                </span>
+                <div 
+                  className={`
+                    mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5
+                    text-[11px] font-semibold tabular-nums
+                    ${isDayPositive 
+                      ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400" 
+                      : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400"
+                    }
+                  `}
+                >
+                  {isDayPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
