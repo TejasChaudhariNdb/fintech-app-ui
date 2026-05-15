@@ -1,7 +1,6 @@
 "use client";
 
-import { Share2, Pencil, Trash2, TrendingUp, TrendingDown } from "lucide-react";
-import Card from "../ui/Card";
+import { Share2, Pencil, Trash2, TrendingUp, TrendingDown, ChevronRight } from "lucide-react";
 import PrivacyMask from "../ui/PrivacyMask";
 
 interface SchemeCardProps {
@@ -53,152 +52,279 @@ export default function SchemeCard({
   onSell,
 }: SchemeCardProps) {
   const isPositive = returnPct >= 0;
-  const performanceTone = isPositive
-    ? "text-emerald-600 dark:text-emerald-400"
-    : "text-red-500 dark:text-red-400";
   const isDayPositive = dayChange >= 0;
 
   return (
-    <Card
-      className="group relative overflow-hidden rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md dark:border-white/5 dark:bg-surface dark:hover:bg-white/[0.03]"
-      onClick={onClick}>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-emerald-500/6 to-transparent opacity-80 dark:from-emerald-400/8" />
-      <div
-        className={`relative flex items-start justify-between gap-4 ${onShare ? "pr-8" : ""}`}>
-        <div className="min-w-0 flex-1">
-          <h4 className="line-clamp-2 text-[15px] font-semibold leading-snug tracking-tight text-neutral-900 dark:text-white sm:text-[16px]">
-            {scheme}
-          </h4>
-          <p className="mt-2 truncate text-sm font-medium text-neutral-500 dark:text-neutral-400">
-            {amc}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {categoryLabel && (
-              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-                {categoryLabel}
-              </span>
-            )}
-            {overallRank ? (
-              <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
-                Rank #{overallRank}/{totalHoldings || overallRank}
-              </span>
-            ) : null}
+    <div
+      onClick={onClick}
+      className={`
+        group relative overflow-hidden rounded-2xl
+        bg-white dark:bg-surface
+        border border-neutral-200/80 dark:border-white/[0.06]
+        shadow-sm hover:shadow-lg
+        transition-all duration-300 ease-out
+        hover:-translate-y-0.5
+        ${onClick ? "cursor-pointer" : ""}
+      `}
+    >
+      {/* Subtle top accent line */}
+      <div 
+        className={`absolute inset-x-0 top-0 h-[2px] ${
+          isPositive 
+            ? "bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500" 
+            : "bg-gradient-to-r from-red-400 via-red-500 to-rose-500"
+        }`} 
+      />
+
+      {/* Main Content */}
+      <div className="p-5">
+        {/* Header Section */}
+        <div className="flex items-start justify-between gap-4">
+          {/* Left: Scheme Info */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              {categoryLabel && (
+                <span className="inline-flex items-center rounded-md bg-primary-50 dark:bg-primary-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                  {categoryLabel}
+                </span>
+              )}
+              {overallRank && (
+                <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                  #{overallRank}{totalHoldings ? `/${totalHoldings}` : ""}
+                </span>
+              )}
+            </div>
+            <h4 className="mt-2 text-[15px] font-semibold leading-snug text-neutral-900 dark:text-white line-clamp-2 tracking-tight">
+              {scheme}
+            </h4>
+            <p className="mt-1 text-[13px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
+              {amc}
+            </p>
+          </div>
+
+          {/* Right: Value & Returns */}
+          <div className="shrink-0 text-right">
+            <p className="text-lg font-bold text-neutral-900 dark:text-white tabular-nums">
+              <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
+            </p>
+            
+            {/* Return Badge */}
+            <div 
+              className={`
+                mt-1.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1
+                text-xs font-semibold tabular-nums
+                ${isPositive 
+                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400" 
+                  : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400"
+                }
+              `}
+            >
+              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {isPositive ? "+" : ""}{returnPct.toFixed(2)}%
+            </div>
+
+            {/* Day Change */}
+            <p className={`mt-1.5 text-[11px] font-medium tabular-nums ${
+              isDayPositive 
+                ? "text-emerald-600 dark:text-emerald-400" 
+                : "text-red-500 dark:text-red-400"
+            }`}>
+              {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")} ({dayChangePct.toFixed(2)}%)
+            </p>
           </div>
         </div>
 
-        <div className="shrink-0 text-right">
-          <p className="text-[15px] font-bold leading-none text-neutral-900 dark:text-white sm:text-[16px]">
-            <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
-          </p>
-          <div
-            className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[12px] font-semibold ${isPositive ? "bg-emerald-50 dark:bg-emerald-500/10" : "bg-red-50 dark:bg-red-500/10"} ${performanceTone}`}>
-            {isPositive ? "+" : ""}
-            {returnPct.toFixed(2)}%
-          </div>
-          <p
-            className={`mt-2 text-[12px] font-medium ${
-              isDayPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"
-            }`}>
-            {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")} ({dayChangePct.toFixed(2)}%)
-          </p>
+        {/* Metrics Grid */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <MetricItem 
+            label="NAV" 
+            value={`₹${nav.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`} 
+          />
+          {avgPrice !== undefined && (
+            <MetricItem 
+              label="Avg Price" 
+              value={`₹${avgPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`} 
+            />
+          )}
+          {units !== undefined && (
+            <MetricItem 
+              label="Units" 
+              value={units.toFixed(3)} 
+            />
+          )}
+          {xirr !== undefined && xirr !== null && (
+            <MetricItem 
+              label="XIRR" 
+              value={`${xirr.toFixed(2)}%`}
+              highlight={xirr >= 0 ? "positive" : "negative"}
+            />
+          )}
+          {categoryRank && (
+            <MetricItem 
+              label="Cat. Rank" 
+              value={`#${categoryRank}${categoryTotal ? `/${categoryTotal}` : ""}`} 
+            />
+          )}
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
-              NAV: ₹
-              {nav.toLocaleString("en-IN", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4,
-              })}
-            </span>
-            {avgPrice !== undefined && (
-              <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
-                Avg Price: ₹
-                {avgPrice.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 4,
-                })}
-              </span>
-            )}
-            {units !== undefined && (
-              <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
-                {units.toFixed(2)} Units
-              </span>
-            )}
-            {xirr !== undefined && xirr !== null && (
-              <span className={`rounded-xl px-2.5 py-1 text-[11px] font-semibold tracking-tight ${
-                xirr >= 0 
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300" 
-                  : "bg-red-50 text-red-600 dark:bg-red-500/12 dark:text-red-300"
-              }`}>
-                XIRR: {xirr.toFixed(2)}%
-              </span>
-            )}
-            {categoryRank ? (
-              <span className="rounded-xl bg-neutral-100 px-2.5 py-1 text-[11px] font-medium tracking-tight text-neutral-600 dark:bg-white/8 dark:text-neutral-300">
-                Category Rank: #{categoryRank}/{categoryTotal || categoryRank}
-              </span>
-            ) : null}
-          </div>
 
-      {onShare && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onShare();
-          }}
-          className="absolute right-3 top-3 rounded-full p-2 text-neutral-400 transition-all hover:bg-primary-50 hover:text-primary-600 focus:opacity-100 dark:hover:bg-primary-500/10"
-          title="Share Performance">
-          <Share2 size={16} />
-        </button>
-      )}
-
+      {/* Action Bar */}
       {(onBuy || onSell || onEdit || onDelete) && (
-        <div className="mt-5 border-t border-neutral-100 pt-4 dark:border-white/5">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-            {onBuy && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBuy();
-                }}
-                className="flex items-center gap-1.5 transition-colors hover:text-emerald-500">
-                <TrendingUp size={14} /> Buy
-              </button>
-            )}
-            {onSell && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSell();
-                }}
-                className="flex items-center gap-1.5 transition-colors hover:text-red-500">
-                <TrendingDown size={14} /> Sell
-              </button>
-            )}
-            {onEdit && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                className="flex items-center gap-1.5 transition-colors hover:text-primary-500">
-                <Pencil size={14} /> Edit
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="flex items-center gap-1.5 transition-colors hover:text-red-500">
-                <Trash2 size={14} /> Delete
-              </button>
-            )}
+        <div className="border-t border-neutral-100 dark:border-white/[0.06] bg-neutral-50/50 dark:bg-white/[0.02] px-5 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {onBuy && (
+                <ActionButton 
+                  onClick={(e) => { e.stopPropagation(); onBuy(); }} 
+                  variant="success"
+                  icon={<TrendingUp className="w-3.5 h-3.5" />}
+                >
+                  Buy
+                </ActionButton>
+              )}
+              {onSell && (
+                <ActionButton 
+                  onClick={(e) => { e.stopPropagation(); onSell(); }} 
+                  variant="danger"
+                  icon={<TrendingDown className="w-3.5 h-3.5" />}
+                >
+                  Sell
+                </ActionButton>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-1">
+              {onShare && (
+                <IconButton 
+                  onClick={(e) => { e.stopPropagation(); onShare(); }} 
+                  title="Share"
+                >
+                  <Share2 className="w-4 h-4" />
+                </IconButton>
+              )}
+              {onEdit && (
+                <IconButton 
+                  onClick={(e) => { e.stopPropagation(); onEdit(); }} 
+                  title="Edit"
+                >
+                  <Pencil className="w-4 h-4" />
+                </IconButton>
+              )}
+              {onDelete && (
+                <IconButton 
+                  onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                  title="Delete"
+                  variant="danger"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </IconButton>
+              )}
+            </div>
           </div>
         </div>
       )}
-    </Card>
+
+      {/* Click indicator */}
+      {onClick && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <ChevronRight className="w-5 h-5 text-neutral-300 dark:text-neutral-600" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Metric Item Component
+function MetricItem({ 
+  label, 
+  value, 
+  highlight 
+}: { 
+  label: string; 
+  value: string; 
+  highlight?: "positive" | "negative";
+}) {
+  return (
+    <div className={`
+      rounded-xl px-3 py-2
+      ${highlight === "positive" 
+        ? "bg-emerald-50 dark:bg-emerald-500/10" 
+        : highlight === "negative"
+          ? "bg-red-50 dark:bg-red-500/10"
+          : "bg-neutral-100 dark:bg-white/[0.04]"
+      }
+    `}>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+        {label}
+      </p>
+      <p className={`mt-0.5 text-[13px] font-semibold tabular-nums ${
+        highlight === "positive" 
+          ? "text-emerald-600 dark:text-emerald-400" 
+          : highlight === "negative"
+            ? "text-red-600 dark:text-red-400"
+            : "text-neutral-700 dark:text-neutral-200"
+      }`}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+// Action Button Component
+function ActionButton({ 
+  children, 
+  onClick, 
+  variant,
+  icon
+}: { 
+  children: React.ReactNode; 
+  onClick: (e: React.MouseEvent) => void; 
+  variant: "success" | "danger";
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5
+        text-xs font-semibold transition-all duration-200
+        ${variant === "success" 
+          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25" 
+          : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25"
+        }
+      `}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+// Icon Button Component
+function IconButton({ 
+  children, 
+  onClick, 
+  title,
+  variant = "default"
+}: { 
+  children: React.ReactNode; 
+  onClick: (e: React.MouseEvent) => void; 
+  title: string;
+  variant?: "default" | "danger";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`
+        p-2 rounded-full transition-all duration-200
+        ${variant === "danger"
+          ? "text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+          : "text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 dark:hover:text-primary-400"
+        }
+      `}
+    >
+      {children}
+    </button>
   );
 }
