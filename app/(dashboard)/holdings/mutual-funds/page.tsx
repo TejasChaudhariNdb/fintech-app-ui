@@ -196,8 +196,10 @@ export default function MutualFundsPage() {
       if (sortBy === "profit") return b.profit - a.profit;
       if (sortBy === "dayChange") return b.day_change - a.day_change;
       if (sortBy === "rank") {
-        return (a.overall_rank || Number.MAX_SAFE_INTEGER) -
-          (b.overall_rank || Number.MAX_SAFE_INTEGER);
+        return (
+          (a.overall_rank || Number.MAX_SAFE_INTEGER) -
+          (b.overall_rank || Number.MAX_SAFE_INTEGER)
+        );
       }
       return a.scheme?.localeCompare(b.scheme);
     });
@@ -320,20 +322,20 @@ export default function MutualFundsPage() {
             </div>
 
             <div className="flex w-full rounded-2xl bg-neutral-100 p-1 dark:bg-white/5 sm:w-fit">
-                {(["amc", "scheme"] as const).map((view) => (
-                  <button
-                    key={view}
-                    onClick={() => setAllocationView(view)}
-                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition-all sm:flex-none ${
-                      allocationView === view
-                        ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
-                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-                    }`}>
-                    {view === "amc" ? "AMC Wise" : "Scheme Wise"}
-                  </button>
-                ))}
-              </div>
+              {(["amc", "scheme"] as const).map((view) => (
+                <button
+                  key={view}
+                  onClick={() => setAllocationView(view)}
+                  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition-all sm:flex-none ${
+                    allocationView === view
+                      ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                  }`}>
+                  {view === "amc" ? "AMC Wise" : "Scheme Wise"}
+                </button>
+              ))}
             </div>
+          </div>
 
           <div className="flex flex-col md:flex-row items-center gap-8">
             <div className="h-[200px] w-[200px] relative shrink-0">
@@ -398,21 +400,28 @@ export default function MutualFundsPage() {
                   <div className="min-w-0 flex-1">
                     <p
                       className="truncate text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                      title={allocationView === "amc" ? entry.amc : entry.scheme}>
+                      title={
+                        allocationView === "amc" ? entry.amc : entry.scheme
+                      }>
                       {allocationView === "amc" ? entry.amc : entry.scheme}
                     </p>
                     <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                       {entry.percent}%
                       {allocationView === "scheme" &&
-                      entry.xirr !== null &&
-                      entry.xirr !== undefined && (
-                        <>
-                          {" | "}
-                          <span className={entry.xirr >= 0 ? "text-emerald-500" : "text-red-500"}>
-                            XIRR {entry.xirr.toFixed(2)}%
-                          </span>
-                        </>
-                      )}
+                        entry.xirr !== null &&
+                        entry.xirr !== undefined && (
+                          <>
+                            {" | "}
+                            <span
+                              className={
+                                entry.xirr >= 0
+                                  ? "text-emerald-500"
+                                  : "text-red-500"
+                              }>
+                              XIRR {entry.xirr.toFixed(2)}%
+                            </span>
+                          </>
+                        )}
                     </p>
                   </div>
                 </div>
@@ -516,6 +525,7 @@ export default function MutualFundsPage() {
                 totalHoldings={scheme.total_holdings}
                 categoryRank={scheme.category_rank}
                 categoryTotal={scheme.category_total}
+                profit={scheme.profit}
                 onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
                 onShare={() =>
                   setSelectedShareStock({
