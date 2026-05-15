@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 import SchemeCard from "@/components/features/SchemeCard";
 import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
-import ShareStockModal from "@/components/features/ShareStockModal";
+import ShareSchemeModal from "@/components/features/ShareSchemeModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
 import { Search, Plus, Share2, UploadCloud } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -301,16 +301,28 @@ export default function MutualFundsPage() {
                   const totalInvested = schemes.reduce((sum, s) => {
                     return sum + s.current / (1 + (s.return_pct || 0) / 100);
                   }, 0);
+                  const totalDayChange = schemes.reduce(
+                    (sum, s) => sum + (s.day_change || 0),
+                    0,
+                  );
 
                   const totalPnlPct =
                     totalInvested > 0
                       ? ((totalCurrent - totalInvested) / totalInvested) * 100
                       : 0;
+                  
+                  const totalDayChangePct =
+                    totalCurrent > 0
+                      ? (totalDayChange / (totalCurrent - totalDayChange)) * 100
+                      : 0;
 
                   setSelectedShareStock({
-                    symbol: "My Mutual Fund Portfolio",
-                    pnl_pct: totalPnlPct,
-                    value: totalCurrent,
+                    name: "My Mutual Fund Portfolio",
+                    currentValue: totalCurrent,
+                    investedValue: totalInvested,
+                    overallReturnPct: totalPnlPct,
+                    dayChange: totalDayChange,
+                    dayChangePct: totalDayChangePct,
                   });
                 }}
                 className="shrink-0 rounded-full p-2 text-neutral-400 transition-all hover:bg-primary-500/10 hover:text-primary-500"
@@ -519,9 +531,14 @@ export default function MutualFundsPage() {
                 onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
                 onShare={() =>
                   setSelectedShareStock({
-                    symbol: scheme.scheme,
-                    pnl_pct: scheme.return_pct,
-                    value: scheme.current,
+                    name: scheme.scheme,
+                    amc: scheme.amc,
+                    currentValue: scheme.current,
+                    investedValue: scheme.invested,
+                    overallReturnPct: scheme.return_pct,
+                    dayChange: scheme.day_change,
+                    dayChangePct: scheme.day_change_pct,
+                    xirr: scheme.xirr,
                   })
                 }
                 onEdit={() => {
@@ -569,10 +586,10 @@ export default function MutualFundsPage() {
         </div>
       </div>
 
-      <ShareStockModal
+      <ShareSchemeModal
         isOpen={!!selectedShareStock}
         onClose={() => setSelectedShareStock(null)}
-        stock={selectedShareStock || { symbol: "", pnl_pct: 0, value: 0 }}
+        scheme={selectedShareStock}
       />
 
       <AddTransactionModal
