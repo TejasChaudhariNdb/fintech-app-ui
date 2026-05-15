@@ -18,6 +18,7 @@ interface SchemeCardProps {
   avgPrice?: number;
   units?: number;
   current: number;
+  profit?: number;
   returnPct: number;
   xirr?: number | null;
   dayChange?: number;
@@ -42,6 +43,7 @@ export default function SchemeCard({
   avgPrice,
   units,
   current,
+  profit = 0,
   returnPct,
   xirr,
   dayChange = 0,
@@ -116,57 +118,97 @@ export default function SchemeCard({
             </p>
 
             {/* Two Return Indicators - Overall & Day */}
-            <div className="mt-2 flex items-center justify-end gap-2">
+            <div className="mt-2 flex items-stretch justify-end gap-2">
               {/* Overall Return */}
-              <div className="flex flex-col items-end">
+              <div className="flex flex-col items-end min-w-[80px]">
                 <span className="text-[9px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                   Overall
                 </span>
                 <div
                   className={`
-                    mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5
-                    text-[11px] font-semibold tabular-nums
+                    mt-1 flex flex-col items-end rounded-lg px-2.5 py-1.5
                     ${
                       isPositive
-                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
-                        : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400"
+                        ? "bg-emerald-50 dark:bg-emerald-500/15"
+                        : "bg-red-50 dark:bg-red-500/15"
                     }
                   `}>
-                  {isPositive ? (
-                    <TrendingUp className="w-3 h-3" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3" />
-                  )}
-                  {isPositive ? "+" : ""}
-                  {returnPct.toFixed(2)}%
+                  <span
+                    className={`
+                      text-[13px] font-bold tabular-nums leading-tight
+                      ${
+                        isPositive
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    `}>
+                    {isPositive ? "+" : ""}₹{Math.abs(profit).toLocaleString("en-IN")}
+                  </span>
+                  <span
+                    className={`
+                      flex items-center gap-0.5 text-[11px] font-semibold tabular-nums
+                      ${
+                        isPositive
+                          ? "text-emerald-500 dark:text-emerald-400/80"
+                          : "text-red-500 dark:text-red-400/80"
+                      }
+                    `}>
+                    {isPositive ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    {isPositive ? "+" : ""}
+                    {returnPct.toFixed(2)}%
+                  </span>
                 </div>
               </div>
 
               {/* Divider */}
-              <div className="h-8 w-px bg-neutral-200 dark:bg-white/10" />
+              <div className="w-px bg-neutral-200 dark:bg-white/10 self-stretch my-1" />
 
               {/* Day Change */}
-              <div className="flex flex-col items-end">
+              <div className="flex flex-col items-end min-w-[80px]">
                 <span className="text-[9px] font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
                   Today
                 </span>
                 <div
                   className={`
-                    mt-0.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5
-                    text-[11px] font-semibold tabular-nums
+                    mt-1 flex flex-col items-end rounded-lg px-2.5 py-1.5
                     ${
                       isDayPositive
-                        ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
-                        : "bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-400"
+                        ? "bg-emerald-50 dark:bg-emerald-500/15"
+                        : "bg-red-50 dark:bg-red-500/15"
                     }
                   `}>
-                  {isDayPositive ? (
-                    <TrendingUp className="w-3 h-3" />
-                  ) : (
-                    <TrendingDown className="w-3 h-3" />
-                  )}
-                  {isDayPositive ? "+" : ""}₹
-                  {Math.abs(dayChange).toLocaleString("en-IN")}
+                  <span
+                    className={`
+                      text-[13px] font-bold tabular-nums leading-tight
+                      ${
+                        isDayPositive
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-600 dark:text-red-400"
+                      }
+                    `}>
+                    {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")}
+                  </span>
+                  <span
+                    className={`
+                      flex items-center gap-0.5 text-[11px] font-semibold tabular-nums
+                      ${
+                        isDayPositive
+                          ? "text-emerald-500 dark:text-emerald-400/80"
+                          : "text-red-500 dark:text-red-400/80"
+                      }
+                    `}>
+                    {isDayPositive ? (
+                      <TrendingUp className="w-3 h-3" />
+                    ) : (
+                      <TrendingDown className="w-3 h-3" />
+                    )}
+                    {isDayPositive ? "+" : ""}
+                    {dayChangePct.toFixed(2)}%
+                  </span>
                 </div>
               </div>
             </div>

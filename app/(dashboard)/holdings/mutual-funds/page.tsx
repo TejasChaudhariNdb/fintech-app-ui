@@ -507,9 +507,10 @@ export default function MutualFundsPage() {
                 avgPrice={scheme.avg_price}
                 units={scheme.units}
                 current={scheme.current}
+                profit={scheme.profit}
                 returnPct={scheme.return_pct}
                 xirr={scheme.xirr}
-                dayChange={scheme.day_change}
+                dayChange={scheme.day_change}}
                 dayChangePct={scheme.day_change_pct}
                 categoryLabel={scheme.category_label}
                 overallRank={scheme.overall_rank}
