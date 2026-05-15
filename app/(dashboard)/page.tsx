@@ -60,12 +60,15 @@ export default function HomePage() {
 
       // 1. Try to load from cache first (Stale-While-Revalidate)
       if (typeof window !== "undefined") {
-        const cachedNw = localStorage.getItem("net-worth");
-        const cachedPs = localStorage.getItem("portfolio-summary");
-        const cachedGoals = localStorage.getItem("goals");
-        const cachedHistory = localStorage.getItem("portfolio-history");
-        const cachedXirr = localStorage.getItem("xirr");
-        const cachedInsights = localStorage.getItem("insights");
+        const userEmail = localStorage.getItem("user_email") || "anonymous";
+        const getCache = (key: string) => localStorage.getItem(`${userEmail}:${key}`);
+
+        const cachedNw = getCache("net-worth");
+        const cachedPs = getCache("portfolio-summary");
+        const cachedGoals = getCache("goals");
+        const cachedHistory = getCache("portfolio-history");
+        const cachedXirr = getCache("xirr");
+        const cachedInsights = getCache("insights");
 
         if (cachedNw && cachedPs) {
           try {

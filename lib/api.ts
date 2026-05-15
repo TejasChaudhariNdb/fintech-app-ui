@@ -75,8 +75,10 @@ export const api = {
 
       // Cache successful response if key provided
       if (options.cacheKey && typeof window !== "undefined") {
+        const userEmail = localStorage.getItem("user_email") || "anonymous";
+        const namespacedKey = `${userEmail}:${options.cacheKey}`;
         localStorage.setItem(
-          options.cacheKey,
+          namespacedKey,
           JSON.stringify({ timestamp: Date.now(), data }),
         );
       }
@@ -87,9 +89,11 @@ export const api = {
 
       // Offline Fallback: Try to return cached data
       if (options.cacheKey && typeof window !== "undefined") {
-        const cached = localStorage.getItem(options.cacheKey);
+        const userEmail = localStorage.getItem("user_email") || "anonymous";
+        const namespacedKey = `${userEmail}:${options.cacheKey}`;
+        const cached = localStorage.getItem(namespacedKey);
         if (cached) {
-          console.log(`[Offline] Serving cached data for ${options.cacheKey}`);
+          console.log(`[Offline] Serving cached data for ${namespacedKey}`);
           return JSON.parse(cached).data;
         }
       }
@@ -406,6 +410,9 @@ export const api = {
       "xirr",
       "insights",
       "portfolio-history",
+      "goals",
+      "user-profile",
+      "prediction-stats",
     ]);
   },
 

@@ -523,7 +523,7 @@ export default function StocksPage() {
               className="flex items-start justify-between gap-3 group/header cursor-pointer">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover/header:text-primary-400 transition-colors">
+                  <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                     {stock.symbol}
                   </h3>
                   {stock.sector && (
@@ -577,15 +577,13 @@ export default function StocksPage() {
               </div>
               <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
                 <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                  XIRR
+                  Day Change
                 </p>
                 <p
                   className={`text-sm font-semibold ${
-                    (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    (stock.day_change || 0) >= 0 ? "text-green-500" : "text-red-500"
                   }`}>
-                  {stock.xirr !== null && stock.xirr !== undefined
-                    ? formatPercent(stock.xirr)
-                    : "--"}
+                  {(stock.day_change || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.day_change || 0).toLocaleString("en-IN")}
                 </p>
               </div>
               <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
@@ -608,6 +606,19 @@ export default function StocksPage() {
                 </p>
                 <p className="text-sm font-semibold text-neutral-900 dark:text-white">
                   {formatPrice(stock.current_price)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                  XIRR
+                </p>
+                <p
+                  className={`text-sm font-semibold ${
+                    (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
+                  }`}>
+                  {stock.xirr !== null && stock.xirr !== undefined
+                    ? formatPercent(stock.xirr)
+                    : "--"}
                 </p>
               </div>
             </div>

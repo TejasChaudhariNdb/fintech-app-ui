@@ -15,9 +15,8 @@ export function useAuth() {
   }, [router]);
 
   const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_email');
-    router.push('/login');
+    localStorage.clear();
+    router.push("/login");
   };
 
   return { isAuthenticated, logout };
