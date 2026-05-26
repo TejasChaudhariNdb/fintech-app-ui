@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Card from "@/components/ui/Card";
+import { analytics } from "@/lib/analytics";
 import {
   Sparkles,
   ShieldAlert,
@@ -28,9 +29,22 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { light } = useHaptic();
 
-  if (!insights || insights.length === 0) return null;
+  const current = insights && insights.length > 0 ? insights[currentIndex] : null;
 
-  const current = insights[currentIndex];
+  useEffect(() => {
+    if (current) {
+      analytics.track({
+        name: "ai_insight_viewed",
+        properties: {
+          insight_id: current.title,
+          insight_type: current.type,
+        },
+      });
+    }
+  }, [currentIndex, current]);
+
+  if (!insights || insights.length === 0 || !current) return null;
+
 
   const getIcon = (iconName: string) => {
     switch (iconName) {

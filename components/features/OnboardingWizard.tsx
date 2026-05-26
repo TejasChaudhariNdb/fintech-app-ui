@@ -19,6 +19,7 @@ import Button from "../ui/Button";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import { api } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
 
 interface OnboardingWizardProps {
@@ -52,6 +53,13 @@ export default function OnboardingWizard({
 
     try {
       await api.uploadCAS(file, password);
+      
+      // Track portfolio creation event
+      analytics.track({
+        name: "portfolio_created",
+        properties: { source: "cams", asset_count: 0 },
+      });
+
       // Success!
       setUploading(false);
       setSuccess(true);
@@ -62,6 +70,7 @@ export default function OnboardingWizard({
         router.replace("/holdings/mutual-funds");
         router.refresh();
       }, 2000);
+
     } catch (err: any) {
       setError(err.message || "Upload failed. Check your password.");
       setUploading(false);

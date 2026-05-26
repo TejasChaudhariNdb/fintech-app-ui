@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import { api } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
+
 import NetWorthCard from "@/components/features/NetWorthCard";
 import PortfolioSummary from "@/components/features/PortfolioSummary";
 import PerformanceChart from "@/components/features/PerformanceChart";
@@ -52,6 +54,27 @@ export default function HomePage() {
 
   useEffect(() => {
     loadData();
+
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const utmCampaign = urlParams.get("utm_campaign");
+      const utmSource = urlParams.get("utm_source");
+      const utmMedium = urlParams.get("utm_medium");
+      
+      if (
+        utmCampaign === "weekly_summary" || 
+        utmSource === "weekly_summary" || 
+        urlParams.get("ref") === "weekly_summary"
+      ) {
+        analytics.track({
+          name: "weekly_summary_clicked",
+          properties: {
+            medium: (utmMedium as "email" | "push") || "email",
+            cohort_week: urlParams.get("cohort_week") || "unknown",
+          },
+        });
+      }
+    }
   }, []);
 
   const loadData = async () => {
@@ -156,7 +179,15 @@ export default function HomePage() {
       setPerfData(history);
       setInsights(ins);
       setBenchmark(bm);
-      if (up) setUserProfile(up);
+      if (up) {
+        setUserProfile(up);
+        // Identify the user in PostHog
+        analytics.identifyUser(up.email || up.id, up.email, {
+          full_name: up.full_name,
+          phone_number: up.phone_number,
+          signup_source: up.signup_source,
+        });
+      }
     } catch (err: any) {
       console.error("Error loading data:", err);
       setError(err.message || "Failed to load data");

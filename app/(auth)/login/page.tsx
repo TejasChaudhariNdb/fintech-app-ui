@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
@@ -62,6 +63,10 @@ function LoginForm() {
       const data = await api.login(email, password);
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("user_email", email);
+
+      // Identify user on login
+      analytics.identifyUser(email, email);
+
       router.push("/");
     } catch (err: any) {
       setError(err.message || "Login failed. Please try again.");
@@ -69,6 +74,7 @@ function LoginForm() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex flex-col items-center justify-center p-4 overflow-hidden relative transition-colors duration-300">

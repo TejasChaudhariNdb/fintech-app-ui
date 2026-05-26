@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useGoogleLogin } from "@react-oauth/google";
 import { Mail, Lock, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
@@ -21,6 +22,9 @@ export default function RegisterPage() {
     // Redirect if already logged in
     if (localStorage.getItem("access_token")) {
       router.replace("/");
+    } else {
+      // Track signup_started when page is visited
+      analytics.track({ name: "signup_started" });
     }
   }, [router]);
 
@@ -31,6 +35,13 @@ export default function RegisterPage() {
         setError("");
         const data = await api.googleLogin(tokenResponse.access_token);
         localStorage.setItem("access_token", data.access_token);
+        // Track signup_completed for Google login
+        analytics.track({
+          name: "signup_completed",
+          properties: {
+            signup_source: "google",
+          },
+        });
         router.push("/");
       } catch (err: any) {
         setError(err.message || "Google Signup Failed.");
@@ -56,6 +67,19 @@ export default function RegisterPage() {
       const data = await api.register(email, password, signupSource);
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("user_email", email);
+
+      // Identify user and track signup_completed
+      analytics.identifyUser(email, email, {
+        signup_source: signupSource,
+      });
+      analytics.track({
+        name: "signup_completed",
+        properties: {
+          email: email,
+          signup_source: signupSource,
+        },
+      });
+
       router.push("/");
     } catch (err: any) {
       setError(err.message || "Registration failed. Please try again.");
@@ -63,6 +87,7 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex items-center justify-center p-4 overflow-hidden relative transition-colors duration-300">

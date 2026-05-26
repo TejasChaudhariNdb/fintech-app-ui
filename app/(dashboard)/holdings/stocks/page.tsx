@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
+
 import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import Button from "@/components/ui/Button";
@@ -236,6 +238,7 @@ export default function StocksPage() {
         showToast("Please select a valid stock from search", "error");
         return;
       }
+      const isFirst = manualStocks.length === 0;
       await api.addStockTransaction({
         symbol: stockForm.symbol,
         quantity: Number(stockForm.quantity),
@@ -243,6 +246,17 @@ export default function StocksPage() {
         date: stockForm.date,
         transaction_type: stockForm.transaction_type,
       });
+
+      if (isFirst) {
+        analytics.track({
+          name: "first_stock_added",
+          properties: {
+            symbol: stockForm.symbol,
+            asset_class: "Equity",
+          },
+        });
+      }
+
       showToast("Transaction added successfully", "success");
       closeStockModal();
       await loadData();
@@ -275,7 +289,19 @@ export default function StocksPage() {
     }
     setIsImporting(true);
     try {
+      const isFirst = manualStocks.length === 0;
       const res = await api.importTrades(importFile, broker);
+      
+      if (isFirst && res.added > 0) {
+        analytics.track({
+          name: "first_stock_added",
+          properties: {
+            symbol: "CSV_IMPORT",
+            asset_class: "Equity",
+          },
+        });
+      }
+
       showToast(`Imported ${res.added} holdings successfully.`, "success");
       await loadData();
       closeStockModal();
