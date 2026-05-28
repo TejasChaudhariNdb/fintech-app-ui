@@ -112,7 +112,7 @@ export default function ActivityPage() {
   };
 
   const handleDelete = async (t: any) => {
-    if (!confirm(`Are you sure you want to delete this ${t.category === "STOCK" ? "stock" : "mutual fund"} transaction?`)) return;
+    if (!confirm(`Are you sure you want to delete this ${t.category === "STOCK" ? "stock" : "mutual fund"} transaction?`)) return false;
     
     try {
       showToast("Deleting transaction...", "loading");
@@ -123,8 +123,10 @@ export default function ActivityPage() {
       }
       showToast("Transaction deleted", "success");
       loadTransactions(0);
+      return true;
     } catch (e) {
       showToast("Failed to delete", "error");
+      return false;
     }
   };
 
@@ -627,7 +629,21 @@ export default function ActivityPage() {
                     }
                     required
                 />
-                <Button type="submit" className="w-full py-4">Update Transaction</Button>
+                <div className="flex gap-3 pt-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={async () => {
+                      const deleted = await handleDelete(editingTx);
+                      if (deleted) setEditingTx(null);
+                    }}
+                    className="flex-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50/50 dark:hover:bg-red-500/10 font-semibold">
+                    Delete
+                  </Button>
+                  <Button type="submit" className="flex-[2]">
+                    Update Transaction
+                  </Button>
+                </div>
             </form>
         )}
       </Modal>
