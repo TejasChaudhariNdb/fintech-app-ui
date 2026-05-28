@@ -10,6 +10,9 @@ import PrivacyMask from "@/components/ui/PrivacyMask";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import Button from "@/components/ui/Button";
 import ShareStockModal from "@/components/features/ShareStockModal";
+import Toast, { ToastType } from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
+import Input from "@/components/ui/Input";
 
 export default function SchemeDetailPage({
   params,
@@ -23,6 +26,65 @@ export default function SchemeDetailPage({
   const [loading, setLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const { light } = useHaptic();
+
+  // Edit State
+  const [editingTx, setEditingTx] = useState<any>(null);
+
+  // Toast State
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: ToastType;
+  }>({ show: false, message: "", type: "info" });
+
+  const showToast = (message: string, type: ToastType) => {
+    setToast({ show: true, message, type });
+  };
+
+  const clearSchemeCache = () => {
+    if (typeof window !== "undefined") {
+      const email = localStorage.getItem("user_email") || "anonymous";
+      localStorage.removeItem(`${email}:scheme-${id}`);
+      api.clearPortfolioCache();
+    }
+  };
+
+  const handleDelete = async (t: any) => {
+    if (!confirm(`Are you sure you want to delete this mutual fund transaction?`)) return false;
+    
+    try {
+      showToast("Deleting transaction...", "loading");
+      await api.deleteMFTransaction(t.id);
+      showToast("Transaction deleted", "success");
+      clearSchemeCache();
+      loadScheme();
+      return true;
+    } catch (e) {
+      showToast("Failed to delete", "error");
+      return false;
+    }
+  };
+
+  const handleUpdateTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTx) return;
+    try {
+      showToast("Updating...", "loading");
+      await api.updateMFTransaction(editingTx.id, {
+        date: editingTx.date,
+        type: editingTx.type,
+        units: Number(editingTx.units),
+        amount: Number(editingTx.amount),
+        nav: Number(editingTx.price || 0),
+      });
+      setEditingTx(null);
+      clearSchemeCache();
+      loadScheme();
+      showToast("Updated successfully", "success");
+    } catch (e) {
+      showToast("Update failed", "error");
+    }
+  };
 
   useEffect(() => {
     loadScheme();
@@ -266,13 +328,21 @@ export default function SchemeDetailPage({
             {scheme.transactions && scheme.transactions.length > 0 ? (
               scheme.transactions.map((tx: any, i: number) => (
                 <TransactionItem
-                  key={i}
+                  key={tx.id || i}
+                  id={tx.id}
                   date={tx.date}
                   type={tx.type}
                   amount={tx.amount}
                   units={tx.units}
                   schemeName={scheme.scheme}
                   amc={scheme.amc}
+                  onEdit={tx.id ? () => {
+                    setEditingTx({
+                      ...tx,
+                      price: tx.price || (tx.units ? tx.amount / tx.units : 0),
+                    });
+                  } : undefined}
+                  onDelete={tx.id ? () => handleDelete(tx) : undefined}
                 />
               ))
             ) : (
@@ -291,6 +361,111 @@ export default function SchemeDetailPage({
         onClose={() => setShowShareModal(false)}
         stock={shareData}
       />
+
+      {/* Toast Notification */}
+      <Toast
+        isVisible={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={!!editingTx}
+        onClose={() => setEditingTx(null)}
+        title="Edit Mutual Fund Transaction"
+      >
+        {editingTx && (
+            <form onSubmit={handleUpdateTransaction} className="space-y-4">
+                 <div className="grid grid-cols-2 gap-2 bg-neutral-100 dark:bg-white/5 p-1 rounded-lg">
+                    <button
+                        type="button"
+                        onClick={() =>
+                        setEditingTx({ ...editingTx, type: "PURCHASE" })
+                        }
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        (editingTx.type === "PURCHASE" || editingTx.type === "BUY" || editingTx.type === "PURCHASE_SIP")
+                            ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                            : "text-neutral-600 dark:text-neutral-300"
+                        }`}>
+                        Buy
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() =>
+                        setEditingTx({ ...editingTx, type: "REDEMPTION" })
+                        }
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        (editingTx.type === "REDEMPTION" || editingTx.type === "SELL")
+                            ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                            : "text-neutral-600 dark:text-neutral-300"
+                        }`}>
+                        Sell
+                    </button>
+                </div>
+                <Input
+                    label="Name / Symbol"
+                    value={editingTx.scheme_name}
+                    disabled
+                    className="opacity-50"
+                />
+                <div className="grid grid-cols-2 gap-4">
+                    <Input
+                        label="Quantity / Units"
+                        type="number"
+                        value={editingTx.units}
+                        onChange={(e) =>
+                        setEditingTx({ ...editingTx, units: e.target.value })
+                        }
+                        required
+                    />
+                    <Input
+                        label="Price / NAV"
+                        type="number"
+                        value={editingTx.price || ""}
+                        onChange={(e) =>
+                        setEditingTx({ ...editingTx, price: e.target.value })
+                        }
+                        required
+                    />
+                </div>
+                <Input
+                    label="Total Amount"
+                    type="number"
+                    value={editingTx.amount}
+                    onChange={(e) =>
+                        setEditingTx({ ...editingTx, amount: e.target.value })
+                    }
+                    required
+                />
+                <Input
+                    label="Date"
+                    type="date"
+                    value={editingTx.date}
+                    onChange={(e) =>
+                        setEditingTx({ ...editingTx, date: e.target.value })
+                    }
+                    required
+                />
+                <div className="flex gap-3 pt-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={async () => {
+                      const deleted = await handleDelete(editingTx);
+                      if (deleted) setEditingTx(null);
+                    }}
+                    className="flex-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50/50 dark:hover:bg-red-500/10 font-semibold">
+                    Delete
+                  </Button>
+                  <Button type="submit" className="flex-[2]">
+                    Update Transaction
+                  </Button>
+                </div>
+            </form>
+        )}
+      </Modal>
     </div>
   );
 }
