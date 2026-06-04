@@ -17,6 +17,8 @@ const COLORS = {
   Debt: "#3B82F6", // Blue-500
   Gold: "#F59E0B", // Amber-500
   Hybrid: "#10B981", // Emerald-500
+  Stocks: "#3B82F6", // Blue-500
+  "Mutual Funds": "#10B981", // Emerald-500
   Other: "#9CA3AF", // Gray-400
 };
 

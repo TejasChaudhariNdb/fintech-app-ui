@@ -27,6 +27,7 @@ import InsightsCard from "@/components/features/InsightsCard";
 import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
 import BenchmarkCard from "@/components/features/BenchmarkCard";
 import MarketPredictionCard from "@/components/features/MarketPredictionCard";
+import AssetAllocationCard from "@/components/features/AssetAllocationCard";
 
 export default function HomePage() {
   const router = useRouter();
@@ -359,6 +360,30 @@ export default function HomePage() {
               stockInvested={summary?.stock_invested || 0}
             />
           </section>
+
+          {/* Asset Allocation Chart */}
+          {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
+            <section className="animate-fade-in">
+              <AssetAllocationCard
+                data={[
+                  {
+                    category: "Mutual Funds",
+                    value: netWorth.mutual_funds || 0,
+                    percentage: (netWorth.stocks + netWorth.mutual_funds) > 0
+                      ? Math.round((netWorth.mutual_funds / (netWorth.stocks + netWorth.mutual_funds)) * 100)
+                      : 0,
+                  },
+                  {
+                    category: "Stocks",
+                    value: netWorth.stocks || 0,
+                    percentage: (netWorth.stocks + netWorth.mutual_funds) > 0
+                      ? Math.round((netWorth.stocks / (netWorth.stocks + netWorth.mutual_funds)) * 100)
+                      : 0,
+                  },
+                ]}
+              />
+            </section>
+          )}
 
           {/* Daily Prediction Card */}
           <section className="animate-fade-in">
