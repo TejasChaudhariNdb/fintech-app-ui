@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Gift,
   Loader2,
+  TrendingUp,
+  LineChart,
 } from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
@@ -301,7 +303,7 @@ export default function HomePage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white mb-2">
-            Welcome back
+            Welcome back, {userProfile?.full_name ? userProfile.full_name.split(' ')[0] : 'Investor'}
             <span className="text-primary-600 dark:text-primary-500">.</span>
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400">
@@ -468,19 +470,37 @@ export default function HomePage() {
               Quick Actions
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <button
                 onClick={() => router.push("/holdings/mutual-funds?import=1")}
-                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-200">
-                <FileText className="h-8 w-8 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform" />
+                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary-500/5 hover:border-primary-500/30">
+                <FileText className="h-8 w-8 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform animate-pulse" />
                 <span className="font-medium text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-300 text-center text-sm">
                   Upload CAS
                 </span>
               </button>
 
               <button
+                onClick={() => router.push("/holdings/mutual-funds")}
+                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/5 hover:border-emerald-500/30">
+                <TrendingUp className="h-8 w-8 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-neutral-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 text-center text-sm">
+                  Mutual Funds
+                </span>
+              </button>
+
+              <button
+                onClick={() => router.push("/holdings/stocks")}
+                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-blue-500/5 hover:border-blue-500/30">
+                <LineChart className="h-8 w-8 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                <span className="font-medium text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 text-center text-sm">
+                  Stocks
+                </span>
+              </button>
+
+              <button
                 onClick={() => router.push("/profile")}
-                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-200">
+                className="glass-card hover:bg-neutral-50 dark:hover:bg-white/10 border border-neutral-200 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/5 hover:border-purple-500/30">
                 <Gift className="h-8 w-8 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
                 <span className="font-medium text-neutral-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 text-center text-sm">
                   Refer & Earn
