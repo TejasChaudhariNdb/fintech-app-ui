@@ -102,12 +102,16 @@ export default function HomePage() {
         // 1. Try Cache
         const cachedFam = getCache("family-summary");
         const cachedGoals = getCache("goals");
+        const cachedFamSummary = getCache("portfolio-summary");
+        const cachedHistory = getCache("portfolio-history");
 
         if (cachedFam) {
           try {
             const parsedFam = JSON.parse(cachedFam);
             setFamilySummary(parsedFam.data);
             if (cachedGoals) setGoals(JSON.parse(cachedGoals).data);
+            if (cachedFamSummary) setSummary(JSON.parse(cachedFamSummary).data);
+            if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
             setLoading(false);
           } catch (e) {
             console.warn("Invalid cached family summary", e);
@@ -115,7 +119,7 @@ export default function HomePage() {
         }
 
         // 2. Fetch Fresh Data
-        const [famData, g, up] = await Promise.all([
+        const [famData, g, up, ps, history] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
             return null;
@@ -128,10 +132,20 @@ export default function HomePage() {
             console.error("Profile error:", err);
             return null;
           }),
+          api.getPortfolioSummary().catch((err) => {
+            console.error("Portfolio summary (family) error:", err);
+            return null;
+          }),
+          api.getPortfolioHistory().catch((err) => {
+            console.error("Portfolio history (family) error:", err);
+            return [];
+          }),
         ]);
 
         if (famData) setFamilySummary(famData);
         setGoals(g);
+        if (ps) setSummary(ps);
+        if (history) setPerfData(history);
         if (up) {
           setUserProfile(up);
           analytics.identifyUser(up.email || up.id, up.email, {
@@ -410,11 +424,41 @@ export default function HomePage() {
           stockValue={familySummary.allocation.stocks}
           onRefresh={handleRefreshNAVs}
           isRefreshing={refreshing}
-          dayChangePct={0}
+          dayChangePct={summary?.day_change_pct || 0}
           lastUpdated={new Date().toISOString()}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
         />
+
+        {/* Portfolio Gain / Loss Summary — mirrors individual dashboard */}
+        {summary && summary.invested > 0 && (
+          <section>
+            <PortfolioSummary
+              invested={summary.invested || 0}
+              current={summary.current || 0}
+              profit={summary.profit || 0}
+              returnPct={summary.return_pct || 0}
+              dayChange={summary.day_change || 0}
+              dayChangePct={summary.day_change_pct || 0}
+              mfProfit={summary.mf_profit || 0}
+              stockProfit={summary.stock_profit || 0}
+              mfInvested={summary.mf_invested || 0}
+              stockInvested={summary.stock_invested || 0}
+            />
+          </section>
+        )}
+
+        {/* Portfolio Growth Chart */}
+        {perfData && perfData.length > 0 && (
+          <section>
+            <PerformanceChart
+              data={perfData}
+              investedAmount={summary?.invested || 0}
+              mfInvested={summary?.mf_invested || 0}
+              stockInvested={summary?.stock_invested || 0}
+            />
+          </section>
+        )}
 
         {/* Profile Breakdown (The "Wow" Section) */}
         <section className="glass-card rounded-2xl border border-neutral-200 dark:border-white/5 bg-white/70 dark:bg-[#151A23]/70 backdrop-blur-xl p-6 shadow-sm">

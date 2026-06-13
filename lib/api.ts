@@ -307,7 +307,7 @@ export const api = {
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
 
-  getPortfolioHistory: () => api.fetch("/portfolio/timeseries"),
+  getPortfolioHistory: () => api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
   getMutualFundJourney: (range: string = "ALL") =>
     api.fetch(`/portfolio/mf-journey?range=${range}`),
 
