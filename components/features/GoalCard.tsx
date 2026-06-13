@@ -30,6 +30,7 @@ interface GoalCardProps {
     shortfall: number;
     sip_increase_needed: number;
     achieved_percentage: number;
+    goal_type?: string;
     linked_schemes: {
       scheme_name: string;
       contribution: number;
@@ -72,9 +73,20 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
             {getIcon(goal.icon)}
           </div>
           <div>
-            <h3 className="font-bold text-lg text-neutral-900 dark:text-white">
-              {goal.name}
-            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-bold text-lg text-neutral-900 dark:text-white">
+                {goal.name}
+              </h3>
+              {goal.goal_type && (
+                <span className={`text-[9px] tracking-wider px-1.5 py-0.5 rounded-md font-bold uppercase border ${
+                  goal.goal_type === "FAMILY"
+                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
+                    : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                }`}>
+                  {goal.goal_type === "FAMILY" ? "Family" : "Personal"}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               Target:{" "}
               <PrivacyMask>

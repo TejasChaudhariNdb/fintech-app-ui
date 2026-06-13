@@ -119,30 +119,100 @@ export default function CreateGoalModal({
     }
   }, [goalType, selectedProfileId, isOpen]);
 
+  // Helper to group schemes by profile name
+  const getGroupedSchemes = () => {
+    const grouped: { [key: string]: typeof availableSchemes } = {};
+    if (goalType === "PERSONAL") {
+      const pName = profiles.find((p) => String(p.id) === selectedProfileId)?.name || "Self";
+      grouped[pName] = availableSchemes;
+    } else {
+      // FAMILY Goal
+      availableSchemes.forEach((s) => {
+        if (s.profile_breakdown && s.profile_breakdown.length > 0) {
+          s.profile_breakdown.forEach((pb: any) => {
+            const pName = pb.profile_name || "Self";
+            if (!grouped[pName]) grouped[pName] = [];
+            if (!grouped[pName].find((item) => item.scheme_id === (pb.scheme_id || s.scheme_id))) {
+              grouped[pName].push({
+                ...s,
+                scheme_id: pb.scheme_id || s.scheme_id,
+                current_value: pb.current_value,
+              });
+            }
+          });
+        } else {
+          const pName = "Self";
+          if (!grouped[pName]) grouped[pName] = [];
+          if (!grouped[pName].find((item) => item.scheme_id === s.scheme_id)) {
+            grouped[pName].push(s);
+          }
+        }
+      });
+    }
+    return grouped;
+  };
+
+  // Helper to group stocks by profile name
+  const getGroupedStocks = () => {
+    const grouped: { [key: string]: typeof availableStocks } = {};
+    if (goalType === "PERSONAL") {
+      const pName = profiles.find((p) => String(p.id) === selectedProfileId)?.name || "Self";
+      grouped[pName] = availableStocks;
+    } else {
+      // FAMILY Goal
+      availableStocks.forEach((s) => {
+        if (s.profile_breakdown && s.profile_breakdown.length > 0) {
+          s.profile_breakdown.forEach((pb: any) => {
+            const pName = pb.profile_name || "Self";
+            if (!grouped[pName]) grouped[pName] = [];
+            if (!grouped[pName].find((item) => item.id === (pb.holding_id || s.id))) {
+              grouped[pName].push({
+                ...s,
+                id: pb.holding_id || s.id,
+                value: pb.value,
+              });
+            }
+          });
+        } else {
+          const pName = "Self";
+          if (!grouped[pName]) grouped[pName] = [];
+          if (!grouped[pName].find((item) => item.id === s.id)) {
+            grouped[pName].push(s);
+          }
+        }
+      });
+    }
+    return grouped;
+  };
+
   const addSchemeLink = () => {
-    if (availableSchemes.length === 0) return;
+    const allSchemeItems = Object.values(getGroupedSchemes()).flat();
+    if (allSchemeItems.length === 0) return;
+    const available = allSchemeItems.filter(
+      (item) => !formData.linked_schemes.find((l) => l.scheme_id === item.scheme_id)
+    );
+    if (available.length === 0) return;
     setFormData((prev) => ({
       ...prev,
       linked_schemes: [
         ...prev.linked_schemes,
-        { scheme_id: availableSchemes[0].scheme_id, contribution_amount: "0" },
+        { scheme_id: available[0].scheme_id, contribution_amount: "0" },
       ],
     }));
   };
 
   const addStockLink = () => {
-    if (availableStocks.length === 0) return;
-    // Prevent adding duplicates
-    const available = availableStocks.filter(
-      (s) => !formData.linked_equities.find((l) => l.holding_id === s.id)
+    const allStockItems = Object.values(getGroupedStocks()).flat();
+    if (allStockItems.length === 0) return;
+    const available = allStockItems.filter(
+      (item) => !formData.linked_equities.find((l) => l.holding_id === item.id)
     );
     if (available.length === 0) return;
-
     setFormData((prev) => ({
       ...prev,
       linked_equities: [
         ...prev.linked_equities,
-        { holding_id: available[0].id, symbol: available[0].symbol }, // Default to first available
+        { holding_id: available[0].id, symbol: available[0].symbol },
       ],
     }));
   };
@@ -170,13 +240,29 @@ export default function CreateGoalModal({
   };
 
   const updateStockLink = (index: number, holdingId: string) => {
-    // Find symbol
-    const stock = availableStocks.find((s) => s.id === Number(holdingId));
+    const parsedId = Number(holdingId);
+    if (isNaN(parsedId)) return;
+    
+    let foundSymbol = "";
+    for (const s of availableStocks) {
+      if (s.id === parsedId) {
+        foundSymbol = s.symbol;
+        break;
+      }
+      if (s.profile_breakdown) {
+        const foundPb = s.profile_breakdown.find((pb: any) => pb.holding_id === parsedId);
+        if (foundPb) {
+          foundSymbol = s.symbol;
+          break;
+        }
+      }
+    }
+
     setFormData((prev) => {
       const newLinks = [...prev.linked_equities];
       newLinks[index] = {
-        holding_id: Number(holdingId),
-        symbol: stock?.symbol || "",
+        holding_id: parsedId,
+        symbol: foundSymbol,
       };
       return { ...prev, linked_equities: newLinks };
     });
@@ -375,14 +461,19 @@ export default function CreateGoalModal({
                 <div className="flex-1 space-y-2">
                   <select
                     className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                    value={link.scheme_id}
+                    value={link.scheme_id || ""}
                     onChange={(e) =>
                       updateSchemeLink(index, "scheme_id", e.target.value)
                     }>
-                    {availableSchemes.map((s) => (
-                      <option key={s.scheme_id} value={s.scheme_id}>
-                        {s.scheme}
-                      </option>
+                    <option value="" disabled>Select Fund</option>
+                    {Object.entries(getGroupedSchemes()).map(([profileName, schemes]) => (
+                      <optgroup key={profileName} label={profileName}>
+                        {schemes.map((s) => (
+                          <option key={s.scheme_id} value={s.scheme_id}>
+                            {s.scheme} - ₹{s.current_value?.toLocaleString()}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                   <div>
@@ -446,12 +537,17 @@ export default function CreateGoalModal({
                 <div className="flex-1">
                   <select
                     className="w-full bg-white dark:bg-black/20 border border-neutral-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                    value={link.holding_id}
+                    value={link.holding_id || ""}
                     onChange={(e) => updateStockLink(index, e.target.value)}>
-                    {availableStocks.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.symbol} - ₹{s.value?.toLocaleString()}
-                      </option>
+                    <option value="" disabled>Select Stock</option>
+                    {Object.entries(getGroupedStocks()).map(([profileName, stocks]) => (
+                      <optgroup key={profileName} label={profileName}>
+                        {stocks.map((s) => (
+                          <option key={s.id || s.symbol} value={s.id || s.symbol}>
+                            {s.symbol} - ₹{s.value?.toLocaleString()}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
