@@ -11,8 +11,10 @@ import Input from "@/components/ui/Input";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
 import { Search, Calendar, Filter, Download, Plus, Trash2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useProfile } from "@/context/ProfileContext";
 
 export default function ActivityPage() {
+  const { activeProfileId, profiles, activeProfile } = useProfile();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -101,8 +103,10 @@ export default function ActivityPage() {
   };
 
   useEffect(() => {
+    setTransactions([]);
+    setPage(0);
     loadTransactions(0);
-  }, []); // Initial load
+  }, [activeProfileId]); // Reload when active profile switches
 
   const handleLoadMore = () => {
     light();
@@ -273,6 +277,25 @@ export default function ActivityPage() {
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
             Track your financial history
           </p>
+          {/* Profile context badge */}
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className={`w-2 h-2 rounded-full ${
+              activeProfileId === "all" ? "bg-primary-500"
+              : activeProfile?.relation?.toUpperCase() === "SELF" ? "bg-blue-500"
+              : activeProfile?.relation?.toUpperCase() === "MOTHER" ? "bg-purple-500"
+              : activeProfile?.relation?.toUpperCase() === "FATHER" ? "bg-green-500"
+              : activeProfile?.relation?.toUpperCase() === "SPOUSE" ? "bg-orange-500"
+              : activeProfile?.relation?.toUpperCase() === "CHILD" ? "bg-yellow-500"
+              : "bg-indigo-500"
+            }`} />
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              activeProfileId === "all"
+                ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/20"
+                : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10"
+            }`}>
+              {activeProfileId === "all" ? "All Family" : activeProfile?.name}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -383,23 +406,28 @@ export default function ActivityPage() {
                   {month}
                 </h3>
                 <div className="space-y-3">
-                  {groupedTransactions[month].map((t: any, idx: number) => (
-                    <TransactionItem
-                      key={`${t.date}-${t.id}-${t.category}`}
-                      id={t.id}
-                      type={t.type}
-                      schemeName={t.scheme_name}
-                      amc={t.amc}
-                      amount={t.amount}
-                      date={t.date}
-                      units={t.units}
-                      category={t.category}
-                      onEdit={() => {
-                        setEditingTx(t);
-                      }}
-                      onDelete={() => handleDelete(t)}
-                    />
-                  ))}
+                  {groupedTransactions[month].map((t: any, idx: number) => {
+                    const profile = profiles.find((p) => p.id === t.profile_id);
+                    return (
+                      <TransactionItem
+                        key={`${t.date}-${t.id}-${t.category}`}
+                        id={t.id}
+                        type={t.type}
+                        schemeName={t.scheme_name}
+                        amc={t.amc}
+                        amount={t.amount}
+                        date={t.date}
+                        units={t.units}
+                        category={t.category}
+                        profileName={profile?.name}
+                        profileRelation={profile?.relation}
+                        onEdit={() => {
+                          setEditingTx(t);
+                        }}
+                        onDelete={() => handleDelete(t)}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))

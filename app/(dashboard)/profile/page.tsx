@@ -181,6 +181,7 @@ export default function ProfilePage() {
   const [newFamilyName, setNewFamilyName] = useState("");
   const [newFamilyRelation, setNewFamilyRelation] = useState("");
   const [newFamilyPan, setNewFamilyPan] = useState("");
+  const [newFamilyProfileType, setNewFamilyProfileType] = useState("INDIVIDUAL");
   const [isSavingFamilyProfile, setIsSavingFamilyProfile] = useState(false);
 
   // Profile State
@@ -517,12 +518,15 @@ export default function ProfilePage() {
     if (choice === "Me") {
       setNewFamilyRelation("Self");
       setNewFamilyName("Self");
+      setNewFamilyProfileType("INDIVIDUAL");
     } else if (choice === "Other") {
       setNewFamilyRelation("");
       setNewFamilyName("");
+      setNewFamilyProfileType("INDIVIDUAL");
     } else {
       setNewFamilyRelation(choice);
       setNewFamilyName(choice);
+      setNewFamilyProfileType("INDIVIDUAL");
     }
   };
 
@@ -537,7 +541,7 @@ export default function ProfilePage() {
       await api.createProfile({
         name: newFamilyName.trim(),
         relation: newFamilyRelation.trim(),
-        profile_type: "individual",
+        profile_type: newFamilyProfileType,
         pan: newFamilyPan.trim() || undefined,
       });
       showToast("Profile created successfully", "success");
@@ -755,6 +759,7 @@ export default function ProfilePage() {
                   setNewFamilyName("");
                   setNewFamilyRelation("");
                   setNewFamilyPan("");
+                  setNewFamilyProfileType("INDIVIDUAL");
                   setShowAddFamilyProfileModal(true);
                 }}
                 className="flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
@@ -788,6 +793,11 @@ export default function ProfilePage() {
                           )}`}
                         >
                           {p.relation}
+                        </span>
+                        <span
+                          className="text-[9px] px-2 py-0.5 rounded-md font-bold uppercase border bg-neutral-100/50 text-neutral-600 border-neutral-200 dark:bg-white/5 dark:text-neutral-400 dark:border-white/5"
+                        >
+                          {p.profile_type}
                         </span>
                         {p.is_default && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold border border-emerald-500/20">
@@ -1560,6 +1570,23 @@ export default function ProfilePage() {
                     className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white disabled:opacity-70 disabled:cursor-not-allowed"
                   />
                 </div>
+              </div>
+
+              {/* Profile Type */}
+              <div>
+                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                  Profile Type
+                </label>
+                <select
+                  value={newFamilyProfileType}
+                  onChange={(e) => setNewFamilyProfileType(e.target.value)}
+                  required
+                  className="w-full px-3 py-3 rounded-xl text-sm transition-all outline-none bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white"
+                >
+                  <option value="INDIVIDUAL" className="bg-white dark:bg-[#151A23]">Individual</option>
+                  <option value="JOINT" className="bg-white dark:bg-[#151A23]">Joint</option>
+                  <option value="CUSTOM" className="bg-white dark:bg-[#151A23]">Custom</option>
+                </select>
               </div>
 
               {/* PAN */}

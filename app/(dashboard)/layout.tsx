@@ -103,12 +103,11 @@ export default function DashboardLayout({
 
           {/* Top Header Bar */}
           <header className="flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky top-0 z-30">
-            {/* Left: Active Profile Chip */}
+
+            {/* Left: Active Profile Indicator */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:inline">
-                Viewing Context:
-              </span>
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/5 text-neutral-700 dark:text-neutral-300">
+              <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Viewing:</span>
+              <div className="flex items-center gap-1.5 bg-neutral-100/80 dark:bg-white/5 px-2.5 py-1 rounded-full border border-neutral-200/60 dark:border-white/10">
                 <span className={`w-2 h-2 rounded-full ${
                   activeProfileId === "all"
                     ? "bg-primary-500"
@@ -124,7 +123,9 @@ export default function DashboardLayout({
                     ? "bg-yellow-500"
                     : "bg-indigo-500"
                 }`} />
-                <span>{activeProfileId === "all" ? "All Family Combined" : activeProfile?.name}</span>
+                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+                  {activeProfileId === "all" ? "All Family" : activeProfile?.name}
+                </span>
               </div>
             </div>
 

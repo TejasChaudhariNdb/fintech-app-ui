@@ -472,7 +472,7 @@ export const api = {
         if (lsKey) {
           const parts = lsKey.split(":");
           // Key format is: userEmail:cacheKey:profileId or userEmail:cacheKey
-          if (parts[0] === userEmail && keys.includes(parts[1])) {
+          if (parts[0] === userEmail && keys.some(k => parts[1] === k || parts[1].startsWith(k + "-"))) {
             keysToRemove.push(lsKey);
           }
         }
@@ -496,6 +496,7 @@ export const api = {
       "user-profile",
       "prediction-stats",
       "family-summary",
+      "transactions",
     ]);
   },
 
@@ -504,7 +505,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message, session_id: sessionId }),
     }),
-
   chatWithAIStream: async (
     message: string,
     sessionId: number | undefined,

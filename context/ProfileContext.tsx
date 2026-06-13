@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import Toast, { ToastType } from "@/components/ui/Toast";
 
 export interface Profile {
   id: number;
@@ -30,6 +31,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: ToastType;
+  }>({ show: false, message: "", type: "info" });
 
   const fetchProfiles = async () => {
     try {
@@ -65,10 +71,28 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const changeActiveProfile = (id: string) => {
+    const targetName = id === "all" ? "All Family Combined" : (profiles.find(p => String(p.id) === id)?.name || "Profile");
+    
+    // Set switching loading toast
+    setToast({
+      show: true,
+      message: `Loading ${targetName}...`,
+      type: "loading"
+    });
+
     setActiveProfileId(id);
     localStorage.setItem("active_profile_id", id);
     // Clear API cache so that calls retrieve correct profile scope
     api.clearPortfolioCache();
+
+    // Smoothly transition toast to success checked state after 800ms
+    setTimeout(() => {
+      setToast({
+        show: true,
+        message: `Now showing ${targetName}`,
+        type: "success"
+      });
+    }, 800);
   };
 
   const setDefault = async (id: number) => {
@@ -104,6 +128,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      <Toast
+        isVisible={toast.show}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
     </ProfileContext.Provider>
   );
 }

@@ -10,6 +10,8 @@ interface TransactionItemProps {
   amc: string;
   units?: number;
   category?: "MF" | "STOCK";
+  profileName?: string;
+  profileRelation?: string;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -23,6 +25,8 @@ export default function TransactionItem({
   amc,
   units,
   category = "MF",
+  profileName,
+  profileRelation,
   onEdit,
   onDelete,
 }: TransactionItemProps) {
@@ -45,6 +49,17 @@ export default function TransactionItem({
       default:
         return type.replace(/_/g, " ");
     }
+  };
+
+  const getProfileBadgeColor = (relation?: string) => {
+    if (!relation) return "bg-indigo-500/10 text-indigo-500 border-indigo-500/20";
+    const rel = relation.toUpperCase();
+    if (rel === "SELF") return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+    if (rel === "MOTHER") return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+    if (rel === "FATHER") return "bg-green-500/10 text-green-500 border-green-500/20";
+    if (rel === "SPOUSE") return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+    if (rel === "CHILD") return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+    return "bg-indigo-500/10 text-indigo-500 border-indigo-500/20";
   };
 
   const isPurchase = type.includes("PURCHASE") || type === "BUY";
@@ -84,7 +99,7 @@ export default function TransactionItem({
 
       {/* Main Content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
             {isTax ? formatType(type) : schemeName}
           </p>
@@ -95,6 +110,11 @@ export default function TransactionItem({
           {category === "STOCK" && (
             <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tight bg-blue-100 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400">
               Stock
+            </span>
+          )}
+          {profileName && (
+            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase border tracking-tight ${getProfileBadgeColor(profileRelation)}`}>
+              {profileName}
             </span>
           )}
         </div>
