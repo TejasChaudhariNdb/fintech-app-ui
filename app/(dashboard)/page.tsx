@@ -107,7 +107,7 @@ export default function HomePage() {
           try {
             const parsedFam = JSON.parse(cachedFam);
             setFamilySummary(parsedFam.data);
-            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data.slice(0, 2));
+            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data);
             setLoading(false);
           } catch (e) {
             console.warn("Invalid cached family summary", e);
@@ -131,7 +131,7 @@ export default function HomePage() {
         ]);
 
         if (famData) setFamilySummary(famData);
-        setGoals(g.slice(0, 2));
+        setGoals(g);
         if (up) {
           setUserProfile(up);
           analytics.identifyUser(up.email || up.id, up.email, {
@@ -161,7 +161,7 @@ export default function HomePage() {
               mf_xirr: parsedXirr?.mf_xirr || 0,
               stock_xirr: parsedXirr?.stock_xirr || 0,
             });
-            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data.slice(0, 2));
+            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data);
             if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
             if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
 
@@ -227,7 +227,7 @@ export default function HomePage() {
           mf_xirr: xirrData?.mf_xirr || 0,
           stock_xirr: xirrData?.stock_xirr || 0,
         });
-        setGoals(g.slice(0, 2));
+        setGoals(g);
         setPerfData(history);
         setInsights(ins);
         setBenchmark(bm);
@@ -303,6 +303,9 @@ export default function HomePage() {
 
   const renderFamilyDashboard = () => {
     if (!familySummary) return null;
+
+    const familyGoals = goals.filter((g) => g.goal_type === "FAMILY");
+    const personalGoals = goals.filter((g) => g.goal_type === "PERSONAL");
 
     const hasNoProfiles = profiles.length <= 1; // Only has "Self"
     
@@ -557,54 +560,86 @@ export default function HomePage() {
         </section>
 
         {/* Family Goals list preview */}
-        <section className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-              Family Goals
-            </h3>
-            {goals.length > 0 && (
+        <section className="space-y-8">
+          {/* Shared Family Goals */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                Family Shared Goals
+              </h3>
+              {familyGoals.length > 0 && (
+                <button
+                  onClick={() => router.push("/goals")}
+                  className="text-sm text-primary-600 dark:text-primary-400 font-semibold hover:underline flex items-center gap-1"
+                >
+                  View All <ArrowRight size={16} />
+                </button>
+              )}
+            </div>
+
+            {familyGoals.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {familyGoals.slice(0, 2).map((goal) => (
+                  <div
+                    key={goal.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push("/goals")}
+                  >
+                    <GoalCard
+                      goal={goal}
+                      onEdit={() => router.push("/goals")}
+                      onDelete={() => router.push("/goals")}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
               <button
                 onClick={() => router.push("/goals")}
-                className="text-sm text-primary-600 dark:text-primary-400 font-semibold hover:underline flex items-center gap-1"
+                className="w-full flex flex-col items-center justify-center p-8 border border-dashed border-neutral-200 dark:border-white/10 rounded-2xl hover:border-primary-500 dark:hover:border-primary-400/50 hover:bg-neutral-50 dark:hover:bg-white/5 transition-all group gap-3"
               >
-                View All <ArrowRight size={16} />
+                <div className="p-3 bg-neutral-100 dark:bg-white/5 rounded-full group-hover:bg-primary-500/10 transition-colors">
+                  <Users className="text-neutral-400 dark:text-neutral-500 group-hover:text-primary-500 h-6 w-6" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-neutral-900 dark:text-white">
+                    No Joint Goals Defined
+                  </p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Link investments from multiple family members into a joint goal
+                  </p>
+                </div>
               </button>
             )}
           </div>
 
-          {goals.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {goals.map((goal) => (
-                <div
-                  key={goal.id}
-                  className="cursor-pointer"
-                  onClick={() => router.push("/goals")}
-                >
-                  <GoalCard
-                    goal={goal}
-                    onEdit={() => router.push("/goals")}
-                    onDelete={() => router.push("/goals")}
-                  />
-                </div>
-              ))}
+          {/* Family Members' Personal Goals */}
+          {personalGoals.length > 0 && (
+            <div className="space-y-4 pt-6 border-t border-dashed border-neutral-200 dark:border-white/10">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                  Personal Goals
+                </h3>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {personalGoals.slice(0, 2).map((goal) => (
+                  <div
+                    key={goal.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push("/goals")}
+                  >
+                    <GoalCard
+                      goal={goal}
+                      onEdit={() => router.push("/goals")}
+                      onDelete={() => router.push("/goals")}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <button
-              onClick={() => router.push("/goals")}
-              className="w-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-neutral-200 dark:border-white/10 rounded-2xl hover:border-primary-500 transition-all group gap-3"
-            >
-              <div className="p-3 bg-neutral-100 dark:bg-white/5 rounded-full group-hover:bg-primary-500/10 transition-colors">
-                <Users className="text-neutral-400 dark:text-neutral-500 group-hover:text-primary-500 h-6 w-6" />
-              </div>
-              <div className="text-center">
-                <p className="font-semibold text-neutral-900 dark:text-white">
-                  No Goals Defined
-                </p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Link your family members' wealth to joint financial goals
-                </p>
-              </div>
-            </button>
           )}
         </section>
       </div>
