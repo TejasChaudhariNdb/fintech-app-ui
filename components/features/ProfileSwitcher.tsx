@@ -112,24 +112,26 @@ export default function ProfileSwitcher() {
 
           <div className="max-h-60 overflow-y-auto space-y-0.5 px-1.5">
             {/* All Family (Hero Option First) */}
-            <button
-              onClick={() => handleSelect("all")}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium ${
-                activeProfileId === "all"
-                  ? "bg-primary-500/10 text-primary-700 dark:text-primary-300"
-                  : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="h-6 w-6 rounded-full bg-primary-500/10 text-primary-500 flex items-center justify-center border border-primary-500/20 shadow-sm">
-                  <Star size={11} className="stroke-[2.5]" />
+            {profiles.length > 1 && (
+              <button
+                onClick={() => handleSelect("all")}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all duration-150 text-sm font-medium ${
+                  activeProfileId === "all"
+                    ? "bg-primary-500/10 text-primary-700 dark:text-primary-300"
+                    : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="h-6 w-6 rounded-full bg-primary-500/10 text-primary-500 flex items-center justify-center border border-primary-500/20 shadow-sm">
+                    <Star size={11} className="stroke-[2.5]" />
+                  </div>
+                  <span>All Family Portfolio</span>
                 </div>
-                <span>All Family Portfolio</span>
-              </div>
-              {activeProfileId === "all" && (
-                <Check size={14} className="text-primary-600 dark:text-primary-400 stroke-[2.5]" />
-              )}
-            </button>
+                {activeProfileId === "all" && (
+                  <Check size={14} className="text-primary-600 dark:text-primary-400 stroke-[2.5]" />
+                )}
+              </button>
+            )}
 
             {/* Individual Profiles */}
             {profiles.map((p) => {

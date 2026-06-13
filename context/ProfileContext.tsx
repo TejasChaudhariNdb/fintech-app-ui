@@ -38,13 +38,18 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       setProfiles(data || []);
 
       // Determine initial active profile
-      // Check localStorage first
+      const activeProfiles = data || [];
       const storedActiveId = localStorage.getItem("active_profile_id");
-      if (storedActiveId) {
+      
+      if (activeProfiles.length <= 1) {
+        // Enforce the single profile context when user only has 1 active profile (no family assets to aggregate yet)
+        const fallbackId = activeProfiles[0]?.id ? String(activeProfiles[0].id) : "all";
+        setActiveProfileId(fallbackId);
+        localStorage.setItem("active_profile_id", fallbackId);
+      } else if (storedActiveId && (storedActiveId === "all" || activeProfiles.some((p) => String(p.id) === storedActiveId))) {
         setActiveProfileId(storedActiveId);
-        localStorage.setItem("active_profile_id", storedActiveId);
       } else {
-        // Fallback to "all" as the hero context
+        // Fallback to "all" (All Family) as the hero context when they have > 1 profile
         setActiveProfileId("all");
         localStorage.setItem("active_profile_id", "all");
       }
