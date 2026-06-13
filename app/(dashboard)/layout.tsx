@@ -6,6 +6,8 @@ import AppLock from "@/components/features/AppLock";
 import BottomNav from "@/components/features/BottomNav";
 import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
+import { useProfile } from "@/context/ProfileContext";
+import ProfileSwitcher from "@/components/features/ProfileSwitcher";
 
 import DemoRibbon from "@/components/ui/DemoRibbon";
 
@@ -20,6 +22,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { activeProfileId, activeProfile } = useProfile();
   const [isChecking, setIsChecking] = useState(true);
   const [isLockEnabled, setIsLockEnabled] = useState(false);
 
@@ -97,6 +100,39 @@ export default function DashboardLayout({
         {/* Main content */}
         <main className="flex-1 pb-32 lg:pb-10 lg:pl-0 max-w-7xl mx-auto w-full">
           <DemoRibbon />
+
+          {/* Top Header Bar */}
+          <header className="flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky top-0 z-20">
+            {/* Left: Active Profile Chip */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider hidden sm:inline">
+                Viewing Context:
+              </span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/5 text-neutral-700 dark:text-neutral-300">
+                <span className={`w-2 h-2 rounded-full ${
+                  activeProfileId === "all"
+                    ? "bg-primary-500"
+                    : activeProfile?.relation.toUpperCase() === "SELF"
+                    ? "bg-blue-500"
+                    : activeProfile?.relation.toUpperCase() === "MOTHER"
+                    ? "bg-purple-500"
+                    : activeProfile?.relation.toUpperCase() === "FATHER"
+                    ? "bg-green-500"
+                    : activeProfile?.relation.toUpperCase() === "SPOUSE"
+                    ? "bg-orange-500"
+                    : activeProfile?.relation.toUpperCase() === "CHILD"
+                    ? "bg-yellow-500"
+                    : "bg-indigo-500"
+                }`} />
+                <span>{activeProfileId === "all" ? "All Family Combined" : activeProfile?.name}</span>
+              </div>
+            </div>
+
+            {/* Right: Switcher Dropdown */}
+            <div className="flex items-center gap-3">
+              <ProfileSwitcher />
+            </div>
+          </header>
 
           {/* Offline Banner */}
           {!isOnline && (

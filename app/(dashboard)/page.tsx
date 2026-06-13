@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import { api } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
+import { useProfile } from "@/context/ProfileContext";
 
 import NetWorthCard from "@/components/features/NetWorthCard";
 import PortfolioSummary from "@/components/features/PortfolioSummary";
@@ -21,6 +22,8 @@ import {
   Loader2,
   TrendingUp,
   LineChart,
+  Users,
+  Plus,
 } from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
@@ -31,8 +34,10 @@ import AssetAllocationCard from "@/components/features/AssetAllocationCard";
 
 export default function HomePage() {
   const router = useRouter();
+  const { activeProfileId, profiles } = useProfile();
   const [netWorth, setNetWorth] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
+  const [familySummary, setFamilySummary] = useState<any>(null);
   const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]); // New State
@@ -55,9 +60,8 @@ export default function HomePage() {
     setToast({ show: true, message, type });
   };
 
+  // 1. One-time mount effect for UTM Analytics
   useEffect(() => {
-    loadData();
-
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const utmCampaign = urlParams.get("utm_campaign");
@@ -80,15 +84,65 @@ export default function HomePage() {
     }
   }, []);
 
+  // 2. Profile-aware data loading
+  useEffect(() => {
+    loadData();
+  }, [activeProfileId]);
+
   const loadData = async () => {
     try {
-      console.log("Loading dashboard data...");
+      console.log("Loading dashboard data...", activeProfileId);
+      setError("");
 
-      // 1. Try to load from cache first (Stale-While-Revalidate)
-      if (typeof window !== "undefined") {
-        const userEmail = localStorage.getItem("user_email") || "anonymous";
-        const getCache = (key: string) => localStorage.getItem(`${userEmail}:${key}`);
+      const userEmail = localStorage.getItem("user_email") || "anonymous";
+      const getCache = (key: string) => localStorage.getItem(`${userEmail}:${key}:${activeProfileId}`);
 
+      if (activeProfileId === "all") {
+        // --- ALL FAMILY DASHBOARD LOAD ---
+        // 1. Try Cache
+        const cachedFam = getCache("family-summary");
+        const cachedGoals = getCache("goals");
+
+        if (cachedFam) {
+          try {
+            const parsedFam = JSON.parse(cachedFam);
+            setFamilySummary(parsedFam.data);
+            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data.slice(0, 2));
+            setLoading(false);
+          } catch (e) {
+            console.warn("Invalid cached family summary", e);
+          }
+        }
+
+        // 2. Fetch Fresh Data
+        const [famData, g, up] = await Promise.all([
+          api.getFamilySummary().catch((err) => {
+            console.error("Family summary error:", err);
+            return null;
+          }),
+          api.getGoals().catch((err) => {
+            console.error("Goals error:", err);
+            return [];
+          }),
+          api.getUserProfile().catch((err) => {
+            console.error("Profile error:", err);
+            return null;
+          }),
+        ]);
+
+        if (famData) setFamilySummary(famData);
+        setGoals(g.slice(0, 2));
+        if (up) {
+          setUserProfile(up);
+          analytics.identifyUser(up.email || up.id, up.email, {
+            full_name: up.full_name,
+            phone_number: up.phone_number,
+            signup_source: up.signup_source,
+          });
+        }
+      } else {
+        // --- INDIVIDUAL PROFILE DASHBOARD LOAD ---
+        // 1. Try to load from cache first
         const cachedNw = getCache("net-worth");
         const cachedPs = getCache("portfolio-summary");
         const cachedGoals = getCache("goals");
@@ -111,85 +165,80 @@ export default function HomePage() {
             if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
             if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
 
-            setLoading(false); // Show cached data immediately
+            setLoading(false);
 
-            // Only show the syncing snackbar if cache is older than 6 hours
             const cacheTimestamp = parsedNw.timestamp || 0;
-            const hoursSinceCache =
-              (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
+            const hoursSinceCache = (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
             if (hoursSinceCache > 6) {
-              setIsBackgroundRefreshing(true); // Indicate background refresh
+              setIsBackgroundRefreshing(true);
             }
           } catch (e) {
             console.warn("Invalid cache data", e);
           }
         }
-      }
 
-      // 2. Fetch Fresh Data in Background
-      const [nw, ps, g, xirrData, history, ins, bm, up] = await Promise.all([
-        api.getNetWorth().catch((err) => {
-          console.error("Net worth error:", err);
-          return { net_worth: 0, mutual_funds: 0, stocks: 0 };
-        }),
-        api.getPortfolioSummary().catch((err) => {
-          console.error("Portfolio summary error:", err);
-          return {
-            invested: 0,
-            current: 0,
-            profit: 0,
-            return_pct: 0,
-            day_change: 0,
-            day_change_pct: 0,
-          };
-        }),
-        api.getGoals().catch((err) => {
-          console.error("Goals error:", err);
-          return [];
-        }),
-        api.getXIRR().catch((err) => {
-          console.error("XIRR error:", err);
-          return { xirr: 0 };
-        }),
-        api.getPortfolioHistory().catch((err) => {
-          console.error("History error:", err);
-          return [];
-        }),
-        api.getInsights().catch((err) => {
-          console.error("Insights error:", err);
-          return [];
-        }),
-        api.getBenchmark().catch((err) => {
-          console.error("Benchmark error:", err);
-          return null;
-        }),
-        api.getUserProfile().catch((err) => {
-          console.error("Profile error:", err);
-          return null;
-        }),
-      ]);
+        // 2. Fetch Fresh Data in Background
+        const [nw, ps, g, xirrData, history, ins, bm, up] = await Promise.all([
+          api.getNetWorth().catch((err) => {
+            console.error("Net worth error:", err);
+            return { net_worth: 0, mutual_funds: 0, stocks: 0 };
+          }),
+          api.getPortfolioSummary().catch((err) => {
+            console.error("Portfolio summary error:", err);
+            return {
+              invested: 0,
+              current: 0,
+              profit: 0,
+              return_pct: 0,
+              day_change: 0,
+              day_change_pct: 0,
+            };
+          }),
+          api.getGoals().catch((err) => {
+            console.error("Goals error:", err);
+            return [];
+          }),
+          api.getXIRR().catch((err) => {
+            console.error("XIRR error:", err);
+            return { xirr: 0 };
+          }),
+          api.getPortfolioHistory().catch((err) => {
+            console.error("History error:", err);
+            return [];
+          }),
+          api.getInsights().catch((err) => {
+            console.error("Insights error:", err);
+            return [];
+          }),
+          api.getBenchmark().catch((err) => {
+            console.error("Benchmark error:", err);
+            return null;
+          }),
+          api.getUserProfile().catch((err) => {
+            console.error("Profile error:", err);
+            return null;
+          }),
+        ]);
 
-      console.log("Data loaded:", { nw, ps, g, xirrData, bm });
-
-      setNetWorth(nw);
-      setSummary({
-        ...ps,
-        xirr: xirrData?.xirr || 0,
-        mf_xirr: xirrData?.mf_xirr || 0,
-        stock_xirr: xirrData?.stock_xirr || 0,
-      });
-      setGoals(g.slice(0, 2));
-      setPerfData(history);
-      setInsights(ins);
-      setBenchmark(bm);
-      if (up) {
-        setUserProfile(up);
-        // Identify the user in PostHog
-        analytics.identifyUser(up.email || up.id, up.email, {
-          full_name: up.full_name,
-          phone_number: up.phone_number,
-          signup_source: up.signup_source,
+        setNetWorth(nw);
+        setSummary({
+          ...ps,
+          xirr: xirrData?.xirr || 0,
+          mf_xirr: xirrData?.mf_xirr || 0,
+          stock_xirr: xirrData?.stock_xirr || 0,
         });
+        setGoals(g.slice(0, 2));
+        setPerfData(history);
+        setInsights(ins);
+        setBenchmark(bm);
+        if (up) {
+          setUserProfile(up);
+          analytics.identifyUser(up.email || up.id, up.email, {
+            full_name: up.full_name,
+            phone_number: up.phone_number,
+            signup_source: up.signup_source,
+          });
+        }
       }
     } catch (err: any) {
       console.error("Error loading data:", err);
@@ -252,8 +301,332 @@ export default function HomePage() {
     }
   };
 
+  const renderFamilyDashboard = () => {
+    if (!familySummary) return null;
+
+    const hasNoProfiles = profiles.length <= 1; // Only has "Self"
+    
+    if (familySummary.net_worth === 0 && hasNoProfiles) {
+      // ONBOARDING EMPTY STATE
+      return (
+        <div className="px-4 pt-8 pb-32 max-w-3xl mx-auto text-center">
+          <div className="glass-card rounded-3xl p-8 sm:p-12 border border-neutral-200 dark:border-white/5 bg-white/60 dark:bg-[#151A23]/60 backdrop-blur-xl shadow-xl flex flex-col items-center">
+            <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 mb-6">
+              <Users className="w-8 h-8 stroke-[2]" />
+            </div>
+            
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mb-4">
+              Manage your family wealth in one place
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 max-w-md mx-auto mb-8 text-sm sm:text-base leading-relaxed">
+              Consolidate investments across your family members. Switch context to any profile, track personal goals, or aggregate to see family net worth and asset allocations.
+            </p>
+
+            <div className="w-full max-w-md border-t border-neutral-200/50 dark:border-white/5 pt-8">
+              <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-6">
+                Add your first family member to begin
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <button
+                  onClick={() => router.push("/profile?add=MOTHER")}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
+                >
+                  <Plus size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
+                  <span>Mother</span>
+                </button>
+                <button
+                  onClick={() => router.push("/profile?add=FATHER")}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
+                >
+                  <Plus size={16} className="text-green-500 group-hover:scale-110 transition-transform" />
+                  <span>Father</span>
+                </button>
+                <button
+                  onClick={() => router.push("/profile?add=SPOUSE")}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
+                >
+                  <Plus size={16} className="text-orange-500 group-hover:scale-110 transition-transform" />
+                  <span>Spouse</span>
+                </button>
+                <button
+                  onClick={() => router.push("/profile?add=CHILD")}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
+                >
+                  <Plus size={16} className="text-yellow-500 group-hover:scale-110 transition-transform" />
+                  <span>Child</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => router.push("/profile?add=OTHER")}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-sm shadow-md shadow-primary-500/20 hover:shadow-lg transition-all duration-200 active:scale-98"
+              >
+                Create Custom Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const getProfileColorClasses = (color: string) => {
+      if (color === "blue") return { text: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", indicator: "bg-blue-500" };
+      if (color === "purple") return { text: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20", indicator: "bg-purple-500" };
+      if (color === "green") return { text: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20", indicator: "bg-green-500" };
+      if (color === "orange") return { text: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20", indicator: "bg-orange-500" };
+      if (color === "yellow") return { text: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", indicator: "bg-yellow-500" };
+      return { text: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20", indicator: "bg-indigo-500" };
+    };
+
+    return (
+      <div className="px-4 pt-8 pb-32 animate-fade-in space-y-6">
+        {/* Family Dashboard Title */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="text-xs font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-primary-500/10 text-primary-500 border border-primary-500/20">
+                ⭐ All Family Summary
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">
+              Family Portfolio Dashboard<span className="text-primary-600">.</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+              Profiles Tracking: <strong className="text-neutral-800 dark:text-neutral-200">{familySummary.profiles_count}</strong>
+            </span>
+          </div>
+        </div>
+
+        {/* Aggregate Net Worth Card */}
+        <NetWorthCard
+          netWorth={familySummary.net_worth}
+          mfValue={familySummary.allocation.mutual_funds}
+          stockValue={familySummary.allocation.stocks}
+          onRefresh={handleRefreshNAVs}
+          isRefreshing={refreshing}
+          dayChangePct={0}
+          lastUpdated={new Date().toISOString()}
+          onAddMF={() => router.push("/holdings/mutual-funds")}
+          onAddStock={() => router.push("/holdings/stocks")}
+        />
+
+        {/* Profile Breakdown (The "Wow" Section) */}
+        <section className="glass-card rounded-2xl border border-neutral-200 dark:border-white/5 bg-white/70 dark:bg-[#151A23]/70 backdrop-blur-xl p-6 shadow-sm">
+          <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-5">
+            Profile Contributions
+          </h3>
+          
+          <div className="space-y-4">
+            {familySummary.profile_breakdown.map((p: any) => {
+              const colors = getProfileColorClasses(p.color);
+              const percentage = familySummary.net_worth > 0 
+                ? Math.round((p.total_value / familySummary.net_worth) * 100)
+                : 0;
+
+              return (
+                <div key={p.id} className="p-4 rounded-xl border border-neutral-200/50 dark:border-white/5 bg-neutral-50/50 dark:bg-white/2 hover:border-neutral-300 dark:hover:border-white/10 transition-all">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${colors.indicator}`} />
+                      <span className="font-semibold text-neutral-900 dark:text-white text-sm sm:text-base">
+                        {p.name}
+                      </span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase border ${colors.text} ${colors.bg} ${colors.border}`}>
+                        {p.relation}
+                      </span>
+                      {p.is_default && (
+                        <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-medium">
+                          (Default)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-neutral-900 dark:text-white text-sm sm:text-base">
+                        ₹{p.total_value.toLocaleString("en-IN")}
+                      </span>
+                      <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-2 font-semibold">
+                        {percentage}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-neutral-200 dark:bg-white/5 h-1.5 rounded-full mb-3 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${colors.indicator}`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+
+                  {/* Allocation Split */}
+                  <div className="flex items-center gap-6 text-xs text-neutral-500 dark:text-neutral-400">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Mutual Funds: <strong>₹{p.mutual_fund_value.toLocaleString("en-IN")}</strong>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                      Stocks: <strong>₹{p.stock_value.toLocaleString("en-IN")}</strong>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Global Asset Allocation */}
+        <section className="grid gap-6 md:grid-cols-2">
+          {familySummary.net_worth > 0 && (
+            <AssetAllocationCard
+              data={[
+                {
+                  category: "Mutual Funds",
+                  value: familySummary.allocation.mutual_funds,
+                  percentage: familySummary.net_worth > 0
+                    ? Math.round((familySummary.allocation.mutual_funds / familySummary.net_worth) * 100)
+                    : 0,
+                },
+                {
+                  category: "Stocks",
+                  value: familySummary.allocation.stocks,
+                  percentage: familySummary.net_worth > 0
+                    ? Math.round((familySummary.allocation.stocks / familySummary.net_worth) * 100)
+                    : 0,
+                },
+              ]}
+            />
+          )}
+
+          {/* Goal Progress Summary */}
+          <section className="glass-card rounded-2xl border border-neutral-200 dark:border-white/5 bg-white/70 dark:bg-[#151A23]/70 backdrop-blur-xl p-6 flex flex-col justify-between shadow-sm">
+            <div>
+              <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4">
+                Family Goal Progress
+              </h3>
+              <div className="flex items-end justify-between mb-2">
+                <div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Accumulated Corpus</p>
+                  <p className="text-2xl font-black text-neutral-900 dark:text-white">
+                    ₹{familySummary.goal_progress.total_current.toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Combined Target</p>
+                  <p className="text-lg font-bold text-neutral-700 dark:text-neutral-300">
+                    ₹{familySummary.goal_progress.total_target.toLocaleString("en-IN")}
+                  </p>
+                </div>
+              </div>
+
+              {/* Combined Progress Bar */}
+              {familySummary.goal_progress.total_target > 0 && (
+                <div className="w-full bg-neutral-200 dark:bg-white/5 h-2 rounded-full mb-4 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-linear-to-r from-primary-500 to-indigo-600 transition-all duration-500"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round(
+                          (familySummary.goal_progress.total_current /
+                            familySummary.goal_progress.total_target) *
+                            100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-neutral-200/50 dark:border-white/5">
+              <span className="text-xs text-neutral-400 dark:text-neutral-500 font-semibold">
+                Tracking {familySummary.goal_progress.total_goals_count} family goals
+              </span>
+              <button
+                onClick={() => router.push("/goals")}
+                className="text-xs text-primary-600 dark:text-primary-400 font-bold hover:underline"
+              >
+                Configure Goals →
+              </button>
+            </div>
+          </section>
+        </section>
+
+        {/* Family Goals list preview */}
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+              Family Goals
+            </h3>
+            {goals.length > 0 && (
+              <button
+                onClick={() => router.push("/goals")}
+                className="text-sm text-primary-600 dark:text-primary-400 font-semibold hover:underline flex items-center gap-1"
+              >
+                View All <ArrowRight size={16} />
+              </button>
+            )}
+          </div>
+
+          {goals.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {goals.map((goal) => (
+                <div
+                  key={goal.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push("/goals")}
+                >
+                  <GoalCard
+                    goal={goal}
+                    onEdit={() => router.push("/goals")}
+                    onDelete={() => router.push("/goals")}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button
+              onClick={() => router.push("/goals")}
+              className="w-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-neutral-200 dark:border-white/10 rounded-2xl hover:border-primary-500 transition-all group gap-3"
+            >
+              <div className="p-3 bg-neutral-100 dark:bg-white/5 rounded-full group-hover:bg-primary-500/10 transition-colors">
+                <Users className="text-neutral-400 dark:text-neutral-500 group-hover:text-primary-500 h-6 w-6" />
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-neutral-900 dark:text-white">
+                  No Goals Defined
+                </p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  Link your family members' wealth to joint financial goals
+                </p>
+              </div>
+            </button>
+          )}
+        </section>
+      </div>
+    );
+  };
+
   if (loading) {
     return <AppSkeleton />;
+  }
+
+  if (activeProfileId === "all") {
+    return (
+      <>
+        <Toast
+          isVisible={toast.show}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+        />
+        {renderFamilyDashboard()}
+      </>
+    );
   }
 
   if (error) {

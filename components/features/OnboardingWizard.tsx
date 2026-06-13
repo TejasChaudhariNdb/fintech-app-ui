@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   FileText,
@@ -21,6 +21,7 @@ import Input from "../ui/Input";
 import { api } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
+import { useProfile } from "@/context/ProfileContext";
 
 interface OnboardingWizardProps {
   userProfile?: any;
@@ -44,15 +45,35 @@ export default function OnboardingWizard({
   const [error, setError] = useState("");
   const [showInstructions, setShowInstructions] = useState(false); // Toggle instructions
 
+  const { profiles, activeProfileId } = useProfile();
+  const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
+    if (activeProfileId && activeProfileId !== "all") return activeProfileId;
+    return profiles[0]?.id ? String(profiles[0].id) : "";
+  });
+
+  useEffect(() => {
+    if (profiles.length > 0) {
+      if (activeProfileId && activeProfileId !== "all") {
+        setSelectedProfileId(activeProfileId);
+      } else if (!selectedProfileId) {
+        setSelectedProfileId(String(profiles[0].id));
+      }
+    }
+  }, [profiles, activeProfileId]);
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !password) return;
+    if (!selectedProfileId) {
+      setError("Please select a specific profile to import data into.");
+      return;
+    }
 
     setUploading(true);
     setError("");
 
     try {
-      await api.uploadCAS(file, password);
+      await api.uploadCAS(file, password, selectedProfileId);
       
       // Track portfolio creation event
       analytics.track({
@@ -261,6 +282,26 @@ export default function OnboardingWizard({
                   {error}
                 </div>
               )}
+
+              {/* Target Profile Selector */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  Import Into Profile
+                </label>
+                <select
+                  value={selectedProfileId}
+                  onChange={(e) => setSelectedProfileId(e.target.value)}
+                  required
+                  className="w-full bg-neutral-50 dark:bg-black/20 border border-transparent focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition-all dark:text-white"
+                >
+                  <option value="" disabled>Select Target Profile</option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.relation})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <div className="relative">

@@ -1,10 +1,11 @@
-"use strict";
+"use client";
 import { useState, useEffect } from "react";
 import Modal from "../ui/Modal";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { api } from "@/lib/api";
 import { Plus, Trash2 } from "lucide-react";
+import { useProfile } from "@/context/ProfileContext";
 
 interface CreateGoalModalProps {
   isOpen: boolean;
@@ -20,6 +21,11 @@ export default function CreateGoalModal({
   goalToEdit,
 }: CreateGoalModalProps) {
   const [step, setStep] = useState(1);
+  const { profiles, activeProfileId } = useProfile();
+  const [goalType, setGoalType] = useState<"PERSONAL" | "FAMILY">("PERSONAL");
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+  const [prevTargetId, setPrevTargetId] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     name: "",
     target_amount: "",
@@ -33,10 +39,27 @@ export default function CreateGoalModal({
   const [availableStocks, setAvailableStocks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const loadData = async (targetProfileId: string) => {
+    try {
+      const [schemes, equityData] = await Promise.all([
+        api.fetch(`/portfolio/schemes?profile_id=${targetProfileId}`),
+        api.fetch(`/equity/summary?profile_id=${targetProfileId}`),
+      ]);
+      setAvailableSchemes(schemes || []);
+      setAvailableStocks(equityData?.holdings || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Initialize selectedProfileId and goalType when modal opens or goalToEdit changes
   useEffect(() => {
     if (isOpen) {
-      loadData();
       if (goalToEdit) {
+        setGoalType(goalToEdit.goal_type || "PERSONAL");
+        const editProfileId = goalToEdit.profile_id ? String(goalToEdit.profile_id) : "";
+        setSelectedProfileId(editProfileId);
+        
         setFormData({
           name: goalToEdit.name,
           target_amount: goalToEdit.target_amount.toString(),
@@ -53,7 +76,15 @@ export default function CreateGoalModal({
               }))
             : [],
         });
+        setPrevTargetId(goalToEdit.goal_type === "FAMILY" ? "all" : editProfileId);
       } else {
+        const initialType = activeProfileId === "all" ? "FAMILY" : "PERSONAL";
+        setGoalType(initialType);
+        const initialProfileId = activeProfileId === "all" 
+          ? (profiles[0]?.id ? String(profiles[0].id) : "")
+          : activeProfileId;
+        setSelectedProfileId(initialProfileId);
+        
         setFormData({
           name: "",
           target_amount: "",
@@ -62,23 +93,31 @@ export default function CreateGoalModal({
           linked_schemes: [],
           linked_equities: [],
         });
+        setPrevTargetId(initialType === "FAMILY" ? "all" : initialProfileId);
       }
       setStep(1);
     }
-  }, [isOpen, goalToEdit]);
+  }, [isOpen, goalToEdit, activeProfileId, profiles]);
 
-  const loadData = async () => {
-    try {
-      const [schemes, equityData] = await Promise.all([
-        api.getSchemes(),
-        api.getEquitySummary(),
-      ]);
-      setAvailableSchemes(schemes || []);
-      setAvailableStocks(equityData.holdings || []);
-    } catch (err) {
-      console.error(err);
+  // Load schemes/stocks based on goalType and selectedProfileId
+  useEffect(() => {
+    if (isOpen) {
+      const targetId = goalType === "FAMILY" ? "all" : selectedProfileId;
+      if (targetId) {
+        loadData(targetId);
+        
+        // Only clear if the scope actually changed from the previous loaded scope
+        if (prevTargetId && prevTargetId !== targetId) {
+          setFormData((prev) => ({
+            ...prev,
+            linked_schemes: [],
+            linked_equities: [],
+          }));
+        }
+        setPrevTargetId(targetId);
+      }
     }
-  };
+  }, [goalType, selectedProfileId, isOpen]);
 
   const addSchemeLink = () => {
     if (availableSchemes.length === 0) return;
@@ -153,6 +192,8 @@ export default function CreateGoalModal({
         target_amount: parseFloat(formData.target_amount),
         target_year: parseInt(formData.target_year),
         icon: formData.icon,
+        goal_type: goalType,
+        profile_id: goalType === "PERSONAL" ? (selectedProfileId ? Number(selectedProfileId) : null) : null,
         linked_schemes: formData.linked_schemes.map((l) => ({
           scheme_id: Number(l.scheme_id),
           contribution_amount: parseFloat(l.contribution_amount) || 0,
@@ -195,9 +236,63 @@ export default function CreateGoalModal({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Goal Details */}
         <div className="space-y-4">
+          {/* Goal Scope Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                Goal Scope
+              </label>
+              <div className="flex rounded-xl bg-neutral-100 dark:bg-white/5 p-1">
+                <button
+                  type="button"
+                  onClick={() => setGoalType("PERSONAL")}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+                    goalType === "PERSONAL"
+                      ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                  }`}
+                >
+                  Personal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGoalType("FAMILY")}
+                  className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+                    goalType === "FAMILY"
+                      ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                  }`}
+                >
+                  Family
+                </button>
+              </div>
+            </div>
+
+            {/* Profile Dropdown (Only for Personal Scope) */}
+            {goalType === "PERSONAL" && (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+                  Profile Owner
+                </label>
+                <select
+                  value={selectedProfileId}
+                  onChange={(e) => setSelectedProfileId(e.target.value)}
+                  className="w-full bg-neutral-50 dark:bg-white/5 border border-transparent focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded-xl px-3 py-2 text-sm font-semibold outline-none transition-all dark:text-white"
+                >
+                  <option value="" disabled>Select Profile</option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.relation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-2 text-neutral-700 dark:text-neutral-300">
-              Goal Type
+              Goal Icon
             </label>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {ICONS.map((icon) => (

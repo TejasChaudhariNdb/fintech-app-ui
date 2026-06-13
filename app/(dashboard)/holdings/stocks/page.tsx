@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
+import { useProfile } from "@/context/ProfileContext";
 
 import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
@@ -33,8 +34,39 @@ import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 import StockJourneyChart from "@/components/features/StockJourneyChart";
 
 export default function StocksPage() {
+  const { profiles, activeProfileId } = useProfile();
   const [isLoading, setIsLoading] = useState(true);
   const [portfolioXirr, setPortfolioXirr] = useState(0);
+
+  const getRelationForProfile = (profileId: number) => {
+    const found = profiles.find((p) => p.id === profileId);
+    return found ? found.relation : "other";
+  };
+
+  const getProfileBadgeColor = (relation: string) => {
+    const rel = relation.toUpperCase();
+    if (rel === "SELF") return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+    if (rel === "MOTHER") return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
+    if (rel === "FATHER") return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
+    if (rel === "SPOUSE") return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+    if (rel === "CHILD") return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20";
+    return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
+  };
+
+  const [targetProfileId, setTargetProfileId] = useState<string>(() => {
+    if (activeProfileId && activeProfileId !== "all") return activeProfileId;
+    return profiles[0]?.id ? String(profiles[0].id) : "";
+  });
+
+  useEffect(() => {
+    if (profiles.length > 0) {
+      if (activeProfileId && activeProfileId !== "all") {
+        setTargetProfileId(activeProfileId);
+      } else if (!targetProfileId) {
+        setTargetProfileId(String(profiles[0].id));
+      }
+    }
+  }, [profiles, activeProfileId]);
 
   // Toast State
   const [toast, setToast] = useState({
@@ -238,6 +270,10 @@ export default function StocksPage() {
         showToast("Please select a valid stock from search", "error");
         return;
       }
+      if (!targetProfileId) {
+        showToast("Please select a target profile", "error");
+        return;
+      }
       const isFirst = manualStocks.length === 0;
       await api.addStockTransaction({
         symbol: stockForm.symbol,
@@ -245,7 +281,7 @@ export default function StocksPage() {
         price: Number(stockForm.price),
         date: stockForm.date,
         transaction_type: stockForm.transaction_type,
-      });
+      }, targetProfileId);
 
       if (isFirst) {
         analytics.track({
@@ -287,10 +323,14 @@ export default function StocksPage() {
       showToast("Please select a file", "error");
       return;
     }
+    if (!targetProfileId) {
+      showToast("Please select a target profile", "error");
+      return;
+    }
     setIsImporting(true);
     try {
       const isFirst = manualStocks.length === 0;
-      const res = await api.importTrades(importFile, broker);
+      const res = await api.importTrades(importFile, broker, targetProfileId);
       
       if (isFirst && res.added > 0) {
         analytics.track({
@@ -563,6 +603,28 @@ export default function StocksPage() {
                     ? stock.company_name
                     : "Equity Share"}
                 </p>
+                {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {stock.profile_breakdown.map((pb: any) => {
+                      const relation = getRelationForProfile(pb.profile_id);
+                      const formattedValue = pb.value >= 100000 
+                        ? `₹${(pb.value / 100000).toFixed(2)}L`
+                        : `₹${pb.value.toLocaleString("en-IN")}`;
+                      return (
+                        <span
+                          key={pb.profile_id}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
+                            relation
+                          )}`}
+                        >
+                          <span className="truncate max-w-[80px]">{pb.profile_name}</span>
+                          <span className="opacity-60">•</span>
+                          <span>{formattedValue}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-start gap-2 shrink-0">
@@ -785,6 +847,26 @@ export default function StocksPage() {
             }`}>
             Import File
           </button>
+        </div>
+
+        {/* Target Profile Selector */}
+        <div className="mb-6">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">
+            Target Profile
+          </label>
+          <select
+            value={targetProfileId}
+            onChange={(e) => setTargetProfileId(e.target.value)}
+            required
+            className="w-full bg-neutral-50 dark:bg-black/20 border border-transparent focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-white/10 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition-all dark:text-white"
+          >
+            <option value="" disabled>Select Profile</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.relation})
+              </option>
+            ))}
+          </select>
         </div>
 
         {stockModalTab === "MANUAL" ? (

@@ -32,6 +32,8 @@ export const api = {
         ? localStorage.getItem("access_token")
         : null;
 
+    const activeProfileId = typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null;
+
     try {
       const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
 
@@ -56,7 +58,38 @@ export const api = {
         }
       }
 
-      const res = await fetch(`${API_URL}${endpoint}`, {
+      let finalEndpoint = endpoint;
+      
+      if (activeProfileId && !endpoint.includes("profile_id=")) {
+        const scopedPrefixes = [
+          "/equity/net-worth",
+          "/equity/summary",
+          "/equity/journey",
+          "/equity/transactions",
+          "/equity/transaction",
+          "/portfolio/summary",
+          "/portfolio/schemes",
+          "/portfolio/amc-allocation",
+          "/portfolio/scheme-allocation",
+          "/portfolio/transactions",
+          "/portfolio/xirr",
+          "/portfolio/timeseries",
+          "/portfolio/mf-journey",
+          "/goals/",
+          "/cas/upload",
+          "/cas/upload-json",
+          "/equity/import",
+          "/equity/holding"
+        ];
+        
+        const pathPart = endpoint.split("?")[0];
+        if (scopedPrefixes.some(prefix => pathPart === prefix || pathPart.startsWith(prefix + "/"))) {
+          const separator = endpoint.includes("?") ? "&" : "?";
+          finalEndpoint = `${endpoint}${separator}profile_id=${activeProfileId}`;
+        }
+      }
+
+      const res = await fetch(`${API_URL}${finalEndpoint}`, {
         ...options,
         cache: options.cache || "no-store",
         headers: {
@@ -76,7 +109,8 @@ export const api = {
       // Cache successful response if key provided
       if (options.cacheKey && typeof window !== "undefined") {
         const userEmail = localStorage.getItem("user_email") || "anonymous";
-        const namespacedKey = `${userEmail}:${options.cacheKey}`;
+        const cacheProfileId = activeProfileId || "default";
+        const namespacedKey = `${userEmail}:${options.cacheKey}:${cacheProfileId}`;
         localStorage.setItem(
           namespacedKey,
           JSON.stringify({ timestamp: Date.now(), data }),
@@ -90,7 +124,8 @@ export const api = {
       // Offline Fallback: Try to return cached data
       if (options.cacheKey && typeof window !== "undefined") {
         const userEmail = localStorage.getItem("user_email") || "anonymous";
-        const namespacedKey = `${userEmail}:${options.cacheKey}`;
+        const cacheProfileId = activeProfileId || "default";
+        const namespacedKey = `${userEmail}:${options.cacheKey}:${cacheProfileId}`;
         const cached = localStorage.getItem(namespacedKey);
         if (cached) {
           console.log(`[Offline] Serving cached data for ${namespacedKey}`);
@@ -158,14 +193,17 @@ export const api = {
   // Net Worth & Equity
   getNetWorth: () => api.fetch("/equity/net-worth", { cacheKey: "net-worth" }),
 
-  addStockTransaction: (data: {
-    symbol: string;
-    quantity: number;
-    price: number;
-    date: string;
-    transaction_type: "BUY" | "SELL";
-  }) =>
-    api.fetch("/equity/transaction", {
+  addStockTransaction: (
+    data: {
+      symbol: string;
+      quantity: number;
+      price: number;
+      date: string;
+      transaction_type: "BUY" | "SELL";
+    },
+    profileId?: string
+  ) =>
+    api.fetch(`/equity/transaction${profileId ? `?profile_id=${profileId}` : ""}`, {
       method: "POST",
       body: JSON.stringify(data),
     }),
@@ -306,12 +344,15 @@ export const api = {
     }),
 
   // CAS Upload
-  uploadCAS: async (file: File, password: string) => {
+  uploadCAS: async (file: File, password: string, profileId?: string) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("password", password);
     const token = localStorage.getItem("access_token");
-    const r = await fetch(`${API_URL}/cas/upload`, {
+    const url = profileId 
+      ? `${API_URL}/cas/upload?profile_id=${profileId}` 
+      : `${API_URL}/cas/upload`;
+    const r = await fetch(url, {
       method: "POST",
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -346,12 +387,15 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  importTrades: async (file: File, broker: string) => {
+  importTrades: async (file: File, broker: string, profileId?: string) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("broker", broker);
     const token = localStorage.getItem("access_token");
-    const r = await fetch(`${API_URL}/equity/import`, {
+    const url = profileId 
+      ? `${API_URL}/equity/import?profile_id=${profileId}` 
+      : `${API_URL}/equity/import`;
+    const r = await fetch(url, {
       method: "POST",
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -392,10 +436,48 @@ export const api = {
   getSessionMessages: (sessionId: number) =>
     api.fetch(`/ai/sessions/${sessionId}/messages`),
 
+  // Profiles CRUD
+  getProfiles: () => api.fetch("/profiles/"),
+  createProfile: (data: { name: string; profile_type: string; relation: string; pan?: string }) =>
+    api.fetch("/profiles/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateProfile: (
+    id: number,
+    data: { name?: string; profile_type?: string; relation?: string; pan?: string }
+  ) =>
+    api.fetch(`/profiles/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  archiveProfile: (id: number) =>
+    api.fetch(`/profiles/${id}/archive`, {
+      method: "POST",
+    }),
+  setDefaultProfile: (id: number) =>
+    api.fetch(`/profiles/${id}/default`, {
+      method: "POST",
+    }),
+  getFamilySummary: () =>
+    api.fetch("/profiles/family/summary", { cacheKey: "family-summary" }),
+
   // Utilities
   clearCache: (keys: string[]) => {
     if (typeof window !== "undefined") {
-      keys.forEach((key) => localStorage.removeItem(key));
+      const userEmail = localStorage.getItem("user_email") || "anonymous";
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const lsKey = localStorage.key(i);
+        if (lsKey) {
+          const parts = lsKey.split(":");
+          // Key format is: userEmail:cacheKey:profileId or userEmail:cacheKey
+          if (parts[0] === userEmail && keys.includes(parts[1])) {
+            keysToRemove.push(lsKey);
+          }
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
     }
   },
 
@@ -413,6 +495,7 @@ export const api = {
       "goals",
       "user-profile",
       "prediction-stats",
+      "family-summary",
     ]);
   },
 

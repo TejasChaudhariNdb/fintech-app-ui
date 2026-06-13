@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { analytics } from "@/lib/analytics";
+import { ProfileProvider } from "@/context/ProfileContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -16,9 +17,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-        {children}
-      </ThemeProvider>
+      <ProfileProvider>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          {children}
+        </ThemeProvider>
+      </ProfileProvider>
     </GoogleOAuthProvider>
   );
 }

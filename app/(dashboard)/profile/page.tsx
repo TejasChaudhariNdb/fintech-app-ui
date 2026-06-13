@@ -30,10 +30,13 @@ import {
   Copy,
   Gift,
   CheckCircle,
+  Users,
+  Plus,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
 import useFcmToken from "@/hooks/useFcmToken";
+import { useProfile } from "@/context/ProfileContext";
 
 function SectionCard({
   title,
@@ -163,12 +166,22 @@ export default function ProfilePage() {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     account: true,
+    familyProfiles: true,
     ai: true,
     security: true,
     app: true,
     danger: true,
   });
   const { permission, requestPermission } = useFcmToken();
+
+  // Family Profile State
+  const { profiles, refreshProfiles, setDefault } = useProfile();
+  const [showAddFamilyProfileModal, setShowAddFamilyProfileModal] = useState(false);
+  const [familyRelationChoice, setFamilyRelationChoice] = useState("");
+  const [newFamilyName, setNewFamilyName] = useState("");
+  const [newFamilyRelation, setNewFamilyRelation] = useState("");
+  const [newFamilyPan, setNewFamilyPan] = useState("");
+  const [isSavingFamilyProfile, setIsSavingFamilyProfile] = useState(false);
 
   // Profile State
   const [userProfile, setUserProfile] = useState({
@@ -474,9 +487,114 @@ export default function ProfilePage() {
   };
 
   const toggleSection = (
-    key: "account" | "ai" | "security" | "app" | "danger",
+    key: "account" | "familyProfiles" | "ai" | "security" | "app" | "danger",
   ) => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const getProfileColorClass = (relation: string) => {
+    const rel = relation.toUpperCase();
+    if (rel === "SELF") return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+    if (rel === "MOTHER") return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+    if (rel === "FATHER") return "bg-green-500/10 text-green-500 border-green-500/20";
+    if (rel === "SPOUSE") return "bg-orange-500/10 text-orange-500 border-orange-500/20";
+    if (rel === "CHILD") return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+    return "bg-indigo-500/10 text-indigo-500 border-indigo-500/20";
+  };
+
+  const getProfileBadgeColor = (relation: string) => {
+    const rel = relation.toUpperCase();
+    if (rel === "SELF") return "bg-blue-500";
+    if (rel === "MOTHER") return "bg-purple-500";
+    if (rel === "FATHER") return "bg-green-500";
+    if (rel === "SPOUSE") return "bg-orange-500";
+    if (rel === "CHILD") return "bg-yellow-500";
+    return "bg-indigo-500";
+  };
+
+  const handleRelationChoice = (choice: string) => {
+    setFamilyRelationChoice(choice);
+    if (choice === "Me") {
+      setNewFamilyRelation("Self");
+      setNewFamilyName("Self");
+    } else if (choice === "Other") {
+      setNewFamilyRelation("");
+      setNewFamilyName("");
+    } else {
+      setNewFamilyRelation(choice);
+      setNewFamilyName(choice);
+    }
+  };
+
+  const handleCreateFamilyProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFamilyName.trim() || !newFamilyRelation.trim()) {
+      showToast("Name and Relation are required", "error");
+      return;
+    }
+    setIsSavingFamilyProfile(true);
+    try {
+      await api.createProfile({
+        name: newFamilyName.trim(),
+        relation: newFamilyRelation.trim(),
+        profile_type: "individual",
+        pan: newFamilyPan.trim() || undefined,
+      });
+      showToast("Profile created successfully", "success");
+      setShowAddFamilyProfileModal(false);
+      setNewFamilyName("");
+      setNewFamilyRelation("");
+      setNewFamilyPan("");
+      setFamilyRelationChoice("");
+      await refreshProfiles();
+    } catch (err: any) {
+      let msg = err.message || "Failed to create profile";
+      try {
+        if (msg.startsWith("{")) {
+          const parsed = JSON.parse(msg);
+          msg = parsed.detail || msg;
+        }
+      } catch {}
+      showToast(msg, "error");
+    } finally {
+      setIsSavingFamilyProfile(false);
+    }
+  };
+
+  const handleArchiveProfile = async (id: number) => {
+    if (!confirm("Are you sure you want to archive this profile? This will hide it from the switcher. This action cannot be undone if the profile has active holdings.")) return;
+    try {
+      showToast("Archiving profile...", "loading");
+      await api.archiveProfile(id);
+      showToast("Profile archived successfully", "success");
+      await refreshProfiles();
+    } catch (err: any) {
+      let msg = err.message || "Failed to archive profile";
+      try {
+        if (msg.startsWith("{")) {
+          const parsed = JSON.parse(msg);
+          msg = parsed.detail || msg;
+        }
+      } catch {}
+      showToast(msg, "error");
+    }
+  };
+
+  const handleSetDefaultProfile = async (id: number) => {
+    try {
+      showToast("Setting default profile...", "loading");
+      await setDefault(id);
+      showToast("Default profile updated", "success");
+    } catch (err: any) {
+      let msg = err.message || "Failed to set default profile";
+      try {
+        if (msg.startsWith("{")) {
+          const parsed = JSON.parse(msg);
+          msg = parsed.detail || msg;
+        }
+      } catch {}
+      showToast(msg, "error");
+    }
   };
 
   const freeChatsLeft = Math.max(0, 15 - userProfile.ai_chats_used);
@@ -614,6 +732,99 @@ export default function ProfilePage() {
               </div>
               <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
             </button>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Family Profiles"
+          subtitle="Manage investment profiles for family members"
+          summary={`${profiles.length} active profile(s)`}
+          icon={<Users size={18} />}
+          isOpen={expandedSections.familyProfiles}
+          onToggle={() => toggleSection("familyProfiles")}
+        >
+          <div className="space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-neutral-100 dark:border-white/5">
+              <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                Active Profiles
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFamilyRelationChoice("");
+                  setNewFamilyName("");
+                  setNewFamilyRelation("");
+                  setNewFamilyPan("");
+                  setShowAddFamilyProfileModal(true);
+                }}
+                className="flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+              >
+                <Plus size={14} className="stroke-[2.5]" /> Add Profile
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {profiles.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm ${getProfileBadgeColor(
+                        p.relation
+                      )}`}
+                    >
+                      {p.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-neutral-900 dark:text-white">
+                          {p.name}
+                        </span>
+                        <span
+                          className={`text-[9px] px-2 py-0.5 rounded-md font-bold uppercase border ${getProfileColorClass(
+                            p.relation
+                          )}`}
+                        >
+                          {p.relation}
+                        </span>
+                        {p.is_default && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold border border-emerald-500/20">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                        PAN: <span className="font-mono">{p.pan || "Not Provided"}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 sm:self-center self-end">
+                    {!p.is_default && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefaultProfile(p.id)}
+                        className="text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-white/15 dark:hover:bg-white/25 text-neutral-700 dark:text-neutral-300 transition-colors"
+                      >
+                        Make Default
+                      </button>
+                    )}
+                    {!p.is_default && (
+                      <button
+                        type="button"
+                        onClick={() => handleArchiveProfile(p.id)}
+                        className="text-xs font-semibold p-1.5 rounded-xl border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                        title="Archive Profile"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </SectionCard>
 
@@ -1254,6 +1465,147 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
+      </Modal>
+
+      {/* Add Family Profile Modal */}
+      <Modal
+        isOpen={showAddFamilyProfileModal}
+        onClose={() => setShowAddFamilyProfileModal(false)}
+        title="Add Family Profile"
+      >
+        <form onSubmit={handleCreateFamilyProfile} className="space-y-5">
+          {!familyRelationChoice ? (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                Who is this profile for?
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { label: "Me", relation: "Self", color: "from-blue-500 to-indigo-500" },
+                  { label: "Mother", relation: "Mother", color: "from-purple-500 to-pink-500" },
+                  { label: "Father", relation: "Father", color: "from-emerald-500 to-teal-500" },
+                  { label: "Spouse", relation: "Spouse", color: "from-orange-500 to-amber-500" },
+                  { label: "Child", relation: "Child", color: "from-yellow-500 to-orange-400" },
+                  { label: "Other", relation: "Other", color: "from-slate-500 to-neutral-600" },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => handleRelationChoice(option.label)}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl border border-neutral-200 dark:border-white/10 hover:border-primary-500 dark:hover:border-primary-500 bg-neutral-50 dark:bg-white/5 transition-all text-center group active:scale-95 duration-150"
+                  >
+                    <div className={`h-8 w-8 rounded-full bg-gradient-to-br ${option.color} flex items-center justify-center text-white font-bold text-xs shadow-md mb-2 group-hover:scale-110 transition-transform`}>
+                      {option.label.charAt(0)}
+                    </div>
+                    <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                      {option.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-white/5">
+                <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                  Profile Details for {familyRelationChoice}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFamilyRelationChoice("")}
+                  className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:underline text-left"
+                >
+                  Change relation
+                </button>
+              </div>
+
+              {/* Profile Name */}
+              <div>
+                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                  Profile Name
+                </label>
+                <div className="relative">
+                  <User
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={newFamilyName}
+                    onChange={(e) => setNewFamilyName(e.target.value)}
+                    placeholder="E.g. Mother's Portfolio, or Father's Name"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Relation */}
+              <div>
+                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                  Relation
+                </label>
+                <div className="relative">
+                  <User
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={newFamilyRelation}
+                    disabled={familyRelationChoice !== "Other" && familyRelationChoice !== "Me"}
+                    onChange={(e) => setNewFamilyRelation(e.target.value)}
+                    placeholder="E.g. Mother, Father, Joint, etc."
+                    className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white disabled:opacity-70 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {/* PAN */}
+              <div>
+                <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1 block">
+                  PAN Card (Optional)
+                </label>
+                <div className="relative">
+                  <CreditCard
+                    size={16}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+                  />
+                  <input
+                    type="text"
+                    value={newFamilyPan}
+                    onChange={(e) => setNewFamilyPan(e.target.value.toUpperCase())}
+                    placeholder="ABCDE1234F"
+                    className="w-full pl-9 pr-4 py-3 rounded-xl text-sm transition-all outline-none uppercase bg-neutral-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-black/20 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 text-neutral-900 dark:text-white"
+                  />
+                </div>
+                <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">
+                  Optional, used to partition and map portfolios during CAS/CSV import matches.
+                </p>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setFamilyRelationChoice("")}
+                  className="flex-1"
+                  variant="secondary"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  isLoading={isSavingFamilyProfile}
+                  className="flex-1"
+                  variant="primary"
+                >
+                  Create Profile
+                </Button>
+              </div>
+            </div>
+          )}
+        </form>
       </Modal>
     </div>
   );

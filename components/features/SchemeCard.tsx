@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import PrivacyMask from "../ui/PrivacyMask";
+import { useProfile } from "@/context/ProfileContext";
 
 interface SchemeCardProps {
   schemeId: number;
@@ -34,6 +35,12 @@ interface SchemeCardProps {
   onDelete?: () => void;
   onBuy?: () => void;
   onSell?: () => void;
+  profileBreakdown?: Array<{
+    profile_id: number;
+    profile_name: string;
+    units: number;
+    current_value: number;
+  }>;
 }
 
 export default function SchemeCard({
@@ -59,9 +66,26 @@ export default function SchemeCard({
   onDelete,
   onBuy,
   onSell,
+  profileBreakdown,
 }: SchemeCardProps) {
+  const { profiles } = useProfile();
   const isPositive = returnPct >= 0;
   const isDayPositive = dayChange >= 0;
+
+  const getRelationForProfile = (profileId: number) => {
+    const found = profiles.find((p) => p.id === profileId);
+    return found ? found.relation : "other";
+  };
+
+  const getProfileBadgeColor = (relation: string) => {
+    const rel = relation.toUpperCase();
+    if (rel === "SELF") return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+    if (rel === "MOTHER") return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
+    if (rel === "FATHER") return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
+    if (rel === "SPOUSE") return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+    if (rel === "CHILD") return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20";
+    return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
+  };
 
   return (
     <div
@@ -109,6 +133,28 @@ export default function SchemeCard({
             <p className="mt-1 text-[13px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
               {amc}
             </p>
+            {profileBreakdown && profileBreakdown.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                {profileBreakdown.map((pb) => {
+                  const relation = getRelationForProfile(pb.profile_id);
+                  const formattedValue = pb.current_value >= 100000 
+                    ? `₹${(pb.current_value / 100000).toFixed(2)}L`
+                    : `₹${pb.current_value.toLocaleString("en-IN")}`;
+                  return (
+                    <span
+                      key={pb.profile_id}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
+                        relation
+                      )}`}
+                    >
+                      <span className="truncate max-w-[80px]">{pb.profile_name}</span>
+                      <span className="opacity-60">•</span>
+                      <span>{formattedValue}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Right: Value & Returns */}
