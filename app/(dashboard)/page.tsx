@@ -9,6 +9,7 @@ import { useProfile } from "@/context/ProfileContext";
 
 import NetWorthCard from "@/components/features/NetWorthCard";
 import PortfolioSummary from "@/components/features/PortfolioSummary";
+import FamilyPortfolioSummary from "@/components/features/FamilyPortfolioSummary";
 import PerformanceChart from "@/components/features/PerformanceChart";
 import GoalCard from "@/components/features/GoalCard";
 import Button from "@/components/ui/Button";
@@ -387,14 +388,6 @@ export default function HomePage() {
       );
     }
 
-    const getProfileColorClasses = (color: string) => {
-      if (color === "blue") return { text: "text-blue-500", bg: "bg-blue-500/10", border: "border-blue-500/20", indicator: "bg-blue-500" };
-      if (color === "purple") return { text: "text-purple-500", bg: "bg-purple-500/10", border: "border-purple-500/20", indicator: "bg-purple-500" };
-      if (color === "green") return { text: "text-green-500", bg: "bg-green-500/10", border: "border-green-500/20", indicator: "bg-green-500" };
-      if (color === "orange") return { text: "text-orange-500", bg: "bg-orange-500/10", border: "border-orange-500/20", indicator: "bg-orange-500" };
-      if (color === "yellow") return { text: "text-yellow-500", bg: "bg-yellow-500/10", border: "border-yellow-500/20", indicator: "bg-yellow-500" };
-      return { text: "text-indigo-500", bg: "bg-indigo-500/10", border: "border-indigo-500/20", indicator: "bg-indigo-500" };
-    };
 
     return (
       <div className="px-4 pt-8 pb-32 animate-fade-in space-y-6">
@@ -430,10 +423,10 @@ export default function HomePage() {
           onAddStock={() => router.push("/holdings/stocks")}
         />
 
-        {/* Portfolio Gain / Loss Summary — mirrors individual dashboard */}
+        {/* Family Portfolio Summary — per-profile breakdown */}
         {summary && summary.invested > 0 && (
           <section>
-            <PortfolioSummary
+            <FamilyPortfolioSummary
               invested={summary.invested || 0}
               current={summary.current || 0}
               profit={summary.profit || 0}
@@ -444,6 +437,7 @@ export default function HomePage() {
               stockProfit={summary.stock_profit || 0}
               mfInvested={summary.mf_invested || 0}
               stockInvested={summary.stock_invested || 0}
+              profileBreakdown={familySummary?.profile_breakdown || []}
             />
           </section>
         )}
@@ -460,70 +454,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Profile Breakdown (The "Wow" Section) */}
-        <section className="glass-card rounded-2xl border border-neutral-200 dark:border-white/5 bg-white/70 dark:bg-[#151A23]/70 backdrop-blur-xl p-6 shadow-sm">
-          <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-5">
-            Profile Contributions
-          </h3>
-          
-          <div className="space-y-4">
-            {familySummary.profile_breakdown.map((p: any) => {
-              const colors = getProfileColorClasses(p.color);
-              const percentage = familySummary.net_worth > 0 
-                ? Math.round((p.total_value / familySummary.net_worth) * 100)
-                : 0;
-
-              return (
-                <div key={p.id} className="p-4 rounded-xl border border-neutral-200/50 dark:border-white/5 bg-neutral-50/50 dark:bg-white/2 hover:border-neutral-300 dark:hover:border-white/10 transition-all">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-2.5 h-2.5 rounded-full ${colors.indicator}`} />
-                      <span className="font-semibold text-neutral-900 dark:text-white text-sm sm:text-base">
-                        {p.name}
-                      </span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase border ${colors.text} ${colors.bg} ${colors.border}`}>
-                        {p.relation}
-                      </span>
-                      {p.is_default && (
-                        <span className="text-[9px] text-neutral-400 dark:text-neutral-500 font-medium">
-                          (Default)
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold text-neutral-900 dark:text-white text-sm sm:text-base">
-                        ₹{p.total_value.toLocaleString("en-IN")}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-2 font-semibold">
-                        {percentage}%
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full bg-neutral-200 dark:bg-white/5 h-1.5 rounded-full mb-3 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${colors.indicator}`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-
-                  {/* Allocation Split */}
-                  <div className="flex items-center gap-6 text-xs text-neutral-500 dark:text-neutral-400">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      Mutual Funds: <strong>₹{p.mutual_fund_value.toLocaleString("en-IN")}</strong>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      Stocks: <strong>₹{p.stock_value.toLocaleString("en-IN")}</strong>
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
         {/* Global Asset Allocation */}
         <section className="grid gap-6 md:grid-cols-2">
