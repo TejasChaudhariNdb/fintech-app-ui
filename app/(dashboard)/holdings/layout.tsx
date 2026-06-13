@@ -27,7 +27,7 @@ export default function HoldingsLayout({
       </div>
 
       {/* Tab Switcher */}
-      <div className="sticky top-0 z-20 mb-6 border-b border-neutral-200/70 dark:border-white/5 bg-neutral-50/95 dark:bg-[#0B0E14]/90 backdrop-blur-xl">
+      <div className="sticky top-16 z-20 mb-6 border-b border-neutral-200/70 dark:border-white/5 bg-neutral-50/95 dark:bg-[#0B0E14]/90 backdrop-blur-xl">
         <div className="px-4 py-3">
           <div className="bg-neutral-100 dark:bg-white/5 p-1 rounded-xl flex gap-1">
             <button

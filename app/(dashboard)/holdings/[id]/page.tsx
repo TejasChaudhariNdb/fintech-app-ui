@@ -154,7 +154,7 @@ export default function SchemeDetailPage({
   return (
     <div className="pb-20 min-h-screen bg-neutral-50 dark:bg-[#0B0E14] animate-fade-in text-neutral-900 dark:text-white transition-colors">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5">
+      <div className="sticky top-16 z-20 bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5">
         <div className="px-4 py-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <button

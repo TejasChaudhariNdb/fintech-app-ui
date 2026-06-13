@@ -46,7 +46,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         const fallbackId = activeProfiles[0]?.id ? String(activeProfiles[0].id) : "all";
         setActiveProfileId(fallbackId);
         localStorage.setItem("active_profile_id", fallbackId);
-      } else if (storedActiveId && (storedActiveId === "all" || activeProfiles.some((p) => String(p.id) === storedActiveId))) {
+      } else if (storedActiveId && (storedActiveId === "all" || activeProfiles.some((p: Profile) => String(p.id) === storedActiveId))) {
         setActiveProfileId(storedActiveId);
       } else {
         // Fallback to "all" (All Family) as the hero context when they have > 1 profile

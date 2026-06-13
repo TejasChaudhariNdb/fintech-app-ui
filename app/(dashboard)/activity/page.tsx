@@ -267,7 +267,7 @@ export default function ActivityPage() {
       />
 
       {/* Header */}
-      <div className="bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5 p-4 sticky top-0 z-20 transition-colors flex justify-between items-center">
+      <div className="bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5 p-4 sticky top-16 z-20 transition-colors flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Transactions</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
