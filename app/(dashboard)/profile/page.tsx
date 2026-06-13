@@ -32,6 +32,8 @@ import {
   CheckCircle,
   Users,
   Plus,
+  AlertTriangle,
+  ExternalLink,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -192,7 +194,7 @@ export default function ProfilePage() {
   const { permission, requestPermission } = useFcmToken();
 
   // Family Profile State
-  const { profiles, refreshProfiles, setDefault, activeProfileId } = useProfile();
+  const { profiles, refreshProfiles, setDefault, activeProfileId, changeActiveProfile } = useProfile();
   const [showAddFamilyProfileModal, setShowAddFamilyProfileModal] = useState(false);
   const [familyRelationChoice, setFamilyRelationChoice] = useState("");
   const [newFamilyName, setNewFamilyName] = useState("");
@@ -200,6 +202,11 @@ export default function ProfilePage() {
   const [newFamilyPan, setNewFamilyPan] = useState("");
   const [newFamilyProfileType, setNewFamilyProfileType] = useState("INDIVIDUAL");
   const [isSavingFamilyProfile, setIsSavingFamilyProfile] = useState(false);
+
+  // Archive Modal State
+  const [profileToArchive, setProfileToArchive] = useState<any>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [isArchivingInProgress, setIsArchivingInProgress] = useState(false);
 
   // Profile State
   const [userProfile, setUserProfile] = useState({
@@ -250,6 +257,7 @@ export default function ProfilePage() {
     setNotificationsEnabled(allowed && !optedOut);
 
     loadUserProfile();
+    refreshProfiles();
 
     // PWA Install Prompt Listener
     if (typeof window !== "undefined") {
@@ -575,16 +583,20 @@ export default function ProfilePage() {
     }
   };
 
-  const handleArchiveProfile = async (id: number) => {
-    if (!confirm("Are you sure you want to archive this profile? This will hide it from the switcher. This action cannot be undone if the profile has active holdings.")) return;
+  const handleConfirmArchive = async (id: number) => {
+    setIsArchivingInProgress(true);
     try {
-      showToast("Archiving profile...", "loading");
+      showToast("Deleting profile...", "loading");
       await api.archiveProfile(id);
-      showToast("Profile archived successfully", "success");
+      showToast("Profile deleted successfully", "success");
+      setShowArchiveModal(false);
+      setProfileToArchive(null);
       await refreshProfiles();
     } catch (err: any) {
-      const msg = cleanErrorMessage(err, "Failed to archive profile");
+      const msg = cleanErrorMessage(err, "Failed to delete profile");
       showToast(msg, "error");
+    } finally {
+      setIsArchivingInProgress(false);
     }
   };
 
@@ -833,12 +845,7 @@ export default function ProfilePage() {
                             {p.goal_count} Goal{p.goal_count > 1 ? "s" : ""}
                           </span>
                         )}
-                        {p.portfolio_count === 0 && p.holding_count === 0 && p.goal_count === 0 && (
-                          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Ready to archive
-                          </span>
-                        )}
+
                       </div>
                     </div>
                   </div>
@@ -856,7 +863,10 @@ export default function ProfilePage() {
                     {!p.is_default && (
                       <button
                         type="button"
-                        onClick={() => handleArchiveProfile(p.id)}
+                        onClick={() => {
+                          setProfileToArchive(p);
+                          setShowArchiveModal(true);
+                        }}
                         className="text-xs font-semibold p-1.5 rounded-xl border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                         title="Archive Profile"
                       >
@@ -1679,6 +1689,238 @@ export default function ProfilePage() {
             </div>
           )}
         </form>
+      </Modal>
+
+      {/* Delete Profile Checklist Modal */}
+      <Modal
+        isOpen={showArchiveModal && !!profileToArchive}
+        onClose={() => {
+          if (!isArchivingInProgress) {
+            setShowArchiveModal(false);
+            setProfileToArchive(null);
+          }
+        }}
+        title={`Delete Profile: ${profileToArchive?.name || ""}`}
+      >
+        <div className="space-y-5">
+          {/* Header Banner */}
+          <div className="bg-amber-50 dark:bg-amber-500/10 p-4 rounded-xl border border-amber-200/60 dark:border-amber-500/20 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-3">
+            <AlertTriangle className="shrink-0 mt-0.5" size={18} />
+            <div>
+              <p className="font-semibold">Safety Constraints Check</p>
+              <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400 leading-normal">
+                To prevent orphan records and data loss, profiles with active mutual funds, stocks, or financial goals cannot be deleted. Please resolve the issues shown below first.
+              </p>
+            </div>
+          </div>
+
+          {/* Checklist */}
+          <div className="space-y-3">
+            {/* Mutual Funds Check */}
+            {(() => {
+              const activeMfs = profileToArchive?.portfolio_count || 0;
+              const isMfClean = activeMfs === 0;
+              return (
+                <div className={`p-4 rounded-xl border flex items-start gap-3 transition-colors ${isMfClean ? "bg-emerald-500/5 border-emerald-500/25 dark:bg-emerald-500/5 dark:border-emerald-500/20" : "bg-red-500/5 border-red-500/25 dark:bg-red-500/5 dark:border-red-500/20"}`}>
+                  <div className="mt-0.5">
+                    {isMfClean ? (
+                      <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs select-none">
+                        ✓
+                      </div>
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-red-500 text-red-500 flex items-center justify-center font-bold text-xs select-none bg-red-500/10 dark:bg-red-500/20">
+                        ✗
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Mutual Fund Portfolios
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                      {isMfClean ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">All cleared. No active portfolios.</span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          Found {activeMfs} active portfolio{activeMfs > 1 ? "s" : ""}. Deletion is blocked until they are deleted or re-assigned.
+                        </span>
+                      )}
+                    </p>
+                    {!isMfClean && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          changeActiveProfile(String(profileToArchive.id));
+                          router.push("/holdings/mutual-funds");
+                          setShowArchiveModal(false);
+                        }}
+                        className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-500/10 px-3 py-1.5 rounded-lg border border-primary-100 dark:border-primary-500/20"
+                      >
+                        Unlink/Delete Mutual Funds <ExternalLink size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Stocks Check */}
+            {(() => {
+              const activeStocks = profileToArchive?.holding_count || 0;
+              const isStocksClean = activeStocks === 0;
+              return (
+                <div className={`p-4 rounded-xl border flex items-start gap-3 transition-colors ${isStocksClean ? "bg-emerald-500/5 border-emerald-500/25 dark:bg-emerald-500/5 dark:border-emerald-500/20" : "bg-red-500/5 border-red-500/25 dark:bg-red-500/5 dark:border-red-500/20"}`}>
+                  <div className="mt-0.5">
+                    {isStocksClean ? (
+                      <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs select-none">
+                        ✓
+                      </div>
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-red-500 text-red-500 flex items-center justify-center font-bold text-xs select-none bg-red-500/10 dark:bg-red-500/20">
+                        ✗
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Stock Holdings
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                      {isStocksClean ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">All cleared. No active stock holdings.</span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          Found {activeStocks} active stock holding{activeStocks > 1 ? "s" : ""}. Deletion is blocked until they are deleted or sold.
+                        </span>
+                      )}
+                    </p>
+                    {!isStocksClean && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          changeActiveProfile(String(profileToArchive.id));
+                          router.push("/holdings/stocks");
+                          setShowArchiveModal(false);
+                        }}
+                        className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-500/10 px-3 py-1.5 rounded-lg border border-primary-100 dark:border-primary-500/20"
+                      >
+                        Unlink/Delete Stocks <ExternalLink size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Goals Check */}
+            {(() => {
+              const activeGoals = profileToArchive?.goal_count || 0;
+              const isGoalsClean = activeGoals === 0;
+              return (
+                <div className={`p-4 rounded-xl border flex items-start gap-3 transition-colors ${isGoalsClean ? "bg-emerald-500/5 border-emerald-500/25 dark:bg-emerald-500/5 dark:border-emerald-500/20" : "bg-red-500/5 border-red-500/25 dark:bg-red-500/5 dark:border-red-500/20"}`}>
+                  <div className="mt-0.5">
+                    {isGoalsClean ? (
+                      <div className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs select-none">
+                        ✓
+                      </div>
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border-2 border-red-500 text-red-500 flex items-center justify-center font-bold text-xs select-none bg-red-500/10 dark:bg-red-500/20">
+                        ✗
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Financial Goals
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                      {isGoalsClean ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">All cleared. No active goals.</span>
+                      ) : (
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          Found {activeGoals} active goal{activeGoals > 1 ? "s" : ""}. Deletion is blocked until they are deleted or re-assigned.
+                        </span>
+                      )}
+                    </p>
+                    {!isGoalsClean && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          changeActiveProfile(String(profileToArchive.id));
+                          router.push("/goals");
+                          setShowArchiveModal(false);
+                        }}
+                        className="mt-2.5 inline-flex items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-500/10 px-3 py-1.5 rounded-lg border border-primary-100 dark:border-primary-500/20"
+                      >
+                        Unlink/Delete Goals <ExternalLink size={12} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Action Footer */}
+          {(() => {
+            const activeMfs = profileToArchive?.portfolio_count || 0;
+            const activeStocks = profileToArchive?.holding_count || 0;
+            const activeGoals = profileToArchive?.goal_count || 0;
+            const canArchive = activeMfs === 0 && activeStocks === 0 && activeGoals === 0;
+
+            if (canArchive) {
+              return (
+                <div className="pt-4 border-t border-neutral-200 dark:border-white/5 space-y-3">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    All safety checks passed. This profile and its inactive configurations will be permanently deleted.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowArchiveModal(false);
+                        setProfileToArchive(null);
+                      }}
+                      className="flex-1"
+                      variant="secondary"
+                      disabled={isArchivingInProgress}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleConfirmArchive(profileToArchive.id)}
+                      className="flex-1 !bg-red-600 hover:!bg-red-700 text-white"
+                      variant="primary"
+                      isLoading={isArchivingInProgress}
+                    >
+                      Delete Profile
+                    </Button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className="pt-4 border-t border-neutral-200 dark:border-white/5 flex flex-col gap-3">
+                <p className="text-xs text-red-500 dark:text-red-400/90 font-medium">
+                  Please clear or re-assign all active items listed above to unlock profile deletion.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowArchiveModal(false);
+                    setProfileToArchive(null);
+                  }}
+                  className="w-full"
+                  variant="secondary"
+                >
+                  Close Safety Check
+                </Button>
+              </div>
+            );
+          })()}
+        </div>
       </Modal>
     </div>
   );
