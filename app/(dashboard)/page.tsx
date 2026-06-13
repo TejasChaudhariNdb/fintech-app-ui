@@ -12,6 +12,7 @@ import PortfolioSummary from "@/components/features/PortfolioSummary";
 import FamilyPortfolioSummary from "@/components/features/FamilyPortfolioSummary";
 import PerformanceChart from "@/components/features/PerformanceChart";
 import GoalCard from "@/components/features/GoalCard";
+import TopHoldingsCard from "@/components/features/TopHoldingsCard";
 import Button from "@/components/ui/Button";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import OnboardingWizard from "@/components/features/OnboardingWizard";
@@ -41,6 +42,7 @@ export default function HomePage() {
   const [familySummary, setFamilySummary] = useState<any>(null);
   const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
+  const [topHoldings, setTopHoldings] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]); // New State
   const [userProfile, setUserProfile] = useState<any>(null); // New State
 
@@ -99,12 +101,12 @@ export default function HomePage() {
       const getCache = (key: string) => localStorage.getItem(`${userEmail}:${key}:${activeProfileId}`);
 
       if (activeProfileId === "all") {
-        // --- ALL FAMILY DASHBOARD LOAD ---
         // 1. Try Cache
         const cachedFam = getCache("family-summary");
         const cachedGoals = getCache("goals");
         const cachedFamSummary = getCache("portfolio-summary");
         const cachedHistory = getCache("portfolio-history");
+        const cachedTopHoldings = getCache("family-top-holdings");
 
         if (cachedFam) {
           try {
@@ -113,6 +115,7 @@ export default function HomePage() {
             if (cachedGoals) setGoals(JSON.parse(cachedGoals).data);
             if (cachedFamSummary) setSummary(JSON.parse(cachedFamSummary).data);
             if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
+            if (cachedTopHoldings) setTopHoldings(JSON.parse(cachedTopHoldings).data.holdings || []);
             setLoading(false);
           } catch (e) {
             console.warn("Invalid cached family summary", e);
@@ -120,7 +123,7 @@ export default function HomePage() {
         }
 
         // 2. Fetch Fresh Data
-        const [famData, g, up, ps, history] = await Promise.all([
+        const [famData, g, up, ps, history, topH] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
             return null;
@@ -141,12 +144,17 @@ export default function HomePage() {
             console.error("Portfolio history (family) error:", err);
             return [];
           }),
+          api.getFamilyTopHoldings(5).catch((err) => {
+            console.error("Top holdings error:", err);
+            return { holdings: [] };
+          }),
         ]);
 
         if (famData) setFamilySummary(famData);
         setGoals(g);
         if (ps) setSummary(ps);
         if (history) setPerfData(history);
+        if (topH) setTopHoldings(topH.holdings || []);
         if (up) {
           setUserProfile(up);
           analytics.identifyUser(up.email || up.id, up.email, {
@@ -439,6 +447,13 @@ export default function HomePage() {
               stockInvested={summary.stock_invested || 0}
               profileBreakdown={familySummary?.profile_breakdown || []}
             />
+          </section>
+        )}
+
+        {/* Top Holdings across profiles */}
+        {topHoldings && topHoldings.length > 0 && (
+          <section>
+            <TopHoldingsCard holdings={topHoldings} />
           </section>
         )}
 

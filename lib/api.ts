@@ -302,8 +302,10 @@ export const api = {
     window.URL.revokeObjectURL(url);
   },
 
-  resetPortfolio: (type: "ALL" | "MF" | "STOCKS" = "ALL") =>
-    api.fetch(`/portfolio/reset?reset_type=${type}`, { method: "DELETE" }),
+  resetPortfolio: (type: "ALL" | "MF" | "STOCKS" = "ALL", profileId?: string) => {
+    const param = profileId ? `&profile_id=${profileId}` : "";
+    return api.fetch(`/portfolio/reset?reset_type=${type}${param}`, { method: "DELETE" });
+  },
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
 
@@ -461,6 +463,9 @@ export const api = {
     }),
   getFamilySummary: () =>
     api.fetch("/profiles/family/summary", { cacheKey: "family-summary" }),
+
+  getFamilyTopHoldings: (limit = 10) =>
+    api.fetch(`/profiles/family/top-holdings?limit=${limit}`, { cacheKey: "family-top-holdings" }),
 
   // Utilities
   clearCache: (keys: string[]) => {

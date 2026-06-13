@@ -13,6 +13,9 @@ export interface Profile {
   is_default: boolean;
   is_archived: boolean;
   created_at: string;
+  portfolio_count?: number;
+  holding_count?: number;
+  goal_count?: number;
 }
 
 interface ProfileContextType {

@@ -187,7 +187,7 @@ export default function StocksPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [activeProfileId]);
 
   // Stock Statistics Calculation
   const stockStats = useMemo(() => {

@@ -19,6 +19,7 @@ import MutualFundJourneyChart from "@/components/features/MutualFundJourneyChart
 
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
+import { useProfile } from "@/context/ProfileContext";
 
 const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
 const SCHEME_CHART_LIMIT = 5;
@@ -27,6 +28,7 @@ export default function MutualFundsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const { activeProfileId } = useProfile();
 
   // Toast State
   const [toast, setToast] = useState({
@@ -125,7 +127,7 @@ export default function MutualFundsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [activeProfileId]);
 
   useEffect(() => {
     if (searchParams.get("import") === "1") {

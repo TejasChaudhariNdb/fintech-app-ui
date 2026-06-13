@@ -37,6 +37,7 @@ import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
 import useFcmToken from "@/hooks/useFcmToken";
 import { useProfile } from "@/context/ProfileContext";
+import Toast from "@/components/ui/Toast";
 
 function SectionCard({
   title,
@@ -151,6 +152,22 @@ function InfoRow({
   );
 }
 
+function cleanErrorMessage(err: any, fallback = "An error occurred"): string {
+  let msg = err.message || fallback;
+  const startIdx = msg.indexOf("{");
+  const endIdx = msg.lastIndexOf("}");
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    try {
+      const jsonStr = msg.substring(startIdx, endIdx + 1);
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.detail) {
+        return parsed.detail;
+      }
+    } catch {}
+  }
+  return msg;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -175,7 +192,7 @@ export default function ProfilePage() {
   const { permission, requestPermission } = useFcmToken();
 
   // Family Profile State
-  const { profiles, refreshProfiles, setDefault } = useProfile();
+  const { profiles, refreshProfiles, setDefault, activeProfileId } = useProfile();
   const [showAddFamilyProfileModal, setShowAddFamilyProfileModal] = useState(false);
   const [familyRelationChoice, setFamilyRelationChoice] = useState("");
   const [newFamilyName, setNewFamilyName] = useState("");
@@ -422,16 +439,7 @@ export default function ProfilePage() {
         setReferralInput("");
       }
     } catch (err: any) {
-      let msg = err.message || "Invalid referral code";
-      try {
-        // Try to parse JSON error if it comes as stringified JSON
-        if (msg.startsWith("{")) {
-          const parsed = JSON.parse(msg);
-          msg = parsed.detail || msg;
-        }
-      } catch (e) {
-        // ignore parse error
-      }
+      const msg = cleanErrorMessage(err, "Invalid referral code");
       setReferralError(msg);
       showToast(msg, "error");
     } finally {
@@ -463,19 +471,27 @@ export default function ProfilePage() {
   };
 
   const handleReset = async (type: "ALL" | "MF" | "STOCKS" = "ALL") => {
+    if (activeProfileId === "all") {
+      showToast("Reset is disabled when viewing 'All Family'. Please select a specific profile to reset.", "error");
+      return;
+    }
+
+    const currentProfile = profiles.find(p => String(p.id) === activeProfileId);
+    const profileName = currentProfile ? currentProfile.name : "this profile";
+
     // Confirmation
     const msg =
       type === "ALL"
-        ? "⚠️ This will delete ALL portfolio data. This action cannot be undone. Continue?"
+        ? `⚠️ This will delete ALL portfolio data for profile "${profileName}". This action cannot be undone. Continue?`
         : `⚠️ This will delete ALL ${
             type === "MF" ? "Mutual Fund" : "Stock"
-          } data. Continue?`;
+          } data for profile "${profileName}". Continue?`;
 
     if (!confirm(msg)) return;
 
     try {
       showToast("Resetting portfolio...", "loading");
-      await api.resetPortfolio(type);
+      await api.resetPortfolio(type, activeProfileId);
       showToast(
         `${type === "ALL" ? "Portfolio" : type} reset successfully`,
         "success",
@@ -552,13 +568,7 @@ export default function ProfilePage() {
       setFamilyRelationChoice("");
       await refreshProfiles();
     } catch (err: any) {
-      let msg = err.message || "Failed to create profile";
-      try {
-        if (msg.startsWith("{")) {
-          const parsed = JSON.parse(msg);
-          msg = parsed.detail || msg;
-        }
-      } catch {}
+      const msg = cleanErrorMessage(err, "Failed to create profile");
       showToast(msg, "error");
     } finally {
       setIsSavingFamilyProfile(false);
@@ -573,13 +583,7 @@ export default function ProfilePage() {
       showToast("Profile archived successfully", "success");
       await refreshProfiles();
     } catch (err: any) {
-      let msg = err.message || "Failed to archive profile";
-      try {
-        if (msg.startsWith("{")) {
-          const parsed = JSON.parse(msg);
-          msg = parsed.detail || msg;
-        }
-      } catch {}
+      const msg = cleanErrorMessage(err, "Failed to archive profile");
       showToast(msg, "error");
     }
   };
@@ -590,13 +594,7 @@ export default function ProfilePage() {
       await setDefault(id);
       showToast("Default profile updated", "success");
     } catch (err: any) {
-      let msg = err.message || "Failed to set default profile";
-      try {
-        if (msg.startsWith("{")) {
-          const parsed = JSON.parse(msg);
-          msg = parsed.detail || msg;
-        }
-      } catch {}
+      const msg = cleanErrorMessage(err, "Failed to set default profile");
       showToast(msg, "error");
     }
   };
@@ -605,6 +603,14 @@ export default function ProfilePage() {
 
   return (
     <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white">
+      {/* Toast Notification */}
+      <Toast
+        isVisible={toast.isVisible}
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
+      />
+
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-900 dark:to-[#0B0E14] border-b border-white/5 px-4 pt-10 pb-6 transition-colors duration-300">
         <div className="mx-auto max-w-3xl flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -808,6 +814,32 @@ export default function ProfilePage() {
                       <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                         PAN: <span className="font-mono">{p.pan || "Not Provided"}</span>
                       </p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-neutral-400 dark:text-neutral-500">
+                        {p.portfolio_count !== undefined && p.portfolio_count > 0 && (
+                          <span className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {p.portfolio_count} MF Portfolio{p.portfolio_count > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {p.holding_count !== undefined && p.holding_count > 0 && (
+                          <span className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                            {p.holding_count} Stock{p.holding_count > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {p.goal_count !== undefined && p.goal_count > 0 && (
+                          <span className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            {p.goal_count} Goal{p.goal_count > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {p.portfolio_count === 0 && p.holding_count === 0 && p.goal_count === 0 && (
+                          <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            Ready to archive
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1090,20 +1122,34 @@ export default function ProfilePage() {
           onToggle={() => toggleSection("danger")}
         >
           <div className="space-y-3">
-            <button
-              onClick={() => setShowResetModal(true)}
-              className="flex w-full items-center justify-between rounded-2xl border border-red-100 p-4 text-left transition-colors hover:bg-red-50 dark:border-red-500/20 dark:hover:bg-red-500/5"
-            >
-              <div>
-                <p className="text-sm font-semibold text-red-600 dark:text-red-400">
-                  Reset Portfolio
-                </p>
-                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                  Clear mutual funds, stocks, or everything
-                </p>
+            {activeProfileId === "all" ? (
+              <div className="flex w-full items-center justify-between rounded-2xl border border-neutral-100 bg-neutral-50/50 p-4 text-left dark:border-white/5 dark:bg-white/2 opacity-70">
+                <div>
+                  <p className="text-sm font-semibold text-neutral-400 dark:text-neutral-500">
+                    Reset Portfolio (Disabled)
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500 leading-snug">
+                    Please switch from "All Family" to a specific family member in the header dropdown to reset their data.
+                  </p>
+                </div>
+                <ChevronRight className="text-neutral-300 dark:text-neutral-600 shrink-0" size={18} />
               </div>
-              <ChevronRight className="text-red-300 dark:text-red-600" size={18} />
-            </button>
+            ) : (
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="flex w-full items-center justify-between rounded-2xl border border-red-100 p-4 text-left transition-colors hover:bg-red-50 dark:border-red-500/20 dark:hover:bg-red-500/5"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                    Reset Portfolio
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    Clear mutual funds, stocks, or everything
+                  </p>
+                </div>
+                <ChevronRight className="text-red-300 dark:text-red-600" size={18} />
+              </button>
+            )}
           </div>
         </SectionCard>
 
