@@ -420,6 +420,7 @@ export const api = {
     full_name?: string;
     phone_number?: string;
     pan_card?: string;
+    signup_source?: string;
   }) =>
     api.fetch("/users/me", {
       method: "PATCH",

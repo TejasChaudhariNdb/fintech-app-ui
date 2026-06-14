@@ -36,7 +36,7 @@ import AssetAllocationCard from "@/components/features/AssetAllocationCard";
 
 export default function HomePage() {
   const router = useRouter();
-  const { activeProfileId, profiles } = useProfile();
+  const { activeProfileId, profiles, loading: profileLoading } = useProfile();
   const [netWorth, setNetWorth] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
   const [familySummary, setFamilySummary] = useState<any>(null);
@@ -330,71 +330,7 @@ export default function HomePage() {
     const familyGoals = goals.filter((g) => g.goal_type === "FAMILY");
     const personalGoals = goals.filter((g) => g.goal_type === "PERSONAL");
 
-    const hasNoProfiles = profiles.length <= 1; // Only has "Self"
-    
-    if (familySummary.net_worth === 0 && hasNoProfiles) {
-      // ONBOARDING EMPTY STATE
-      return (
-        <div className="px-4 pt-8 pb-32 max-w-3xl mx-auto text-center">
-          <div className="glass-card rounded-3xl p-8 sm:p-12 border border-neutral-200 dark:border-white/5 bg-white/60 dark:bg-[#151A23]/60 backdrop-blur-xl shadow-xl flex flex-col items-center">
-            <div className="h-16 w-16 rounded-2xl bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 mb-6">
-              <Users className="w-8 h-8 stroke-[2]" />
-            </div>
-            
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight mb-4">
-              Manage your family wealth in one place
-            </h2>
-            <p className="text-neutral-500 dark:text-neutral-400 max-w-md mx-auto mb-8 text-sm sm:text-base leading-relaxed">
-              Consolidate investments across your family members. Switch context to any profile, track personal goals, or aggregate to see family net worth and asset allocations.
-            </p>
 
-            <div className="w-full max-w-md border-t border-neutral-200/50 dark:border-white/5 pt-8">
-              <p className="text-xs font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-6">
-                Add your first family member to begin
-              </p>
-              
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <button
-                  onClick={() => router.push("/profile?add=MOTHER")}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
-                >
-                  <Plus size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
-                  <span>Mother</span>
-                </button>
-                <button
-                  onClick={() => router.push("/profile?add=FATHER")}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
-                >
-                  <Plus size={16} className="text-green-500 group-hover:scale-110 transition-transform" />
-                  <span>Father</span>
-                </button>
-                <button
-                  onClick={() => router.push("/profile?add=SPOUSE")}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
-                >
-                  <Plus size={16} className="text-orange-500 group-hover:scale-110 transition-transform" />
-                  <span>Spouse</span>
-                </button>
-                <button
-                  onClick={() => router.push("/profile?add=CHILD")}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-[#0B0E14] hover:bg-neutral-50 dark:hover:bg-white/5 text-sm font-semibold transition-all duration-200 justify-center group active:scale-98"
-                >
-                  <Plus size={16} className="text-yellow-500 group-hover:scale-110 transition-transform" />
-                  <span>Child</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => router.push("/profile?add=OTHER")}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-sm shadow-md shadow-primary-500/20 hover:shadow-lg transition-all duration-200 active:scale-98"
-              >
-                Create Custom Profile
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
 
 
     return (
@@ -635,8 +571,16 @@ export default function HomePage() {
     );
   };
 
-  if (loading) {
+  if (loading || profileLoading) {
     return <AppSkeleton />;
+  }
+
+  // ✅ UX: Onboarding for New Users (Empty State)
+  const isNewUserIndividual = summary && summary.invested === 0;
+  const isNewUserFamily = familySummary && familySummary.net_worth === 0 && profiles.length <= 1;
+
+  if (isNewUserIndividual || isNewUserFamily) {
+    return <OnboardingWizard userProfile={userProfile} />;
   }
 
   if (activeProfileId === "all") {
@@ -670,11 +614,6 @@ export default function HomePage() {
         </div>
       </div>
     );
-  }
-
-  // ✅ UX: Onboarding for New Users (Empty State)
-  if (summary && summary.invested === 0) {
-    return <OnboardingWizard userProfile={userProfile} />;
   }
 
   return (

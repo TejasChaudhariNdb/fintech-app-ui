@@ -8,10 +8,11 @@ import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
 import { useProfile } from "@/context/ProfileContext";
 import ProfileSwitcher from "@/components/features/ProfileSwitcher";
-import { Sparkles } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { api } from "@/lib/api";
 
 import DemoRibbon from "@/components/ui/DemoRibbon";
+import { useIsDemo } from "@/lib/hooks/useIsDemo";
 
 import ChatWidget from "@/components/features/AIChat/ChatWidget";
 import FcmManager from "@/components/FcmManager";
@@ -29,6 +30,7 @@ export default function DashboardLayout({
   const [isChecking, setIsChecking] = useState(true);
   const [isLockEnabled, setIsLockEnabled] = useState(false);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+  const isDemo = useIsDemo();
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -123,18 +125,19 @@ export default function DashboardLayout({
           <DemoRibbon />
 
           {/* Top Header Bar */}
-          <header className="flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky top-0 z-30">
+          <header className={`flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky z-30 transition-all duration-300 ${isDemo ? 'top-10' : 'top-0'}`}>
 
             {/* Left: What's New Shortcut */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/profile/whats-new")}
-                className="relative flex items-center justify-center p-2 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30"
+                className="relative flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold"
                 title="What's New"
               >
-                <Sparkles className="w-4.5 h-4.5" />
+                <Megaphone className="w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:scale-105 transition-transform" />
+                <span className="hidden sm:inline-block">What&apos;s New</span>
                 {hasUnreadUpdates && (
-                  <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-primary-500 border-2 border-white dark:border-[#0B0E14] rounded-full animate-pulse shadow-sm shadow-primary-500/50" />
+                  <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary-500 border-2 border-white dark:border-[#0B0E14] rounded-full animate-pulse shadow-sm shadow-primary-500/50" />
                 )}
               </button>
             </div>

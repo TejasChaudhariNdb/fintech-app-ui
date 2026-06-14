@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { LogOut, ArrowRight, Sparkles } from "lucide-react";
 import { useIsDemo } from "@/lib/hooks/useIsDemo";
 
 export default function DemoRibbon() {
@@ -14,18 +14,42 @@ export default function DemoRibbon() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_email");
     sessionStorage.clear();
-    router.push("/login"); // or router.replace("/login")
+    router.push("/login");
+  };
+
+  const handleStartFree = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_email");
+    sessionStorage.clear();
+    router.push("/register");
   };
 
   return (
-    <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white text-[11px] lg:text-xs font-bold px-4 py-1.5 shadow-md relative z-30 tracking-wide uppercase flex items-center justify-between lg:justify-center gap-4">
-      <span>Demo Account — View Only Mode</span>
-      <button
-        onClick={handleExit}
-        className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-2.5 py-0.5 rounded-full flex items-center gap-1.5 transition-colors border border-white/10">
-        <span>Exit Demo</span>
-        <LogOut size={10} strokeWidth={3} />
-      </button>
+    <div className="sticky top-0 z-[45] h-10 w-full bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 text-white text-xs font-semibold px-4 flex items-center justify-between shadow-lg backdrop-blur-md border-b border-white/10 select-none">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse hidden sm:inline-block" />
+        <span className="tracking-wide text-[11px] sm:text-xs">
+          Exploring in <strong className="font-extrabold uppercase bg-black/20 px-2 py-0.5 rounded-md text-[10px]">Demo Mode</strong>. Track your own portfolio!
+        </span>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Subtle Exit Demo Link */}
+        <button
+          onClick={handleExit}
+          className="text-[11px] font-medium text-white/70 hover:text-white hover:underline transition-all flex items-center gap-1">
+          <span>Exit Demo</span>
+          <LogOut size={11} className="opacity-70" />
+        </button>
+
+        {/* High-Converting Glowing Start Free Button */}
+        <button
+          onClick={handleStartFree}
+          className="bg-white text-primary-600 hover:bg-neutral-50 active:scale-95 px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-md shadow-black/10 hover:shadow-lg flex items-center gap-1 group">
+          <span>Start Free</span>
+          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
     </div>
   );
 }

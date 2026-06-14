@@ -31,6 +31,7 @@ interface OnboardingWizardProps {
 }
 
 export default function OnboardingWizard({
+  userProfile,
   initialStep = 1,
   onAddTransactionClick,
   onClose,
@@ -44,6 +45,31 @@ export default function OnboardingWizard({
   const [success, setSuccess] = useState(false); // Success state
   const [error, setError] = useState("");
   const [showInstructions, setShowInstructions] = useState(false); // Toggle instructions
+  const [signupSource, setSignupSource] = useState("other");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = userProfile || await api.getUserProfile();
+        if (profile?.signup_source) {
+          setSignupSource(profile.signup_source);
+        }
+      } catch (e) {
+        console.error("Failed to load user profile in wizard", e);
+      }
+    };
+    fetchProfile();
+  }, [userProfile]);
+
+  const handleSignupSource = async (value: string) => {
+    setSignupSource(value);
+    try {
+      await api.updateUserProfile({ signup_source: value });
+      api.clearCache(["user-profile"]);
+    } catch (err) {
+      console.error("Failed to update signup source", err);
+    }
+  };
 
   const { profiles, activeProfileId } = useProfile();
   const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
@@ -123,6 +149,8 @@ export default function OnboardingWizard({
             </p>
           </div>
 
+
+
           {/* Main Actions */}
           <div className="grid md:grid-cols-2 gap-4 md:gap-6 max-w-4xl mx-auto mb-12">
             {/* Option 1: Mutual Funds */}
@@ -174,6 +202,34 @@ export default function OnboardingWizard({
                 <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
               </div>
             </button>
+          </div>
+
+          {/* Marketing Attribution Chips */}
+          <div className="max-w-xl mx-auto mt-12 text-center animate-fade-in border-t border-neutral-200/50 dark:border-white/5 pt-6">
+            <p className="text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-3.5">
+              How did you hear about us?
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {[
+                { label: "Reddit", value: "reddit" },
+                { label: "YouTube", value: "youtube" },
+                { label: "Google Search", value: "google" },
+                { label: "X / Twitter", value: "twitter" },
+                { label: "Other", value: "other" },
+              ].map((source) => (
+                <button
+                  key={source.value}
+                  type="button"
+                  onClick={() => handleSignupSource(source.value)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all duration-200 active:scale-95 cursor-pointer ${
+                    signupSource === source.value
+                      ? "bg-primary-600 border-primary-600 text-white shadow-md shadow-primary-500/25"
+                      : "border-neutral-200 dark:border-white/10 hover:border-neutral-350 dark:hover:border-white/20 bg-white dark:bg-[#151A23] text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/5 shadow-xs"
+                  }`}>
+                  {source.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
