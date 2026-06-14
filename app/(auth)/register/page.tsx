@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -11,7 +11,7 @@ import { analytics } from "@/lib/analytics";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +19,13 @@ export default function RegisterPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState("");
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
     // Redirect if already logged in
     if (localStorage.getItem("access_token")) {
       router.replace("/");
@@ -28,29 +34,12 @@ export default function RegisterPage() {
       // Track signup_started when page is visited
       analytics.track({ name: "signup_started" });
     }
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await api.googleLogin(tokenResponse.access_token);
-        localStorage.setItem("access_token", data.access_token);
-        // Track signup_completed for Google login
-        analytics.track({
-          name: "signup_completed",
-          properties: {
-            signup_source: "google",
-          },
-        });
-        router.push("/");
-      } catch (err: any) {
-        setError(err.message || "Google Signup Failed.");
-      } finally {
-        setLoading(false);
-      }
-    },
+    flow: "auth-code",
+    ux_mode: "redirect",
+    redirect_uri: typeof window !== "undefined" ? window.location.origin + "/google-callback" : undefined,
     onError: () => setError("Google Signup Failed"),
   });
 
@@ -256,5 +245,20 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-neutral-50 dark:bg-[#0B0E14] flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary-500 mb-4" />
+        <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium">
+          Loading...
+        </p>
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }

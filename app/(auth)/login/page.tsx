@@ -34,6 +34,10 @@ function LoginForm() {
       router.replace("/");
       return;
     }
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
     document.title = "Login - Arthavi";
     if (localStorage.getItem("access_token")) {
       router.replace("/");
@@ -43,19 +47,9 @@ function LoginForm() {
   }, [router, searchParams]);
 
   const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await api.googleLogin(tokenResponse.access_token);
-        localStorage.setItem("access_token", data.access_token);
-        router.push("/");
-      } catch (err: any) {
-        setError(err.message || "Google Login failed.");
-      } finally {
-        setLoading(false);
-      }
-    },
+    flow: "auth-code",
+    ux_mode: "redirect",
+    redirect_uri: typeof window !== "undefined" ? window.location.origin + "/google-callback" : undefined,
     onError: () => setError("Google Login Failed"),
   });
 

@@ -171,6 +171,12 @@ export const api = {
       body: JSON.stringify({ token }),
     }),
 
+  googleLoginWithCode: (code: string, redirectUri: string) =>
+    api.fetch("/auth/google/code", {
+      method: "POST",
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    }),
+
   resetPassword: (email: string) =>
     api.fetch("/auth/reset-password", {
       method: "POST",
