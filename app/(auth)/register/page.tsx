@@ -42,7 +42,7 @@ function RegisterForm() {
     redirect_uri: typeof window !== "undefined" ? window.location.origin + "/google-callback" : undefined,
     prompt: "select_account",
     onError: () => setError("Google Signup Failed"),
-  });
+  } as any);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

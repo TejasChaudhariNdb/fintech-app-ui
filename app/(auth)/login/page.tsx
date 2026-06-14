@@ -52,7 +52,7 @@ function LoginForm() {
     redirect_uri: typeof window !== "undefined" ? window.location.origin + "/google-callback" : undefined,
     prompt: "select_account",
     onError: () => setError("Google Login Failed"),
-  });
+  } as any);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
