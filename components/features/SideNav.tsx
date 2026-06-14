@@ -11,6 +11,7 @@ import {
   Settings,
   Eye,
   EyeOff,
+  Sparkles,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -23,6 +24,7 @@ export default function SideNav() {
     full_name?: string;
     email?: string;
   } | null>(null);
+  const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -35,6 +37,23 @@ export default function SideNav() {
     };
     loadUser();
   }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const checkUnreadUpdates = async () => {
+      try {
+        const res = await api.getUnreadUpdatesStatus();
+        if (res && res.hasUnread !== undefined) {
+          setHasUnreadUpdates(res.hasUnread);
+        }
+      } catch (e) {
+        console.error("Failed to check unread updates status", e);
+      }
+    };
+    checkUnreadUpdates();
+  }, [pathname]);
 
   const mainTabs = [
     { id: "/", label: "Home", icon: Home },
@@ -97,24 +116,49 @@ export default function SideNav() {
       {/* Divider */}
       <div className="h-px bg-neutral-100 dark:bg-white/5 mx-4 my-3" />
 
-      {/* Settings — separated at bottom of nav */}
-      <div className="px-3 pb-3">
+      {/* Settings & Updates — separated at bottom of nav */}
+      <div className="px-3 pb-3 space-y-1">
         <Link
           href="/profile"
           className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${
-            isSettingsActive
+            pathname === "/profile"
               ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300"
               : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
           }`}>
           <Settings
             size={18}
-            strokeWidth={isSettingsActive ? 2.5 : 2}
+            strokeWidth={pathname === "/profile" ? 2.5 : 2}
             className={
-              isSettingsActive ? "text-primary-600 dark:text-primary-400" : ""
+              pathname === "/profile" ? "text-primary-600 dark:text-primary-400" : ""
             }
           />
           Settings
-          {isSettingsActive && (
+          {pathname === "/profile" && (
+            <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
+          )}
+        </Link>
+
+        <Link
+          href="/profile/whats-new"
+          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${
+            pathname === "/profile/whats-new"
+              ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300"
+              : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
+          }`}>
+          <Sparkles
+            size={18}
+            strokeWidth={pathname === "/profile/whats-new" ? 2.5 : 2}
+            className={
+              pathname === "/profile/whats-new" ? "text-primary-600 dark:text-primary-400" : ""
+            }
+          />
+          What&apos;s New
+          {hasUnreadUpdates && (
+            <span className="ml-auto bg-primary-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse">
+              NEW
+            </span>
+          )}
+          {pathname === "/profile/whats-new" && !hasUnreadUpdates && (
             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
           )}
         </Link>

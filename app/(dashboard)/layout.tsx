@@ -14,6 +14,7 @@ import DemoRibbon from "@/components/ui/DemoRibbon";
 import ChatWidget from "@/components/features/AIChat/ChatWidget";
 import FcmManager from "@/components/FcmManager";
 import FeedbackButton from "@/components/features/FeedbackButton";
+import WhatsNewModal from "@/components/features/WhatsNewModal";
 
 export default function DashboardLayout({
   children,
@@ -151,6 +152,7 @@ export default function DashboardLayout({
       <ChatWidget />
       <FcmManager />
       <FeedbackButton />
+      <WhatsNewModal />
     </PrivacyProvider>
   );
 }

@@ -636,4 +636,11 @@ export const api = {
       api.clearCache(["prediction-stats"]);
       return res;
     }),
+
+  // What's New Updates
+  getUpdates: () => api.fetch("/updates"),
+  getUnreadUpdatesStatus: () => api.fetch("/updates/unread"),
+  getLatestAnnouncement: () => api.fetch("/updates/latest-announcement"),
+  markUpdatesAsSeen: () => api.fetch("/updates/seen", { method: "POST" }),
+  markUpdateAsSeen: (id: number) => api.fetch(`/updates/${id}/seen`, { method: "POST" }),
 };

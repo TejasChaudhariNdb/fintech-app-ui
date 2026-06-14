@@ -34,6 +34,7 @@ import {
   Plus,
   AlertTriangle,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -202,6 +203,7 @@ export default function ProfilePage() {
   const [newFamilyPan, setNewFamilyPan] = useState("");
   const [newFamilyProfileType, setNewFamilyProfileType] = useState("INDIVIDUAL");
   const [isSavingFamilyProfile, setIsSavingFamilyProfile] = useState(false);
+  const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
 
   // Archive Modal State
   const [profileToArchive, setProfileToArchive] = useState<any>(null);
@@ -258,6 +260,18 @@ export default function ProfilePage() {
 
     loadUserProfile();
     refreshProfiles();
+
+    const checkUpdates = async () => {
+      try {
+        const res = await api.getUnreadUpdatesStatus();
+        if (res && res.hasUnread !== undefined) {
+          setHasUnreadUpdates(res.hasUnread);
+        }
+      } catch (e) {
+        console.error("Failed to check unread updates status", e);
+      }
+    };
+    checkUpdates();
 
     // PWA Install Prompt Listener
     if (typeof window !== "undefined") {
@@ -972,6 +986,31 @@ export default function ProfilePage() {
           onToggle={() => toggleSection("app")}
         >
           <div className="space-y-3">
+            <button
+              onClick={() => router.push("/profile/whats-new")}
+              className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 p-4 text-left transition-colors hover:bg-neutral-50 dark:border-white/10 dark:hover:bg-white/5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-white">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold dark:text-white">What&apos;s New</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Discover recently released features
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasUnreadUpdates && (
+                  <span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse">
+                    NEW
+                  </span>
+                )}
+                <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
+              </div>
+            </button>
+
             {mounted && (
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
