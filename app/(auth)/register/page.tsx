@@ -40,6 +40,7 @@ function RegisterForm() {
     flow: "auth-code",
     ux_mode: "redirect",
     redirect_uri: typeof window !== "undefined" ? window.location.origin + "/google-callback" : undefined,
+    prompt: "select_account",
     onError: () => setError("Google Signup Failed"),
   });
 
