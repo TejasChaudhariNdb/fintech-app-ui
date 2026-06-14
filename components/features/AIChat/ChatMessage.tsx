@@ -1,5 +1,6 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Bot, User, Sparkles } from "lucide-react";
 
 interface ChatMessageProps {
@@ -35,6 +36,7 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
           </div>
         )}
         <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
           components={{
             p: ({ children }) => <p className="mb-2 last:mb-0 font-medium">{children}</p>,
             ul: ({ children }) => (
@@ -57,6 +59,38 @@ export default function ChatMessage({ role, content }: ChatMessageProps) {
               }`}>
                 {children}
               </code>
+            ),
+            table: ({ children }) => (
+              <div className="overflow-x-auto my-3 border border-neutral-200 dark:border-white/10 rounded-xl bg-neutral-50/50 dark:bg-white/5 shadow-sm">
+                <table className="min-w-full divide-y divide-neutral-200 dark:divide-white/10 text-xs">
+                  {children}
+                </table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead className="bg-neutral-100/80 dark:bg-white/5">
+                {children}
+              </thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="divide-y divide-neutral-200 dark:divide-white/5">
+                {children}
+              </tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="hover:bg-neutral-100/30 dark:hover:bg-white/2 transition-colors">
+                {children}
+              </tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-3 py-2 text-left font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[10px]">
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td className="px-3 py-2 text-neutral-700 dark:text-neutral-200 font-semibold whitespace-nowrap">
+                {children}
+              </td>
             ),
           }}
         >

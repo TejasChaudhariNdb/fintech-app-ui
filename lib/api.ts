@@ -512,16 +512,17 @@ export const api = {
     ]);
   },
 
-  chatWithAI: (message: string, sessionId?: number) =>
+  chatWithAI: (message: string, sessionId?: number, activeProfileId?: string) =>
     api.fetch("/ai/chat", {
       method: "POST",
-      body: JSON.stringify({ message, session_id: sessionId }),
+      body: JSON.stringify({ message, session_id: sessionId, active_profile_id: activeProfileId }),
     }),
   chatWithAIStream: async (
     message: string,
     sessionId: number | undefined,
     handlers: AIStreamHandlers = {},
     options: AIStreamOptions = {},
+    activeProfileId?: string
   ): Promise<AIChatResponse> => {
     const token =
       typeof window !== "undefined"
@@ -540,6 +541,7 @@ export const api = {
         message,
         session_id: sessionId,
         stream: true,
+        active_profile_id: activeProfileId,
       }),
     });
 

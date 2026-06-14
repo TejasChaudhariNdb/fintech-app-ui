@@ -25,6 +25,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useProfile } from "@/context/ProfileContext";
 import ChatMessage from "./ChatMessage";
 import ContactSupportModal from "../ContactSupportModal";
 
@@ -112,6 +113,7 @@ const GrokLogo = ({ className }: { className?: string }) => (
 );
 
 export default function ChatWidget() {
+  const { activeProfileId } = useProfile();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -266,6 +268,7 @@ export default function ChatWidget() {
           {
             signal: abortController.signal,
           },
+          activeProfileId
         );
       } catch (streamErr) {
         if (streamErr instanceof Error && streamErr.name === "AbortError") {
@@ -276,7 +279,7 @@ export default function ChatWidget() {
           "AI stream failed. Falling back to normal response.",
           streamErr,
         );
-        res = (await api.chatWithAI(userMsg, currentSessionId)) as AIChatResult;
+        res = (await api.chatWithAI(userMsg, currentSessionId, activeProfileId)) as AIChatResult;
         streamingTextRef.current = "";
         setStreamingText("");
         setMessages((prev) => [
