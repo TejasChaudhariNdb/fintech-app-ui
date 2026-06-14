@@ -8,6 +8,8 @@ import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
 import { useProfile } from "@/context/ProfileContext";
 import ProfileSwitcher from "@/components/features/ProfileSwitcher";
+import { Sparkles } from "lucide-react";
+import { api } from "@/lib/api";
 
 import DemoRibbon from "@/components/ui/DemoRibbon";
 
@@ -26,6 +28,24 @@ export default function DashboardLayout({
   const { activeProfileId, activeProfile } = useProfile();
   const [isChecking, setIsChecking] = useState(true);
   const [isLockEnabled, setIsLockEnabled] = useState(false);
+  const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const checkUnreadUpdates = async () => {
+      try {
+        const res = await api.getUnreadUpdatesStatus();
+        if (res && res.hasUnread !== undefined) {
+          setHasUnreadUpdates(res.hasUnread);
+        }
+      } catch (e) {
+        console.error("Failed to check unread updates status", e);
+      }
+    };
+    checkUnreadUpdates();
+  }, [pathname]);
 
   // Update Page Title for GA & UX
   useEffect(() => {
@@ -105,29 +125,18 @@ export default function DashboardLayout({
           {/* Top Header Bar */}
           <header className="flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky top-0 z-30">
 
-            {/* Left: Active Profile Indicator */}
+            {/* Left: What's New Shortcut */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-neutral-400 dark:text-neutral-500">Viewing:</span>
-              <div className="flex items-center gap-1.5 bg-neutral-100/80 dark:bg-white/5 px-2.5 py-1 rounded-full border border-neutral-200/60 dark:border-white/10">
-                <span className={`w-2 h-2 rounded-full ${
-                  activeProfileId === "all"
-                    ? "bg-primary-500"
-                    : activeProfile?.relation.toUpperCase() === "SELF"
-                    ? "bg-blue-500"
-                    : activeProfile?.relation.toUpperCase() === "MOTHER"
-                    ? "bg-purple-500"
-                    : activeProfile?.relation.toUpperCase() === "FATHER"
-                    ? "bg-green-500"
-                    : activeProfile?.relation.toUpperCase() === "SPOUSE"
-                    ? "bg-orange-500"
-                    : activeProfile?.relation.toUpperCase() === "CHILD"
-                    ? "bg-yellow-500"
-                    : "bg-indigo-500"
-                }`} />
-                <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
-                  {activeProfileId === "all" ? "All Family" : activeProfile?.name}
-                </span>
-              </div>
+              <button
+                onClick={() => router.push("/profile/whats-new")}
+                className="relative flex items-center justify-center p-2 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30"
+                title="What's New"
+              >
+                <Sparkles className="w-4.5 h-4.5" />
+                {hasUnreadUpdates && (
+                  <span className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-primary-500 border-2 border-white dark:border-[#0B0E14] rounded-full animate-pulse shadow-sm shadow-primary-500/50" />
+                )}
+              </button>
             </div>
 
             {/* Right: Switcher Dropdown */}
