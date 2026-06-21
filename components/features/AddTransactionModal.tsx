@@ -136,8 +136,10 @@ export default function AddTransactionModal({
       await api.addManualTransaction(payload);
       onSuccess();
       onClose();
-    } catch (err) {
-      alert("Failed to add transaction");
+    } catch (err: any) {
+      if (err.message !== "This action is disabled in demo mode.") {
+        alert("Failed to add transaction");
+      }
     } finally {
       setLoading(false);
     }

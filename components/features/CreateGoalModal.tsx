@@ -296,9 +296,11 @@ export default function CreateGoalModal({
       }
       onSuccess();
       onClose();
-    } catch (err) {
+        } catch (err: any) {
       console.error(err);
-      alert("Failed to save goal");
+      if (err.message !== "This action is disabled in demo mode.") {
+        alert("Failed to save goal");
+      }
     } finally {
       setLoading(false);
     }
