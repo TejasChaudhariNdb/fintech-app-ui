@@ -40,20 +40,64 @@ export default function NetWorthCard({
       })
     : "Never";
 
-  // Calculate next refresh time (11 PM IST)
-  const getNextRefreshText = () => {
-    const now = new Date();
-    const today11PM = new Date(now);
-    today11PM.setHours(23, 0, 0, 0);
+  const [nextRefreshText, setNextRefreshText] = React.useState("7:00 AM / 11:00 PM");
 
-    if (now < today11PM) {
-      return "Today 11 PM";
-    } else {
-      return "Tomorrow 11 PM";
-    }
-  };
+  React.useEffect(() => {
+    const calculateText = () => {
+      const now = new Date();
+      
+      const getUTCTarget = (baseDate: Date, addDays: number, hours: number, minutes: number) => {
+        const d = new Date(baseDate.getTime());
+        d.setUTCDate(d.getUTCDate() + addDays);
+        d.setUTCHours(hours, minutes, 0, 0);
+        return d;
+      };
 
-  const nextRefreshText = getNextRefreshText();
+      // Cron is '30 1,17 * * *' (UTC) -> 1:30 UTC and 17:30 UTC.
+      // In IST (UTC+5:30), these correspond to 7:00 AM and 11:00 PM respectively.
+      const runAToday = getUTCTarget(now, 0, 1, 30);
+      const runBToday = getUTCTarget(now, 0, 17, 30);
+      const runATomorrow = getUTCTarget(now, 1, 1, 30);
+      const runBTomorrow = getUTCTarget(now, 1, 17, 30);
+
+      const targets = [runAToday, runBToday, runATomorrow, runBTomorrow];
+      const futureTargets = targets.filter(t => t.getTime() > now.getTime());
+      futureTargets.sort((a, b) => a.getTime() - b.getTime());
+
+      const nextTarget = futureTargets[0];
+      if (!nextTarget) return "7:00 AM";
+
+      const diffMs = nextTarget.getTime() - now.getTime();
+      const diffMinutes = Math.round(diffMs / (1000 * 60));
+
+      let countdownText = "";
+      if (diffMinutes < 60) {
+        countdownText = `in ${diffMinutes}m`;
+      } else {
+        const hours = Math.round(diffMinutes / 60);
+        countdownText = `in ${hours}h`;
+      }
+
+      // Format target time to user-friendly local format (in IST Asia/Kolkata)
+      const timeStr = nextTarget.toLocaleTimeString("en-US", {
+        timeZone: "Asia/Kolkata",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      return `${timeStr} (${countdownText})`;
+    };
+
+    setNextRefreshText(calculateText());
+
+    // Update every minute (60000 ms) to keep the countdown fresh
+    const interval = setInterval(() => {
+      setNextRefreshText(calculateText());
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Card className="p-6 bg-gradient-to-br from-primary-600 to-primary-800 text-white border-none shadow-2xl shadow-primary-900/40 relative overflow-hidden group">
