@@ -165,6 +165,13 @@ export const api = {
       body: JSON.stringify({ email, password, signup_source }),
     }),
 
+  /** Returns {exists: true} if the email is already registered, {exists: false} if it's new. */
+  checkEmail: (email: string): Promise<{ exists: boolean }> =>
+    api.fetch("/auth/check-email", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
   googleLogin: (token: string) =>
     api.fetch("/auth/google", {
       method: "POST",
