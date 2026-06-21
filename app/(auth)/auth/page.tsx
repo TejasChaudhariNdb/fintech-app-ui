@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -37,8 +37,6 @@ function AuthForm() {
   const [error, setError] = useState("");
   const [animating, setAnimating] = useState(false);
 
-  const emailInputRef = useRef<HTMLInputElement>(null);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   // ── Auth guard, error from URL & page-view tracking ─────────────────────
   useEffect(() => {
@@ -87,8 +85,6 @@ function AuthForm() {
     setTimeout(() => {
       setStep(next);
       setAnimating(false);
-      // Auto-focus password after transition
-      setTimeout(() => passwordInputRef.current?.focus(), 80);
     }, 220);
   };
 
@@ -173,15 +169,14 @@ function AuthForm() {
     }
   };
 
-  const goBack = (fromStep: "login" | "register" = step as "login" | "register") => {
-    analytics.track({ name: "auth_back_clicked", properties: { from_step: fromStep } });
+  const goBack = () => {
+    analytics.track({ name: "auth_back_clicked", properties: { from_step: step as "login" | "register" } });
     setAnimating(true);
     setError("");
     setPassword("");
     setTimeout(() => {
       setStep("email");
       setAnimating(false);
-      setTimeout(() => emailInputRef.current?.focus(), 80);
     }, 220);
   };
 
@@ -224,8 +219,8 @@ function AuthForm() {
       <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-primary-500/10 rounded-full blur-3xl pointer-events-none transition-all duration-700" />
       <div
         className={`absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full blur-3xl pointer-events-none transition-all duration-700 ${step === "register"
-            ? "bg-emerald-500/10"
-            : "bg-indigo-500/10"
+          ? "bg-emerald-500/10"
+          : "bg-indigo-500/10"
           }`}
       />
 
@@ -251,10 +246,10 @@ function AuthForm() {
             <div
               key={s}
               className={`h-1.5 rounded-full transition-all duration-500 ${(step === "email" && i === 0) || (step !== "email" && i === 1)
-                  ? step === "register"
-                    ? "w-8 bg-emerald-500"
-                    : "w-8 bg-primary-500"
-                  : "w-4 bg-neutral-200 dark:bg-neutral-700"
+                ? step === "register"
+                  ? "w-8 bg-emerald-500"
+                  : "w-8 bg-primary-500"
+                : "w-4 bg-neutral-200 dark:bg-neutral-700"
                 }`}
             />
           ))}
@@ -269,8 +264,8 @@ function AuthForm() {
             <div className="flex items-center justify-center gap-2 mb-3">
               <div
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${step === "login"
-                    ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 border-primary-200 dark:border-primary-500/20"
-                    : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
+                  ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-400 border-primary-200 dark:border-primary-500/20"
+                  : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20"
                   }`}
               >
                 {meta.icon}
@@ -320,7 +315,6 @@ function AuthForm() {
           {step === "email" && (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <Input
-                ref={emailInputRef}
                 type="email"
                 label="Email Address"
                 id="auth-email"
@@ -379,7 +373,6 @@ function AuthForm() {
 
               <div>
                 <Input
-                  ref={passwordInputRef}
                   type="password"
                   label="Password"
                   id="auth-password"
@@ -444,7 +437,6 @@ function AuthForm() {
 
               <div>
                 <Input
-                  ref={passwordInputRef}
                   type="password"
                   label="Create Password"
                   id="auth-new-password"
