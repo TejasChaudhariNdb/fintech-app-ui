@@ -227,7 +227,7 @@ function AuthForm() {
       <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 rounded-3xl p-8 lg:p-10 w-full max-w-md z-10 shadow-2xl shadow-neutral-200/60 dark:shadow-black/40 backdrop-blur-xl animate-slide-up">
 
         {/* Logo */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4">
           <div className="relative group">
             <div className="absolute inset-0 bg-primary-500/25 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-300 opacity-60" />
             <Image
@@ -239,6 +239,21 @@ function AuthForm() {
             />
           </div>
         </div>
+
+        {/* Tagline — only shown on Step 1 to hook hesitating users */}
+        {step === "email" && (
+          <div className="text-center mb-5">
+            <p className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
+              Track wealth.{" "}
+              <span className="bg-gradient-to-r from-primary-500 to-indigo-500 bg-clip-text text-transparent">
+                Beat the market.
+              </span>
+            </p>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+              Join 10,000+ investors who track their net worth for free
+            </p>
+          </div>
+        )}
 
         {/* Step indicator pills */}
         <div className="flex justify-center gap-2 mb-7">
@@ -339,6 +354,15 @@ function AuthForm() {
                 Continue
                 {!loading && <ArrowRight className="w-5 h-5 ml-2 inline-block" />}
               </Button>
+
+              {/* Trust line — answers "is this worth my email?" */}
+              <p className="text-center text-xs text-neutral-400 dark:text-neutral-500 flex items-center justify-center gap-2">
+                <span>✓ Free forever</span>
+                <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                <span>✓ No credit card</span>
+                <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                <span>✓ 5-sec signup</span>
+              </p>
 
               <button
                 type="button"
