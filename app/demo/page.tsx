@@ -23,7 +23,7 @@ export default function DemoPage() {
             "Demo credentials not configured in environment (NEXT_PUBLIC_DEMO_EMAIL/PASSWORD)",
           );
         }
-
+        console.log(email)
         const data = await api.login(email, password);
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("user_email", email);

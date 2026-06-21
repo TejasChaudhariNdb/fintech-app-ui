@@ -36,6 +36,7 @@ function AuthForm() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState("");
   const [animating, setAnimating] = useState(false);
+  const [showReactivate, setShowReactivate] = useState(false);
 
 
   // ── Auth guard, error from URL & page-view tracking ─────────────────────
@@ -127,6 +128,7 @@ function AuthForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setShowReactivate(false);
     try {
       const data = await api.login(email, password);
       localStorage.setItem("access_token", data.access_token);
@@ -137,7 +139,29 @@ function AuthForm() {
     } catch (err: any) {
       const reason = err.message || "Incorrect password";
       analytics.track({ name: "auth_login_failed", properties: { method: "email", reason } });
-      setError(reason + ". Please try again.");
+      if (err.message === "Account is deactivated") {
+        setError("Your account is deactivated/deleted. Would you like to reactivate it?");
+        setShowReactivate(true);
+      } else {
+        setError(reason + ". Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.reactivate(email, password);
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("user_email", email);
+      analytics.identifyUser(email, email);
+      analytics.track({ name: "auth_reactivation_success", properties: { method: "email" } });
+      router.push("/");
+    } catch (err: any) {
+      setError(err.message || "Failed to reactivate account. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -421,16 +445,28 @@ function AuthForm() {
 
               {error && <ErrorBox message={error} />}
 
-              <Button
-                type="submit"
-                isLoading={loading}
-                id="auth-login-submit"
-                className="w-full text-base py-3.5 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all duration-300"
-                variant="primary"
-              >
-                Sign In
-                {!loading && <ArrowRight className="w-5 h-5 ml-2 inline-block" />}
-              </Button>
+              {showReactivate ? (
+                <Button
+                  type="button"
+                  onClick={handleReactivate}
+                  isLoading={loading}
+                  className="w-full text-base py-3.5 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-300 !bg-emerald-600 hover:!bg-emerald-700"
+                >
+                  Reactivate Account
+                  {!loading && <CheckCircle2 className="w-5 h-5 ml-2 inline-block" />}
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  id="auth-login-submit"
+                  className="w-full text-base py-3.5 shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all duration-300"
+                  variant="primary"
+                >
+                  Sign In
+                  {!loading && <ArrowRight className="w-5 h-5 ml-2 inline-block" />}
+                </Button>
+              )}
 
               <button
                 type="button"

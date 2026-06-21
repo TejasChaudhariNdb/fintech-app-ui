@@ -526,6 +526,33 @@ export default function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (
+      !confirm(
+        "⚠️ Are you absolutely sure you want to delete your account? This will deactivate your login and all profile details. This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      showToast("Deleting account...", "loading");
+      await api.deleteUserProfile();
+      showToast("Account deleted successfully", "success");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user_email");
+      localStorage.removeItem("net-worth");
+      localStorage.removeItem("portfolio-summary");
+      localStorage.removeItem("goals");
+      localStorage.removeItem("portfolio-history");
+      localStorage.removeItem("xirr");
+      localStorage.removeItem("insights");
+      setTimeout(() => router.push("/login"), 1000);
+    } catch (err: any) {
+      showToast("Failed to delete account", "error");
+    }
+  };
+
   const toggleSection = (
     key: "account" | "familyProfiles" | "ai" | "security" | "app" | "danger",
   ) => {
@@ -1212,6 +1239,24 @@ export default function ProfilePage() {
                 <ChevronRight className="text-red-400/60 dark:text-red-500/40" size={18} />
               </button>
             )}
+
+            <button
+              onClick={handleDeleteAccount}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-red-100/50 dark:hover:bg-red-500/5 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+                  <Trash2 size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400">Delete Account</p>
+                  <p className="text-xs text-red-500/80 dark:text-red-400/80 mt-0.5">
+                    Permanently delete and deactivate your account
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="text-red-400/60 dark:text-red-500/40" size={18} />
+            </button>
           </div>
         </div>
 

@@ -22,6 +22,23 @@ type AIStreamOptions = {
   signal?: AbortSignal;
 };
 
+function checkDemoRestriction() {
+  if (typeof window === "undefined") return;
+  const token = localStorage.getItem("access_token");
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+  const userEmail = localStorage.getItem("user_email");
+
+  if (
+    token &&
+    userEmail &&
+    demoEmail &&
+    userEmail.toLowerCase() === demoEmail.toLowerCase()
+  ) {
+    window.dispatchEvent(new CustomEvent("show-demo-restriction"));
+    throw new Error("This action is disabled in demo mode.");
+  }
+}
+
 export const api = {
   async fetch(
     endpoint: string,
@@ -43,18 +60,11 @@ export const api = {
         typeof window !== "undefined" &&
         ["POST", "PUT", "DELETE", "PATCH"].includes(options.method || "GET")
       ) {
-        const userEmail = localStorage.getItem("user_email");
         // Allowed endpoints for demo user
         const allowedEndpoints = ["/auth/login", "/auth/logout"];
 
-        if (
-          userEmail &&
-          demoEmail &&
-          userEmail.toLowerCase() === demoEmail.toLowerCase() &&
-          !allowedEndpoints.some((ep) => endpoint.startsWith(ep))
-        ) {
-          alert("This feature is disabled for the demo account.");
-          return;
+        if (!allowedEndpoints.some((ep) => endpoint.startsWith(ep))) {
+          checkDemoRestriction();
         }
       }
 
@@ -100,8 +110,31 @@ export const api = {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Request failed");
+        let errMsg = "Request failed";
+        let reactivationToken = "";
+        try {
+          const text = await res.text();
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed && typeof parsed === "object") {
+              if (parsed.detail) {
+                errMsg = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
+              } else if (parsed.message) {
+                errMsg = parsed.message;
+              }
+              if (parsed.reactivation_token) {
+                reactivationToken = parsed.reactivation_token;
+              }
+            }
+          } catch {
+            if (text) errMsg = text;
+          }
+        } catch {}
+        const error = new Error(errMsg);
+        if (reactivationToken) {
+          (error as any).reactivationToken = reactivationToken;
+        }
+        throw error;
       }
 
       const data = await res.json();
@@ -159,6 +192,29 @@ export const api = {
     return res.json();
   },
 
+  reactivate: async (email: string, password: string) => {
+    const res = await fetch(`${API_URL}/auth/reactivate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.detail || "Reactivation failed");
+    }
+
+    return res.json();
+  },
+
+  reactivateGoogle: (reactivationToken: string) =>
+    api.fetch("/auth/reactivate-google", {
+      method: "POST",
+      body: JSON.stringify({ reactivation_token: reactivationToken }),
+    }),
+
   register: (email: string, password: string, signup_source: string = "other") =>
     api.fetch("/auth/register", {
       method: "POST",
@@ -172,14 +228,14 @@ export const api = {
       body: JSON.stringify({ email }),
     }),
 
-  googleLogin: (token: string) =>
-    api.fetch("/auth/google", {
+  googleLogin: (token: string, reactivate: boolean = false) =>
+    api.fetch(`/auth/google?reactivate=${reactivate}`, {
       method: "POST",
       body: JSON.stringify({ token }),
     }),
 
-  googleLoginWithCode: (code: string, redirectUri: string) =>
-    api.fetch("/auth/google/code", {
+  googleLoginWithCode: (code: string, redirectUri: string, reactivate: boolean = false) =>
+    api.fetch(`/auth/google/code?reactivate=${reactivate}`, {
       method: "POST",
       body: JSON.stringify({ code, redirect_uri: redirectUri }),
     }),
@@ -360,6 +416,7 @@ export const api = {
 
   // CAS Upload
   uploadCAS: async (file: File, password: string, profileId?: string) => {
+    checkDemoRestriction();
     const formData = new FormData();
     formData.append("file", file);
     formData.append("password", password);
@@ -428,6 +485,11 @@ export const api = {
 
   // User Profile
   getUserProfile: () => api.fetch("/users/me", { cacheKey: "user-profile" }),
+
+  deleteUserProfile: () =>
+    api.fetch("/users/me", {
+      method: "DELETE",
+    }),
 
   updateUserProfile: (data: {
     full_name?: string;
@@ -531,6 +593,7 @@ export const api = {
     options: AIStreamOptions = {},
     activeProfileId?: string
   ): Promise<AIChatResponse> => {
+    checkDemoRestriction();
     const token =
       typeof window !== "undefined"
         ? localStorage.getItem("access_token")

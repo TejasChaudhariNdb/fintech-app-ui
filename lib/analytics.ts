@@ -25,6 +25,8 @@ export type AnalyticsEvent =
   | { name: 'auth_login_success'; properties: { method: 'email' } }
   /** Login attempt failed */
   | { name: 'auth_login_failed'; properties: { method: 'email'; reason: string } }
+  /** User successfully reactivated their account */
+  | { name: 'auth_reactivation_success'; properties: { method: 'email' } }
   /** User successfully created a new account */
   | { name: 'auth_register_success'; properties: { method: 'email' } }
   /** Registration attempt failed */
