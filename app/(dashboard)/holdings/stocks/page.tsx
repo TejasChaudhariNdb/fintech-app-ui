@@ -107,6 +107,7 @@ export default function StocksPage() {
   const [stockModalTab, setStockModalTab] = useState<"MANUAL" | "IMPORT">(
     "MANUAL",
   );
+  const [isSubmittingManual, setIsSubmittingManual] = useState(false);
 
   // Import State
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -265,6 +266,7 @@ export default function StocksPage() {
 
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingManual) return;
     try {
       if (!isValidSymbol) {
         showToast("Please select a valid stock from search", "error");
@@ -274,6 +276,7 @@ export default function StocksPage() {
         showToast("Please select a target profile", "error");
         return;
       }
+      setIsSubmittingManual(true);
       const isFirst = manualStocks.length === 0;
       await api.addStockTransaction({
         symbol: stockForm.symbol,
@@ -298,6 +301,8 @@ export default function StocksPage() {
       await loadData();
     } catch (err) {
       showToast("Failed to add transaction", "error");
+    } finally {
+      setIsSubmittingManual(false);
     }
   };
 
@@ -993,6 +998,8 @@ export default function StocksPage() {
             <Button
               type="submit"
               className="w-full"
+              variant={stockForm.transaction_type === "SELL" ? "danger" : "primary"}
+              isLoading={isSubmittingManual}
               disabled={
                 !isValidSymbol || !stockForm.quantity || !stockForm.price
               }>
