@@ -14,6 +14,8 @@ import {
   ExternalLink,
   ArrowRight,
   Plus,
+  Copy,
+  Check,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -46,6 +48,8 @@ export default function OnboardingWizard({
   const [error, setError] = useState("");
   const [showInstructions, setShowInstructions] = useState(false); // Toggle instructions
   const [signupSource, setSignupSource] = useState("other");
+  const [userEmail, setUserEmail] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -54,12 +58,22 @@ export default function OnboardingWizard({
         if (profile?.signup_source) {
           setSignupSource(profile.signup_source);
         }
+        if (profile?.email) {
+          setUserEmail(profile.email);
+        }
       } catch (e) {
         console.error("Failed to load user profile in wizard", e);
       }
     };
     fetchProfile();
   }, [userProfile]);
+
+  const handleCopyEmail = () => {
+    if (!userEmail) return;
+    navigator.clipboard.writeText(userEmail);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSignupSource = async (value: string) => {
     setSignupSource(value);
@@ -281,37 +295,61 @@ export default function OnboardingWizard({
             </button>
 
             <div
-              className={`space-y-3 text-sm text-blue-700 dark:text-blue-200/80 transition-all overflow-hidden ${showInstructions ? "max-h-[600px] opacity-100 mt-4" : "max-h-0 opacity-0 md:max-h-none md:opacity-100 md:mt-0"}`}>
-              <div className="md:hidden text-xs text-blue-600/70 mb-2">
-                Tap to see how to download.
+              className={`space-y-4 text-sm text-neutral-700 dark:text-neutral-300 transition-all overflow-hidden ${showInstructions ? "max-h-[800px] opacity-100 mt-4" : "max-h-0 opacity-0 md:max-h-none md:opacity-100 md:mt-0"}`}>
+              {userEmail && (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-blue-100/40 dark:bg-blue-950/20 rounded-2xl border border-blue-200/40 dark:border-blue-900/30">
+                  <div className="min-w-0">
+                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Registered Email to request CAS</p>
+                    <p className="text-sm font-bold text-blue-900 dark:text-blue-200 truncate mt-0.5">{userEmail}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyEmail}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-xl transition-colors">
+                    {copied ? (
+                      <>
+                        <Check size={14} /> Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} /> Copy Email
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Step 1: Open the CAMS registry site</p>
+                <a
+                  href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 w-full px-4 py-2.5 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-white/10 rounded-xl font-bold text-xs text-neutral-800 dark:text-neutral-200 transition-all text-center">
+                  CAMS Online <ExternalLink size={12} />
+                </a>
               </div>
-              <ol className="list-decimal list-outside ml-4 space-y-3">
-                <li>
-                  Go to{" "}
-                  <a
-                    href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-bold underline hover:text-blue-900 dark:hover:text-blue-100">
-                    CAMS Online
-                  </a>
-                </li>
-                <li>
-                  Select <strong>&quot;Detailed&quot;</strong>{" "}
-                  <span className="font-medium opacity-80 block text-xs">
-                    (Includes transaction listing)
-                  </span>
-                </li>
-                <li>
-                  Select <strong>&quot;Specific Period&quot;</strong> (e.g., Jan
-                  2000 to Today).
-                </li>
-                <li>Enter your email & set a password.</li>
-                <li>Download the PDF from your email.</li>
-                <li className="text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/10 p-2 rounded-lg border border-red-100 dark:border-red-500/20 mt-2 block">
-                  IMPORTANT: Do NOT upload the &quot;Summary&quot; statement.
-                </li>
-              </ol>
+
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">Step 2: Request the statement</p>
+                <ol className="list-decimal list-outside ml-4 space-y-2 text-xs md:text-sm text-blue-900/80 dark:text-blue-200/80">
+                  <li>
+                    Select <strong>&quot;Detailed&quot;</strong> (do NOT select Summary).
+                  </li>
+                  <li>
+                    Select <strong>&quot;Specific Period&quot;</strong> (e.g. from <strong>Jan 2000 to Today</strong> to fetch your full history).
+                  </li>
+                  <li>
+                    Paste your copied email, set a PDF password of your choice, and submit.
+                  </li>
+                  <li>
+                    Within 5 minutes, download the PDF from your email and upload it below.
+                  </li>
+                  <li className="text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-950/20 p-2.5 rounded-xl border border-red-100 dark:border-red-900/30 mt-2 block text-xs">
+                    ⚠️ IMPORTANT: Do NOT upload the &quot;Summary&quot; statement. It must be the &quot;Detailed&quot; statement to include transaction history.
+                  </li>
+                </ol>
+              </div>
             </div>
           </div>
         </div>

@@ -453,7 +453,7 @@ export const api = {
   deleteHolding: (id: number) =>
     api.fetch(`/equity/holding/${id}`, { method: "DELETE" }),
 
-  updateHolding: (id: number, data: { quantity: number; avg_price: number }) =>
+  updateHolding: (id: number, data: { quantity: number; avg_price: number; date?: string | null }) =>
     api.fetch(`/equity/holding/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -698,6 +698,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  getUserFeedback: () =>
+    api.fetch("/feedback/list"),
+
 
   trackSupportClick: (paymentApp: string) =>
     api.fetch("/support/click", {

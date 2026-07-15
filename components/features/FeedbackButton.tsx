@@ -41,6 +41,9 @@ export default function FeedbackButton() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<"submit" | "history">("submit");
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const resetForm = () => {
     setType("feedback");
@@ -48,12 +51,32 @@ export default function FeedbackButton() {
     setBody("");
     setError("");
     setSuccess(false);
+    setActiveTab("submit");
+    setHistory([]);
   };
 
   const handleClose = () => {
     setIsOpen(false);
     setTimeout(resetForm, 300);
   };
+
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const data = await api.getUserFeedback();
+      setHistory(data || []);
+    } catch (err) {
+      console.error("Failed to load feedback history", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && activeTab === "history") {
+      fetchHistory();
+    }
+  }, [isOpen, activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,15 +128,39 @@ export default function FeedbackButton() {
           onClick={(e) => e.target === e.currentTarget && handleClose()}>
           <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl w-full max-w-md animate-slide-up">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 dark:border-white/5">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
-                Share Feedback
-              </h2>
-              <button
-                onClick={handleClose}
-                className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10">
-                <X className="w-5 h-5" />
-              </button>
+            <div className="flex flex-col border-b border-neutral-100 dark:border-white/5">
+              <div className="flex items-center justify-between px-6 py-4">
+                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                  Feedback Portal
+                </h2>
+                <button
+                  onClick={handleClose}
+                  className="text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-colors p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex px-6 border-t border-neutral-100 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("submit")}
+                  className={`flex-1 py-3 text-sm font-semibold border-b-2 text-center transition-colors ${
+                    activeTab === "submit"
+                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                      : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                  }`}>
+                  Share Feedback
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("history")}
+                  className={`flex-1 py-3 text-sm font-semibold border-b-2 text-center transition-colors ${
+                    activeTab === "history"
+                      ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                      : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                  }`}>
+                  My History
+                </button>
+              </div>
             </div>
 
             {success ? (
@@ -122,11 +169,69 @@ export default function FeedbackButton() {
                   <CheckCircle2 className="w-8 h-8 text-emerald-500" />
                 </div>
                 <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-                  tejas
+                  Feedback Sent!
                 </h3>
                 <p className="text-sm text-neutral-500">
                   We&apos;ll review it soon.
                 </p>
+              </div>
+            ) : activeTab === "history" ? (
+              <div className="p-6 max-h-[350px] overflow-y-auto space-y-3.5">
+                {loadingHistory ? (
+                  <div className="flex flex-col items-center justify-center py-10 gap-2">
+                    <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-xs text-neutral-400">Loading history...</p>
+                  </div>
+                ) : history.length === 0 ? (
+                  <div className="text-center py-10">
+                    <p className="text-sm text-neutral-400 font-medium">You haven&apos;t submitted any feedback yet.</p>
+                  </div>
+                ) : (
+                  history.map((item) => {
+                    const typeConfig = TYPES.find((t) => t.value === item.type) || TYPES[2];
+                    const Icon = typeConfig.icon;
+                    
+                    // Status styling
+                    let statusColor = "bg-neutral-100 text-neutral-600 dark:bg-white/5 dark:text-neutral-400";
+                    let statusLabel = "Submitted";
+                    if (item.status === "seen") {
+                      statusColor = "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400";
+                      statusLabel = "Under Review";
+                    } else if (item.status === "resolved") {
+                      statusColor = "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400";
+                      statusLabel = "Resolved";
+                    }
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-3.5 rounded-xl border border-neutral-150 dark:border-white/5 bg-neutral-50/50 dark:bg-neutral-900/30 flex flex-col gap-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${typeConfig.color}`}>
+                            <Icon className="w-3 h-3" />
+                            {typeConfig.label}
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColor}`}>
+                            {statusLabel}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+                            {item.title}
+                          </h4>
+                          {item.body && (
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 line-clamp-3">
+                              {item.body}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium">
+                          Submitted on {item.created_at || "Recent"}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="p-6 space-y-5">

@@ -376,6 +376,7 @@ export default function StocksPage() {
       await api.updateHolding(editingStock.id, {
         quantity: Number(editingStock.quantity),
         avg_price: Number(editingStock.avg_price),
+        date: editingStock.acquisition_date || null,
       });
       await loadData();
       setIsEditModalOpen(false);
@@ -385,6 +386,7 @@ export default function StocksPage() {
       showToast("Failed to update stock", "error");
     }
   };
+
 
   if (isLoading) {
     return <AppSkeleton />;
@@ -1105,6 +1107,16 @@ export default function StocksPage() {
             }
             required
             autoComplete="off"
+          />
+          <Input
+            label="Investment Date"
+            type="date"
+            value={editingStock?.acquisition_date || ""}
+            onChange={(e) =>
+              setEditingStock({ ...editingStock, acquisition_date: e.target.value })
+            }
+            required
+            max={new Date().toISOString().split("T")[0]}
           />
           <Button type="submit" className="w-full">
             Update Holding
