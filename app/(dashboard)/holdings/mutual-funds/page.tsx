@@ -528,6 +528,7 @@ export default function MutualFundsPage() {
                 categoryRank={scheme.category_rank}
                 categoryTotal={scheme.category_total}
                 profit={scheme.profit}
+                isSif={scheme.is_sif}
                 profileBreakdown={scheme.profile_breakdown}
                 onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
                 onShare={() =>

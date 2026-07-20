@@ -29,6 +29,7 @@ interface SchemeCardProps {
   totalHoldings?: number;
   categoryRank?: number;
   categoryTotal?: number;
+  isSif?: boolean;
   onClick?: () => void;
   onShare?: () => void;
   onEdit?: () => void;
@@ -60,6 +61,7 @@ export default function SchemeCard({
   totalHoldings,
   categoryRank,
   categoryTotal,
+  isSif = false,
   onClick,
   onShare,
   onEdit,
@@ -120,6 +122,11 @@ export default function SchemeCard({
                   {categoryLabel}
                 </span>
               )}
+              {isSif && (
+                <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
+                  SIF
+                </span>
+              )}
               {overallRank && (
                 <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
                   #{overallRank}
@@ -137,7 +144,7 @@ export default function SchemeCard({
               <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
                 {profileBreakdown.map((pb) => {
                   const relation = getRelationForProfile(pb.profile_id);
-                  const formattedValue = pb.current_value >= 100000 
+                  const formattedValue = pb.current_value >= 100000
                     ? `₹${(pb.current_value / 100000).toFixed(2)}L`
                     : `₹${pb.current_value.toLocaleString("en-IN")}`;
                   return (
@@ -173,19 +180,17 @@ export default function SchemeCard({
                 <div
                   className={`
                     mt-1 flex flex-col items-end rounded-lg px-2.5 py-1.5
-                    ${
-                      isPositive
-                        ? "bg-emerald-50 dark:bg-emerald-500/15"
-                        : "bg-red-50 dark:bg-red-500/15"
+                    ${isPositive
+                      ? "bg-emerald-50 dark:bg-emerald-500/15"
+                      : "bg-red-50 dark:bg-red-500/15"
                     }
                   `}>
                   <span
                     className={`
                       text-[13px] font-bold tabular-nums leading-tight
-                      ${
-                        isPositive
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-red-600 dark:text-red-400"
+                      ${isPositive
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-600 dark:text-red-400"
                       }
                     `}>
                     {isPositive ? "+" : ""}₹
@@ -194,10 +199,9 @@ export default function SchemeCard({
                   <span
                     className={`
                       flex items-center gap-0.5 text-[11px] font-semibold tabular-nums
-                      ${
-                        isPositive
-                          ? "text-emerald-500 dark:text-emerald-400/80"
-                          : "text-red-500 dark:text-red-400/80"
+                      ${isPositive
+                        ? "text-emerald-500 dark:text-emerald-400/80"
+                        : "text-red-500 dark:text-red-400/80"
                       }
                     `}>
                     {isPositive ? (
@@ -222,19 +226,17 @@ export default function SchemeCard({
                 <div
                   className={`
                     mt-1 flex flex-col items-end rounded-lg px-2.5 py-1.5
-                    ${
-                      isDayPositive
-                        ? "bg-emerald-50 dark:bg-emerald-500/15"
-                        : "bg-red-50 dark:bg-red-500/15"
+                    ${isDayPositive
+                      ? "bg-emerald-50 dark:bg-emerald-500/15"
+                      : "bg-red-50 dark:bg-red-500/15"
                     }
                   `}>
                   <span
                     className={`
                       text-[13px] font-bold tabular-nums leading-tight
-                      ${
-                        isDayPositive
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-red-600 dark:text-red-400"
+                      ${isDayPositive
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-red-600 dark:text-red-400"
                       }
                     `}>
                     {isDayPositive ? "+" : ""}₹
@@ -243,10 +245,9 @@ export default function SchemeCard({
                   <span
                     className={`
                       flex items-center gap-0.5 text-[11px] font-semibold tabular-nums
-                      ${
-                        isDayPositive
-                          ? "text-emerald-500 dark:text-emerald-400/80"
-                          : "text-red-500 dark:text-red-400/80"
+                      ${isDayPositive
+                        ? "text-emerald-500 dark:text-emerald-400/80"
+                        : "text-red-500 dark:text-red-400/80"
                       }
                     `}>
                     {isDayPositive ? (
@@ -384,25 +385,23 @@ function MetricItem({
     <div
       className={`
       rounded-xl px-3 py-2
-      ${
-        highlight === "positive"
+      ${highlight === "positive"
           ? "bg-emerald-50 dark:bg-emerald-500/10"
           : highlight === "negative"
             ? "bg-red-50 dark:bg-red-500/10"
             : "bg-neutral-100 dark:bg-white/[0.04]"
-      }
+        }
     `}>
       <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
         {label}
       </p>
       <p
-        className={`mt-0.5 text-[13px] font-semibold tabular-nums ${
-          highlight === "positive"
+        className={`mt-0.5 text-[13px] font-semibold tabular-nums ${highlight === "positive"
             ? "text-emerald-600 dark:text-emerald-400"
             : highlight === "negative"
               ? "text-red-600 dark:text-red-400"
               : "text-neutral-700 dark:text-neutral-200"
-        }`}>
+          }`}>
         {value}
       </p>
     </div>
@@ -427,10 +426,9 @@ function ActionButton({
       className={`
         inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5
         text-xs font-semibold transition-all duration-200
-        ${
-          variant === "success"
-            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
-            : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25"
+        ${variant === "success"
+          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
+          : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25"
         }
       `}>
       {icon}
@@ -457,10 +455,9 @@ function IconButton({
       title={title}
       className={`
         p-2 rounded-full transition-all duration-200
-        ${
-          variant === "danger"
-            ? "text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-            : "text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 dark:hover:text-primary-400"
+        ${variant === "danger"
+          ? "text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+          : "text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-500/10 dark:hover:text-primary-400"
         }
       `}>
       {children}
