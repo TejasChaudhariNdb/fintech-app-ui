@@ -691,9 +691,9 @@ export default function StocksPage() {
                 const isDayPositive = stock.day_change >= 0;
                 
                 return (
-                  <div
+                  <Link
                     key={stock.id || stock.symbol}
-                    onClick={() => router.push(`/holdings/stocks/${encodeURIComponent(stock.symbol)}`)}
+                    href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
                     className="flex flex-col p-4 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/[0.06] rounded-2xl gap-3 hover:border-primary-500/20 hover:shadow-md cursor-pointer transition-all duration-300"
                   >
                     {/* Row 1 */}
@@ -773,7 +773,7 @@ export default function StocksPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
