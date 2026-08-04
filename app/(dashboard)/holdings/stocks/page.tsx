@@ -28,6 +28,8 @@ import {
   Download,
   Search,
   ChevronRight,
+  Grid,
+  List,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -133,6 +135,61 @@ export default function StocksPage() {
   const [journeyMeta, setJourneyMeta] = useState<any>(null);
   const [isJourneyLoading, setIsJourneyLoading] = useState(false);
   const journeyRequestRef = useRef<number>(0);
+
+  // View Mode & Tax Report State
+  const [viewMode, setViewMode] = useState<"compact" | "detailed">("detailed");
+  const [selectedFy, setSelectedFy] = useState("2025-26");
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("holdings_view_mode");
+    if (saved === "compact" || saved === "detailed") {
+      setViewMode(saved);
+    }
+  }, []);
+
+  const handleToggleViewMode = () => {
+    const nextMode = viewMode === "compact" ? "detailed" : "compact";
+    setViewMode(nextMode);
+    localStorage.setItem("holdings_view_mode", nextMode);
+  };
+
+  const handleDownloadTaxReport = async () => {
+    setIsDownloadingReport(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      if (activeProfileId) {
+        headers["x-profile-id"] = String(activeProfileId);
+      }
+      
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/reports/capital-gains/csv?financial_year=${selectedFy}`, {
+        headers
+      });
+      
+      if (!res.ok) throw new Error("Failed to download tax report");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `capital_gains_report_${selectedFy}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Tax report downloaded successfully", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to download tax report", "error");
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
 
   const loadJourneyData = async (range: string) => {
     const requestId = ++journeyRequestRef.current;
@@ -557,7 +614,44 @@ export default function StocksPage() {
                 </button>
               ) : null}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* View Toggle */}
+              <button
+                onClick={handleToggleViewMode}
+                title={viewMode === "compact" ? "Detailed card view" : "Compact list view"}
+                className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent hover:bg-neutral-200 dark:hover:bg-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+              >
+                {viewMode === "compact" ? <Grid size={14} /> : <List size={14} />}
+                <span className="hidden sm:inline">{viewMode === "compact" ? "Detailed" : "Compact"}</span>
+              </button>
+
+              {/* Tax Report Download */}
+              <div className="flex items-center gap-1 bg-neutral-100 dark:bg-white/5 border border-transparent rounded-xl px-2.5 py-0.5">
+                <select
+                  value={selectedFy}
+                  onChange={(e) => setSelectedFy(e.target.value)}
+                  aria-label="Financial Year"
+                  className="bg-transparent border-none text-neutral-600 dark:text-neutral-300 text-xs font-medium focus:ring-0 outline-none pr-1 py-1"
+                >
+                  <option value="2026-27" className="dark:bg-surface text-neutral-900 dark:text-white">FY 26-27</option>
+                  <option value="2025-26" className="dark:bg-surface text-neutral-900 dark:text-white">FY 25-26</option>
+                  <option value="2024-25" className="dark:bg-surface text-neutral-900 dark:text-white">FY 24-25</option>
+                  <option value="2023-24" className="dark:bg-surface text-neutral-900 dark:text-white">FY 23-24</option>
+                </select>
+                <button
+                  onClick={handleDownloadTaxReport}
+                  title="Download Tax Report (LTCG / STCG CSV)"
+                  disabled={isDownloadingReport}
+                  className="p-1 text-neutral-600 dark:text-neutral-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-neutral-200 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center"
+                >
+                  {isDownloadingReport ? (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-primary-500 border-t-transparent" />
+                  ) : (
+                    <Download size={14} />
+                  )}
+                </button>
+              </div>
+
               <select
                 value={sortBy}
                 onChange={(e) =>
@@ -587,197 +681,296 @@ export default function StocksPage() {
 
       {/* Stock List */}
       <div className="grid gap-4">
-        {filteredStocks.map((stock) => (
-          <Card
-            key={stock.id || stock.symbol}
-            className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-3.5 group hover:border-primary-500/20 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all rounded-3xl overflow-hidden">
-            <Link
-              href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
-              className="flex items-start justify-between gap-3 group/header cursor-pointer">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                    {stock.symbol}
-                  </h3>
-                  {stock.sector && (
-                    <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5 max-w-[120px] truncate">
-                      {stock.sector}
-                    </span>
+        {viewMode === "compact" ? (
+          <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
+            <div className="grid gap-3 min-w-[760px]">
+              {filteredStocks.map((stock) => {
+                const invested = stock.value - (stock.pnl || 0);
+                const gain = stock.pnl || 0;
+                const isPositive = stock.pnl_pct >= 0;
+                const isDayPositive = stock.day_change >= 0;
+                
+                return (
+                  <div
+                    key={stock.id || stock.symbol}
+                    onClick={() => router.push(`/holdings/stocks/${encodeURIComponent(stock.symbol)}`)}
+                    className="flex flex-col p-4 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/[0.06] rounded-2xl gap-3 hover:border-primary-500/20 hover:shadow-md cursor-pointer transition-all duration-300"
+                  >
+                    {/* Row 1 */}
+                    <div className="flex justify-between items-center gap-4 text-sm font-semibold">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-neutral-900 dark:text-white font-bold text-[15px] truncate max-w-[280px]">
+                            {stock.symbol}
+                          </span>
+                          {stock.sector && (
+                            <span className="px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-500/10 text-[9px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 border border-primary-200/40 dark:border-primary-500/15 shrink-0">
+                              {stock.sector}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-neutral-400 mt-0.5 truncate">
+                          {stock.company_name !== stock.symbol ? stock.company_name : "Equity Share"}
+                        </p>
+                      </div>
+                      <div className="flex gap-6 justify-end items-center text-right shrink-0">
+                        <div className="w-24">
+                          <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Invested</p>
+                          <p className="text-neutral-700 dark:text-neutral-300 font-semibold text-xs sm:text-sm">
+                            <PrivacyMask>₹{invested.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                          </p>
+                        </div>
+                        <div className="w-24">
+                          <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Gain</p>
+                          <p className={`font-bold text-xs sm:text-sm ${gain >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            <PrivacyMask>{gain >= 0 ? "+" : ""}₹{Math.abs(gain).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                          </p>
+                        </div>
+                        <div className="w-28">
+                          <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Current</p>
+                          <p className="text-neutral-900 dark:text-white text-sm sm:text-base font-bold">
+                            <PrivacyMask>₹{stock.value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2 */}
+                    <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
+                      <div className="flex gap-6 items-center flex-wrap">
+                        <div>
+                          <span className="text-neutral-400 mr-1">LTP:</span>
+                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.current_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-400 mr-1">Shares:</span>
+                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{stock.quantity}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-400 mr-1">Avg Price:</span>
+                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.avg_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-6 justify-end items-center text-right shrink-0">
+                        <div className="w-24">
+                          <span className="text-neutral-400 mr-1">P&L:</span>
+                          <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                            {isPositive ? "+" : ""}{stock.pnl_pct.toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="w-24">
+                          <span className="text-neutral-400 mr-1">Today:</span>
+                          <span className={`font-bold ${isDayPositive ? "text-emerald-500" : "text-red-500"}`}>
+                            {isDayPositive ? "+" : ""}{stock.day_change_pct?.toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="w-28">
+                          <span className="text-neutral-400 mr-1">XIRR:</span>
+                          <span className={`font-bold ${stock.xirr !== undefined && stock.xirr !== null ? (stock.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                            {stock.xirr !== undefined && stock.xirr !== null ? `${stock.xirr.toFixed(2)}%` : "--"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          filteredStocks.map((stock) => (
+            <Card
+              key={stock.id || stock.symbol}
+              className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-3.5 group hover:border-primary-500/20 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all rounded-3xl overflow-hidden">
+              <Link
+                href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
+                className="flex items-start justify-between gap-3 group/header cursor-pointer">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {stock.symbol}
+                    </h3>
+                    {stock.sector && (
+                      <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5 max-w-[120px] truncate">
+                        {stock.sector}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate pr-2">
+                    {stock.company_name !== stock.symbol
+                      ? stock.company_name
+                      : "Equity Share"}
+                  </p>
+                  {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {stock.profile_breakdown.map((pb: any) => {
+                        const relation = getRelationForProfile(pb.profile_id);
+                        const formattedValue = pb.value >= 100000 
+                          ? `₹${(pb.value / 100000).toFixed(2)}L`
+                          : `₹${pb.value.toLocaleString("en-IN")}`;
+                        return (
+                          <span
+                            key={pb.profile_id}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
+                              relation
+                            )}`}
+                          >
+                            <span className="truncate max-w-[80px]">{pb.profile_name}</span>
+                            <span className="opacity-60">•</span>
+                            <span>{formattedValue}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate pr-2">
-                  {stock.company_name !== stock.symbol
-                    ? stock.company_name
-                    : "Equity Share"}
-                </p>
-                {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    {stock.profile_breakdown.map((pb: any) => {
-                      const relation = getRelationForProfile(pb.profile_id);
-                      const formattedValue = pb.value >= 100000 
-                        ? `₹${(pb.value / 100000).toFixed(2)}L`
-                        : `₹${pb.value.toLocaleString("en-IN")}`;
-                      return (
-                        <span
-                          key={pb.profile_id}
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
-                            relation
-                          )}`}
-                        >
-                          <span className="truncate max-w-[80px]">{pb.profile_name}</span>
-                          <span className="opacity-60">•</span>
-                          <span>{formattedValue}</span>
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
 
-              <div className="flex items-start gap-2 shrink-0">
-                <div className="text-right">
-                  <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1.5">
-                    <PrivacyMask>
-                      {stock.value > 0 ? (
-                        formatCompactCurrency(stock.value)
-                      ) : stock.quantity > 0 ? (
-                        <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
-                          <Loader2 size={12} className="animate-spin" />
-                          Updating...
-                        </span>
-                      ) : (
-                        "₹0"
-                      )}
-                    </PrivacyMask>
+                <div className="flex items-start gap-2 shrink-0">
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1.5">
+                      <PrivacyMask>
+                        {stock.value > 0 ? (
+                          formatCompactCurrency(stock.value)
+                        ) : stock.quantity > 0 ? (
+                          <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                            <Loader2 size={12} className="animate-spin" />
+                            Updating...
+                          </span>
+                        ) : (
+                          "₹0"
+                        )}
+                      </PrivacyMask>
+                    </div>
+                    <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-neutral-500">
+                      Avg {formatPrice(stock.avg_price)}
+                    </div>
                   </div>
-                  <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-neutral-500">
-                    Avg {formatPrice(stock.avg_price)}
+                  <ChevronRight
+                    className="mt-0.5 text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all shrink-0"
+                    size={18}
+                  />
+                </div>
+              </Link>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    Quantity
+                  </p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                    {stock.quantity} shares
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    Day Change
+                  </p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      (stock.day_change || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    }`}>
+                    {(stock.day_change || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.day_change || 0).toLocaleString("en-IN")}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    P&amp;L
+                  </p>
+                  <div
+                    className={`flex items-baseline gap-2 ${
+                      (stock.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    }`}>
+                    <p className="text-sm font-semibold">
+                      {stock.pnl >= 0 ? "+" : ""}
+                      {formatPercent(stock.pnl_pct)}
+                    </p>
                   </div>
                 </div>
-                <ChevronRight
-                  className="mt-0.5 text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all shrink-0"
-                  size={18}
-                />
-              </div>
-            </Link>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                  Quantity
-                </p>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  {stock.quantity} shares
-                </p>
-              </div>
-              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                  Day Change
-                </p>
-                <p
-                  className={`text-sm font-semibold ${
-                    (stock.day_change || 0) >= 0 ? "text-green-500" : "text-red-500"
-                  }`}>
-                  {(stock.day_change || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.day_change || 0).toLocaleString("en-IN")}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                  P&amp;L
-                </p>
-                <div
-                  className={`flex items-baseline gap-2 ${
-                    (stock.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
-                  }`}>
-                  <p className="text-sm font-semibold">
-                    {stock.pnl >= 0 ? "+" : ""}
-                    {formatPercent(stock.pnl_pct)}
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    LTP
+                  </p>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                    {formatPrice(stock.current_price)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    XIRR
+                  </p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
+                    }`}>
+                    {stock.xirr !== null && stock.xirr !== undefined
+                      ? formatPercent(stock.xirr)
+                      : "--"}
                   </p>
                 </div>
               </div>
-              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                  LTP
-                </p>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  {formatPrice(stock.current_price)}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                  XIRR
-                </p>
-                <p
-                  className={`text-sm font-semibold ${
-                    (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
-                  }`}>
-                  {stock.xirr !== null && stock.xirr !== undefined
-                    ? formatPercent(stock.xirr)
-                    : "--"}
-                </p>
-              </div>
-            </div>
 
-            <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setShowStockModal(true);
-                  setStockModalTab("MANUAL");
-                  setStockForm({
-                    symbol: stock.symbol || "",
-                    quantity: "",
-                    price: stock.current_price
-                      ? String(stock.current_price)
-                      : "",
-                    date: new Date().toISOString().split("T")[0],
-                    transaction_type: "BUY",
-                  });
-                  setIsValidSymbol(true);
-                  setShowSearchResults(false);
-                }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
-                <TrendingUp size={14} /> Buy
-              </button>
-              <button
-                onClick={() => {
-                  setShowStockModal(true);
-                  setStockModalTab("MANUAL");
-                  setStockForm({
-                    symbol: stock.symbol || "",
-                    quantity: "",
-                    price: stock.current_price
-                      ? String(stock.current_price)
-                      : "",
-                    date: new Date().toISOString().split("T")[0],
-                    transaction_type: "SELL",
-                  });
-                  setIsValidSymbol(true);
-                  setShowSearchResults(false);
-                }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                <TrendingDown size={14} /> Sell
-              </button>
-              <button
-                onClick={() => {
-                  setEditingStock({ ...stock });
-                  setIsEditModalOpen(true);
-                }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors">
-                <Pencil size={14} /> Edit
-              </button>
-              <button
-                onClick={() => handleDeleteStock(stock.id)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                <Trash2 size={14} /> Delete
-              </button>
-              <button
-                onClick={() => setSelectedShareStock(stock)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
-                <Share2 size={14} /> Share
-              </button>
-            </div>
-          </Card>
-        ))}
+              <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    setShowStockModal(true);
+                    setStockModalTab("MANUAL");
+                    setStockForm({
+                      symbol: stock.symbol || "",
+                      quantity: "",
+                      price: stock.current_price
+                        ? String(stock.current_price)
+                        : "",
+                      date: new Date().toISOString().split("T")[0],
+                      transaction_type: "BUY",
+                    });
+                    setIsValidSymbol(true);
+                    setShowSearchResults(false);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
+                  <TrendingUp size={14} /> Buy
+                </button>
+                <button
+                  onClick={() => {
+                    setShowStockModal(true);
+                    setStockModalTab("MANUAL");
+                    setStockForm({
+                      symbol: stock.symbol || "",
+                      quantity: "",
+                      price: stock.current_price
+                        ? String(stock.current_price)
+                        : "",
+                      date: new Date().toISOString().split("T")[0],
+                      transaction_type: "SELL",
+                    });
+                    setIsValidSymbol(true);
+                    setShowSearchResults(false);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                  <TrendingDown size={14} /> Sell
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingStock({ ...stock });
+                    setIsEditModalOpen(true);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors">
+                  <Pencil size={14} /> Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteStock(stock.id)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                  <Trash2 size={14} /> Delete
+                </button>
+                <button
+                  onClick={() => setSelectedShareStock(stock)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
+                  <Share2 size={14} /> Share
+                </button>
+              </div>
+            </Card>
+          ))
+        )}
         {manualStocks.length === 0 && !isLoading && (
           <div className="text-center py-10 text-neutral-500 space-y-4">
             <p>No stocks added yet.</p>

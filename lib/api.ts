@@ -702,6 +702,9 @@ export const api = {
   getUserFeedback: () =>
     api.fetch("/feedback/list"),
 
+  getPublicSuggestions: () =>
+    api.fetch("/feedback/public/list"),
+
 
   trackSupportClick: (paymentApp: string) =>
     api.fetch("/support/click", {

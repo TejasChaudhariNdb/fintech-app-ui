@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, Download } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -82,6 +82,61 @@ export default function MutualFundsPage() {
   // Journey State
   const [journeyRange, setJourneyRange] = useState("6M");
   const [isJourneyRefetching, setIsJourneyRefetching] = useState(false);
+
+  // View Mode & Tax Report State
+  const [viewMode, setViewMode] = useState<"compact" | "detailed">("detailed");
+  const [selectedFy, setSelectedFy] = useState("2025-26");
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("holdings_view_mode");
+    if (saved === "compact" || saved === "detailed") {
+      setViewMode(saved);
+    }
+  }, []);
+
+  const handleToggleViewMode = () => {
+    const nextMode = viewMode === "compact" ? "detailed" : "compact";
+    setViewMode(nextMode);
+    localStorage.setItem("holdings_view_mode", nextMode);
+  };
+
+  const handleDownloadTaxReport = async () => {
+    setIsDownloadingReport(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      if (activeProfileId) {
+        headers["x-profile-id"] = String(activeProfileId);
+      }
+      
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/api/reports/capital-gains/csv?financial_year=${selectedFy}`, {
+        headers
+      });
+      
+      if (!res.ok) throw new Error("Failed to download tax report");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `capital_gains_report_${selectedFy}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Tax report downloaded successfully", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to download tax report", "error");
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -462,7 +517,7 @@ export default function MutualFundsPage() {
         </div>
 
         {/* Search and Filter */}
-        <div className="flex gap-2 px-1">
+        <div className="flex flex-col md:flex-row gap-2 px-1 items-stretch md:items-center">
           <div className="relative flex-1">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
@@ -484,77 +539,213 @@ export default function MutualFundsPage() {
               </button>
             ) : null}
           </div>
-          <select
-            value={sortBy}
-            onChange={(e) =>
-              setSortBy(
-                e.target.value as
-                  | "value"
-                  | "name"
-                  | "profit"
-                  | "dayChange"
-                  | "rank",
-              )
-            }
-            aria-label="Sort schemes"
-            className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
-            <option value="name">Sort: Name</option>
-            <option value="value">Sort: Value</option>
-            <option value="profit">Sort: Profit</option>
-            <option value="dayChange">Sort: Daily Change</option>
-            <option value="rank">Sort: Rank</option>
-          </select>
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* View Toggle */}
+            <button
+              onClick={handleToggleViewMode}
+              title={viewMode === "compact" ? "Detailed card view" : "Compact list view"}
+              className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent hover:bg-neutral-200 dark:hover:bg-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+            >
+              {viewMode === "compact" ? <Grid size={14} /> : <List size={14} />}
+              <span className="hidden sm:inline">{viewMode === "compact" ? "Detailed" : "Compact"}</span>
+            </button>
+
+            {/* Tax Report Download */}
+            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-white/5 border border-transparent rounded-xl px-2.5 py-0.5">
+              <select
+                value={selectedFy}
+                onChange={(e) => setSelectedFy(e.target.value)}
+                aria-label="Financial Year"
+                className="bg-transparent border-none text-neutral-600 dark:text-neutral-300 text-xs font-medium focus:ring-0 outline-none pr-1 py-1"
+              >
+                <option value="2026-27" className="dark:bg-surface text-neutral-900 dark:text-white">FY 26-27</option>
+                <option value="2025-26" className="dark:bg-surface text-neutral-900 dark:text-white">FY 25-26</option>
+                <option value="2024-25" className="dark:bg-surface text-neutral-900 dark:text-white">FY 24-25</option>
+                <option value="2023-24" className="dark:bg-surface text-neutral-900 dark:text-white">FY 23-24</option>
+              </select>
+              <button
+                onClick={handleDownloadTaxReport}
+                title="Download Tax Report (LTCG / STCG CSV)"
+                disabled={isDownloadingReport}
+                className="p-1 text-neutral-600 dark:text-neutral-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-neutral-200 dark:hover:bg-white/10 rounded-lg transition-colors flex items-center justify-center"
+              >
+                {isDownloadingReport ? (
+                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-primary-500 border-t-transparent" />
+                ) : (
+                  <Download size={14} />
+                )}
+              </button>
+            </div>
+
+            <select
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(
+                  e.target.value as
+                    | "value"
+                    | "name"
+                    | "profit"
+                    | "dayChange"
+                    | "rank",
+                )
+              }
+              aria-label="Sort schemes"
+              className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
+              <option value="name">Sort: Name</option>
+              <option value="value">Sort: Value</option>
+              <option value="profit">Sort: Profit</option>
+              <option value="dayChange">Sort: Daily Change</option>
+              <option value="rank">Sort: Rank</option>
+            </select>
+          </div>
         </div>
 
         <div className="space-y-4">
           {filteredSchemes.length > 0 ? (
-            filteredSchemes.map((scheme) => (
-              <SchemeCard
-                key={scheme.scheme_id}
-                schemeId={scheme.scheme_id}
-                scheme={scheme.scheme}
-                amc={scheme.amc}
-                nav={scheme.nav}
-                avgPrice={scheme.avg_price}
-                units={scheme.units}
-                current={scheme.current}
-                returnPct={scheme.return_pct}
-                xirr={scheme.xirr}
-                dayChange={scheme.day_change}
-                dayChangePct={scheme.day_change_pct}
-                categoryLabel={scheme.category_label}
-                overallRank={scheme.overall_rank}
-                totalHoldings={scheme.total_holdings}
-                categoryRank={scheme.category_rank}
-                categoryTotal={scheme.category_total}
-                profit={scheme.profit}
-                isSif={scheme.is_sif}
-                profileBreakdown={scheme.profile_breakdown}
-                onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
-                onShare={() =>
-                  setSelectedShareStock({
-                    symbol: scheme.scheme,
-                    pnl_pct: scheme.return_pct,
-                    value: scheme.current,
-                  })
-                }
-                onEdit={() => {
-                  setEditingScheme({ ...scheme });
-                  setIsEditModalOpen(true);
-                }}
-                onDelete={() => handleDeleteScheme(scheme.scheme_id)}
-                onBuy={() => {
-                  setPrefillSchemeId(scheme.scheme_id);
-                  setPrefillMfType("PURCHASE");
-                  setShowAddTx(true);
-                }}
-                onSell={() => {
-                  setPrefillSchemeId(scheme.scheme_id);
-                  setPrefillMfType("REDEMPTION");
-                  setShowAddTx(true);
-                }}
-              />
-            ))
+            viewMode === "compact" ? (
+              <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
+                <div className="grid gap-3 min-w-[760px]">
+                  {filteredSchemes.map((scheme) => {
+                    const invested = scheme.current - (scheme.profit || 0);
+                    const gain = scheme.profit || 0;
+                    const isPositive = scheme.return_pct >= 0;
+                    const isDayPositive = scheme.day_change >= 0;
+                    
+                    return (
+                      <div
+                        key={scheme.scheme_id}
+                        onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
+                        className="flex flex-col p-4 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/[0.06] rounded-2xl gap-3 hover:border-primary-500/20 hover:shadow-md cursor-pointer transition-all duration-300"
+                      >
+                        {/* Row 1 */}
+                        <div className="flex justify-between items-center gap-4 text-sm font-semibold">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-neutral-900 dark:text-white font-bold text-[15px] truncate max-w-[280px]">
+                                {scheme.scheme}
+                              </span>
+                              {scheme.category_label && (
+                                <span className="px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-500/10 text-[9px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 border border-primary-200/40 dark:border-primary-500/15 shrink-0">
+                                  {scheme.category_label}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-neutral-400 mt-0.5 truncate">{scheme.amc}</p>
+                          </div>
+                          <div className="flex gap-6 justify-end items-center text-right shrink-0">
+                            <div className="w-24">
+                              <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Invested</p>
+                              <p className="text-neutral-700 dark:text-neutral-300 font-semibold text-xs sm:text-sm">
+                                <PrivacyMask>₹{invested.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                              </p>
+                            </div>
+                            <div className="w-24">
+                              <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Gain</p>
+                              <p className={`font-bold text-xs sm:text-sm ${gain >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                <PrivacyMask>{gain >= 0 ? "+" : ""}₹{Math.abs(gain).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                              </p>
+                            </div>
+                            <div className="w-28">
+                              <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Current</p>
+                              <p className="text-neutral-900 dark:text-white text-sm sm:text-base font-bold">
+                                <PrivacyMask>₹{scheme.current.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Row 2 */}
+                        <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
+                          <div className="flex gap-6 items-center flex-wrap">
+                            <div>
+                              <span className="text-neutral-400 mr-1">NAV:</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{scheme.nav.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-400 mr-1">Units:</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">{scheme.units?.toFixed(3)}</span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-400 mr-1">Avg Price:</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{scheme.avg_price?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-6 justify-end items-center text-right shrink-0">
+                            <div className="w-24">
+                              <span className="text-neutral-400 mr-1">P&L:</span>
+                              <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                {isPositive ? "+" : ""}{scheme.return_pct.toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="w-24">
+                              <span className="text-neutral-400 mr-1">Today:</span>
+                              <span className={`font-bold ${isDayPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                {isDayPositive ? "+" : ""}{scheme.day_change_pct.toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="w-28">
+                              <span className="text-neutral-400 mr-1">XIRR:</span>
+                              <span className={`font-bold ${scheme.xirr !== undefined && scheme.xirr !== null ? (scheme.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                                {scheme.xirr !== undefined && scheme.xirr !== null ? `${scheme.xirr.toFixed(2)}%` : "--"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              filteredSchemes.map((scheme) => (
+                <SchemeCard
+                  key={scheme.scheme_id}
+                  schemeId={scheme.scheme_id}
+                  scheme={scheme.scheme}
+                  amc={scheme.amc}
+                  nav={scheme.nav}
+                  avgPrice={scheme.avg_price}
+                  units={scheme.units}
+                  current={scheme.current}
+                  returnPct={scheme.return_pct}
+                  xirr={scheme.xirr}
+                  dayChange={scheme.day_change}
+                  dayChangePct={scheme.day_change_pct}
+                  categoryLabel={scheme.category_label}
+                  overallRank={scheme.overall_rank}
+                  totalHoldings={scheme.total_holdings}
+                  categoryRank={scheme.category_rank}
+                  categoryTotal={scheme.category_total}
+                  profit={scheme.profit}
+                  isSif={scheme.is_sif}
+                  profileBreakdown={scheme.profile_breakdown}
+                  onClick={() => router.push(`/holdings/${scheme.scheme_id}`)}
+                  onShare={() =>
+                    setSelectedShareStock({
+                      symbol: scheme.scheme,
+                      pnl_pct: scheme.return_pct,
+                      value: scheme.current,
+                    })
+                  }
+                  onEdit={() => {
+                    setEditingScheme({ ...scheme });
+                    setIsEditModalOpen(true);
+                  }}
+                  onDelete={() => handleDeleteScheme(scheme.scheme_id)}
+                  onBuy={() => {
+                    setPrefillSchemeId(scheme.scheme_id);
+                    setPrefillMfType("PURCHASE");
+                    setShowAddTx(true);
+                  }}
+                  onSell={() => {
+                    setPrefillSchemeId(scheme.scheme_id);
+                    setPrefillMfType("REDEMPTION");
+                    setShowAddTx(true);
+                  }}
+                />
+              ))
+            )
           ) : (
             <div className="text-center py-8 text-neutral-500 dark:text-neutral-400 space-y-2">
               <p>No schemes found. Try clearing search or changing sort.</p>

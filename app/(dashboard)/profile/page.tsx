@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   ExternalLink,
   Sparkles,
+  Lightbulb,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -1155,7 +1156,25 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-sm font-semibold text-neutral-900 dark:text-white">Contact Support</p>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Get help or share feedback
+                    Email, WhatsApp, or phone support
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
+            </button>
+
+            <button
+              onClick={() => router.push("/suggestions")}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-400">
+                  <Lightbulb size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">Suggestions &amp; Feedback</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Request features and view suggestions board
                   </p>
                 </div>
               </div>
