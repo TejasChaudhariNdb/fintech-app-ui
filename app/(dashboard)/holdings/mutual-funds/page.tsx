@@ -60,7 +60,7 @@ export default function MutualFundsPage() {
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<
-    "value" | "name" | "profit" | "dayChange" | "rank"
+    "value" | "name" | "profit" | "dayChange" | "rank" | "categoryRank" | "overallRank"
   >("name");
   const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
@@ -252,7 +252,15 @@ export default function MutualFundsPage() {
       if (sortBy === "value") return b.current - a.current;
       if (sortBy === "profit") return b.profit - a.profit;
       if (sortBy === "dayChange") return b.day_change - a.day_change;
-      if (sortBy === "rank") {
+      if (sortBy === "categoryRank" || sortBy === "rank") {
+        const catCompare = (a.category_label || "").localeCompare(b.category_label || "");
+        if (catCompare !== 0) return catCompare;
+        return (
+          (a.category_rank || Number.MAX_SAFE_INTEGER) -
+          (b.category_rank || Number.MAX_SAFE_INTEGER)
+        );
+      }
+      if (sortBy === "overallRank") {
         return (
           (a.overall_rank || Number.MAX_SAFE_INTEGER) -
           (b.overall_rank || Number.MAX_SAFE_INTEGER)
@@ -586,7 +594,9 @@ export default function MutualFundsPage() {
                     | "name"
                     | "profit"
                     | "dayChange"
-                    | "rank",
+                    | "rank"
+                    | "categoryRank"
+                    | "overallRank",
                 )
               }
               aria-label="Sort schemes"
@@ -595,7 +605,8 @@ export default function MutualFundsPage() {
               <option value="value">Sort: Value</option>
               <option value="profit">Sort: Profit</option>
               <option value="dayChange">Sort: Daily Change</option>
-              <option value="rank">Sort: Rank</option>
+              <option value="categoryRank">Sort: Category Rank</option>
+              <option value="overallRank">Sort: Overall Rank</option>
             </select>
           </div>
         </div>
