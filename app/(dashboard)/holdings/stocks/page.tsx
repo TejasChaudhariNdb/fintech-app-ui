@@ -525,7 +525,7 @@ export default function StocksPage() {
           <PortfolioAnalysisCard />
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
                 Total Value
@@ -548,6 +548,26 @@ export default function StocksPage() {
             </Card>
             <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
               <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
+                Total P&amp;L
+              </p>
+              <div
+                className={`flex items-baseline gap-1.5 flex-wrap ${
+                  stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
+                }`}>
+                <p className="text-lg sm:text-2xl font-bold">
+                  <PrivacyMask>
+                    {stockStats.pnl >= 0 ? "+" : ""}
+                    {formatCompactCurrency(Math.abs(stockStats.pnl))}
+                  </PrivacyMask>
+                </p>
+                <p className="text-xs sm:text-sm font-medium">
+                  ({stockStats.pnl >= 0 ? "+" : ""}
+                  {formatPercent(stockStats.pnlPct)})
+                </p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
                 XIRR
               </p>
               <p
@@ -556,39 +576,6 @@ export default function StocksPage() {
                 }`}>
                 {formatPercent(portfolioXirr)}
               </p>
-            </Card>
-            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex items-center justify-between rounded-2xl col-span-2">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
-                  Total P&L
-                </p>
-                <div
-                  className={`flex items-baseline gap-2 ${
-                    stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
-                  }`}>
-                  <p className="text-lg sm:text-2xl font-bold">
-                    <PrivacyMask>
-                      {stockStats.pnl >= 0 ? "+" : ""}
-                      {formatCompactCurrency(Math.abs(stockStats.pnl))}
-                    </PrivacyMask>
-                  </p>
-                  <p className="text-sm font-medium">
-                    ({stockStats.pnl >= 0 ? "+" : ""}
-                    {formatPercent(stockStats.pnlPct)})
-                  </p>
-                </div>
-              </div>
-              <div
-                className={`p-3 rounded-full ${
-                  stockStats.pnl >= 0 ? "bg-green-500/10" : "bg-red-500/10"
-                }`}>
-                <TrendingUp
-                  size={24}
-                  className={
-                    stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
-                  }
-                />
-              </div>
             </Card>
           </div>
 
@@ -853,59 +840,67 @@ export default function StocksPage() {
                 </div>
               </Link>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+              <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
                     Quantity
                   </p>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                  <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
                     {stock.quantity} shares
                   </p>
                 </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    LTP
+                  </p>
+                  <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                    {formatPrice(stock.current_price)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
                     Day Change
                   </p>
                   <p
-                    className={`text-sm font-semibold ${
+                    className={`text-xs sm:text-sm font-semibold truncate ${
                       (stock.day_change || 0) >= 0 ? "text-green-500" : "text-red-500"
                     }`}>
                     {(stock.day_change || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.day_change || 0).toLocaleString("en-IN")}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
                     P&amp;L
                   </p>
-                  <div
-                    className={`flex items-baseline gap-2 ${
+                  <p
+                    className={`text-xs sm:text-sm font-semibold truncate ${
                       (stock.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
                     }`}>
-                    <p className="text-sm font-semibold">
-                      {stock.pnl >= 0 ? "+" : ""}
-                      {formatPercent(stock.pnl_pct)}
-                    </p>
-                  </div>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    LTP
-                  </p>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                    {formatPrice(stock.current_price)}
+                    {stock.pnl >= 0 ? "+" : ""}
+                    {formatPercent(stock.pnl_pct)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-3 py-2.5">
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
                     XIRR
                   </p>
                   <p
-                    className={`text-sm font-semibold ${
+                    className={`text-xs sm:text-sm font-semibold truncate ${
                       (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
                     }`}>
                     {stock.xirr !== null && stock.xirr !== undefined
                       ? formatPercent(stock.xirr)
                       : "--"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                    Invested
+                  </p>
+                  <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                    <PrivacyMask>
+                      {formatCompactCurrency(stock.value - (stock.pnl || 0))}
+                    </PrivacyMask>
                   </p>
                 </div>
               </div>
