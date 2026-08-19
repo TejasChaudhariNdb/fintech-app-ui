@@ -9,6 +9,17 @@ import { ProfileProvider } from "@/context/ProfileContext";
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     analytics.init();
+
+    const handleChunkError = (e: ErrorEvent) => {
+      if (
+        e?.message?.includes("Loading chunk") ||
+        e?.message?.includes("Failed to load chunk")
+      ) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("error", handleChunkError);
+    return () => window.removeEventListener("error", handleChunkError);
   }, []);
 
   // Replace with your actual Google Client ID

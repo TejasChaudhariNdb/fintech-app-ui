@@ -44,6 +44,9 @@ class AnalyticsService {
   init() {
     if (typeof window === 'undefined' || this.isInitialized) return;
 
+    // Defensive polyfill for any webview/extension calling closeMobileMenu globally
+    (window as any).closeMobileMenu = (window as any).closeMobileMenu || function () {};
+
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
@@ -61,6 +64,61 @@ class AnalyticsService {
         maskAllInputs: true,
       },
       autocapture: false,
+      before_send: (event) => {
+        if (event && event.event === '$exception') {
+          const props = event.properties || {};
+          const excType = String(props['$exception_type'] || props['$exception_name'] || '');
+          const excValue = String(
+            props['$exception_message'] ||
+              props['$exception_value'] ||
+              props['$exception_list']?.[0]?.value ||
+              ''
+          );
+
+          // 1. Filter out cross-origin "Script error." (CORS policy masked errors)
+          if (excValue === 'Script error.' || excValue === 'Script error') {
+            return null;
+          }
+
+          // 2. Filter out Chrome Extension / WebView IPC non-error promise rejections
+          if (
+            excValue.includes('Object Not Found Matching Id') ||
+            excValue.includes('Object captured as exception')
+          ) {
+            return null;
+          }
+
+          // 3. Filter out closeMobileMenu reference errors from third-party scripts/webviews
+          if (excType === 'ReferenceError' && excValue.includes('closeMobileMenu')) {
+            return null;
+          }
+
+          // 4. Filter out Google Translate & browser extension DOM reconciliation issues (DOMException / insertBefore)
+          if (
+            excType === 'DOMException' ||
+            excValue.includes('The object can not be found here') ||
+            excValue.includes('insertBefore')
+          ) {
+            return null;
+          }
+
+          // 5. Filter out ChunkLoadError (handled via auto-reload on stale Next.js deployments)
+          if (excType === 'ChunkLoadError' || excValue.includes('Failed to load chunk')) {
+            return null;
+          }
+
+          // 6. Filter out Android WebView Java native bridge garbage collection errors
+          if (excValue.includes('Error invoking postMessage: Java object is gone')) {
+            return null;
+          }
+
+          // 7. Filter out ResizeObserver frame loop notifications
+          if (excValue.includes('ResizeObserver loop completed')) {
+            return null;
+          }
+        }
+        return event;
+      },
       loaded: (ph) => {
         if (process.env.NODE_ENV === 'development') {
           ph.debug();

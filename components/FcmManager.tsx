@@ -40,10 +40,23 @@ const FcmManager = () => {
         if (payload.notification) {
           const { title, body } = payload.notification;
           if ("Notification" in window) {
-            new Notification(title || "New Message", {
-              body,
-              icon: "/icon-192x192.png",
-            });
+            try {
+              new Notification(title || "New Message", {
+                body,
+                icon: "/icon-192x192.png",
+              });
+            } catch (err) {
+              if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.ready
+                  .then((registration) => {
+                    registration.showNotification(title || "New Message", {
+                      body,
+                      icon: "/icon-192x192.png",
+                    });
+                  })
+                  .catch(() => {});
+              }
+            }
           }
         }
       });
