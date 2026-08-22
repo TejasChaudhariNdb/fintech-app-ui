@@ -379,6 +379,21 @@ export const api = {
     return api.fetch(`/reports/capital-gains/summary?${params.toString()}`);
   },
 
+  updateTradeDetails: (data: {
+    asset_type: string;
+    buy_tx_id?: number | null;
+    sell_tx_id?: number | null;
+    bought_date?: string | null;
+    sold_date?: string | null;
+    bought_rate?: number | null;
+    sold_rate?: number | null;
+    quantity?: number | null;
+  }) =>
+    api.fetch("/reports/trade/update", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   downloadCapitalGainsCSV: async (financialYear?: string, assetClass: string = "all", reportType: string = "it_portal_112a") => {
     const token =
       typeof window !== "undefined"
