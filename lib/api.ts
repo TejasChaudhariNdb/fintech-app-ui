@@ -89,7 +89,8 @@ export const api = {
           "/cas/upload",
           "/cas/upload-json",
           "/equity/import",
-          "/equity/holding"
+          "/equity/holding",
+          "/reports/capital-gains"
         ];
         
         const pathPart = endpoint.split("?")[0];
@@ -365,6 +366,54 @@ export const api = {
     const a = document.createElement("a");
     a.href = url;
     a.download = `transactions_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  getCapitalGainsSummary: (financialYear?: string, assetClass: string = "all") => {
+    const params = new URLSearchParams();
+    if (financialYear) params.append("financial_year", financialYear);
+    params.append("asset_class", assetClass);
+    return api.fetch(`/reports/capital-gains/summary?${params.toString()}`);
+  },
+
+  downloadCapitalGainsCSV: async (financialYear?: string, assetClass: string = "all", reportType: string = "it_portal_112a") => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("access_token")
+        : null;
+    const activeProfileId =
+      typeof window !== "undefined"
+        ? localStorage.getItem("active_profile_id")
+        : null;
+
+    const params = new URLSearchParams();
+    if (financialYear) params.append("financial_year", financialYear);
+    params.append("asset_class", assetClass);
+    params.append("report_type", reportType);
+    if (activeProfileId) params.append("profile_id", activeProfileId);
+
+    const res = await fetch(`${API_URL}/reports/capital-gains/csv?${params.toString()}`, {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+
+    if (!res.ok) throw new Error("CSV Export failed");
+
+    const disposition = res.headers.get("Content-Disposition");
+    let filename = `capital_gains_${reportType}.csv`;
+    if (disposition && disposition.includes("filename=")) {
+      filename = disposition.split("filename=")[1].replace(/"/g, "").trim();
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();

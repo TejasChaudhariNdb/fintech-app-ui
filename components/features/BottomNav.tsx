@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Home, Briefcase, Activity, Target, Settings } from "lucide-react";
+import { Home, Briefcase, Activity, FileSpreadsheet, Target, Settings } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 export default function BottomNav() {
@@ -12,6 +12,7 @@ export default function BottomNav() {
     { id: "/", label: "Home", icon: Home },
     { id: "/holdings", label: "Holdings", icon: Briefcase },
     { id: "/activity", label: "Transactions", icon: Activity },
+    { id: "/reports", label: "Reports", icon: FileSpreadsheet },
     { id: "/goals", label: "Goals", icon: Target },
     { id: "/profile", label: "Settings", icon: Settings },
   ];

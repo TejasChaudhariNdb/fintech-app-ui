@@ -13,6 +13,7 @@ import {
   EyeOff,
   Sparkles,
   Lightbulb,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -60,6 +61,7 @@ export default function SideNav() {
     { id: "/", label: "Home", icon: Home },
     { id: "/holdings", label: "Holdings", icon: Briefcase },
     { id: "/activity", label: "Transactions", icon: Activity },
+    { id: "/reports", label: "Reports", icon: FileSpreadsheet },
     { id: "/goals", label: "Goals", icon: Target },
     { id: "/suggestions", label: "Suggestions", icon: Lightbulb },
   ];
