@@ -77,7 +77,14 @@ export default function ReportsPage() {
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
 
-  const fyOptions = ["2025-26", "2024-25", "2023-24", "2022-23"];
+  const fyOptions = useMemo(() => {
+    const options: string[] = [];
+    const endYear = currentMonth >= 4 ? currentYear : currentYear - 1;
+    for (let y = endYear; y >= 2014; y--) {
+      options.push(`${y}-${(y + 1).toString().slice(2)}`);
+    }
+    return options;
+  }, [currentYear, currentMonth]);
 
   const fetchSummary = async () => {
     try {
