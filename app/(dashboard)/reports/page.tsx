@@ -67,7 +67,7 @@ export default function ReportsPage() {
       ? `${currentYear}-${(currentYear + 1).toString().slice(2)}`
       : `${currentYear - 1}-${currentYear.toString().slice(2)}`;
 
-  const [financialYear, setFinancialYear] = useState<string>(defaultFY);
+  const [financialYear, setFinancialYear] = useState<string>("all");
   const [assetClass, setAssetClass] = useState<string>("all");
   const [activeTab, setActiveTab] = useState<"ltcg" | "stcg">("ltcg");
 
@@ -78,7 +78,7 @@ export default function ReportsPage() {
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   const fyOptions = useMemo(() => {
-    const options: string[] = [];
+    const options: string[] = ["all"];
     const endYear = currentMonth >= 4 ? currentYear : currentYear - 1;
     for (let y = endYear; y >= 2014; y--) {
       options.push(`${y}-${(y + 1).toString().slice(2)}`);
@@ -159,7 +159,7 @@ export default function ReportsPage() {
               className="bg-transparent text-white font-bold outline-none cursor-pointer pr-1">
               {fyOptions.map((fy) => (
                 <option key={fy} value={fy} className="bg-slate-900 text-white">
-                  FY {fy}
+                  {fy === "all" ? "All Time (All Years)" : `FY ${fy}`}
                 </option>
               ))}
             </select>
