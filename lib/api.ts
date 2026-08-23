@@ -766,8 +766,11 @@ export const api = {
   getUserFeedback: () =>
     api.fetch("/feedback/list"),
 
-  getPublicSuggestions: (category?: string) =>
-    api.fetch(category ? `/feedback/public/list?category=${encodeURIComponent(category)}` : "/feedback/public/list"),
+  getPublicSuggestions: (category?: string, limit: number = 8, offset: number = 0) => {
+    let url = `/feedback/public/list?limit=${limit}&offset=${offset}`;
+    if (category) url += `&category=${encodeURIComponent(category)}`;
+    return api.fetch(url);
+  },
 
   toggleFeedbackAgree: (feedbackId: number) =>
     api.fetch(`/feedback/${feedbackId}/agree`, {

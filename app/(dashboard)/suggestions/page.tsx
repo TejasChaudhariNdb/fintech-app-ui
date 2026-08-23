@@ -25,9 +25,7 @@ import {
   ChevronUp,
   Plus,
   X,
-  Filter,
-  User,
-  Check
+  Filter
 } from "lucide-react";
 
 export default function SuggestionsPage() {
@@ -40,16 +38,20 @@ export default function SuggestionsPage() {
   // Status filter
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  // Load More Pagination State (Matches Activity / Transactions Page)
+  const LIMIT = 6;
+  const [offset, setOffset] = useState(0);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+
   // Form modal state
   const [showFormModal, setShowFormModal] = useState(false);
   const [type, setType] = useState("feature");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  // Data & loading
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Comment expand state & inputs
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
@@ -75,28 +77,50 @@ export default function SuggestionsPage() {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (currentOffset: number = 0, isAppend: boolean = false) => {
     try {
-      setLoading(true);
-      const data = await api.getPublicSuggestions(activeTab);
-      setItems(data || []);
+      if (isAppend) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+
+      const res = await api.getPublicSuggestions(activeTab, LIMIT, currentOffset);
+      const newItems = res?.items || [];
+
+      if (isAppend) {
+        setItems((prev) => [...prev, ...newItems]);
+      } else {
+        setItems(newItems);
+      }
+
+      setHasMore(!!res?.has_more);
     } catch (err) {
       console.error(err);
       showToast("Failed to load community board", "error");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    loadData();
-    // Default type depending on activeTab
+    setOffset(0);
+    setItems([]);
+    loadData(0, false);
+
     if (activeTab === "suggestion") {
       setType("feature");
     } else {
       setType("appreciation");
     }
   }, [activeTab]);
+
+  const handleLoadMore = () => {
+    const nextOffset = offset + LIMIT;
+    setOffset(nextOffset);
+    loadData(nextOffset, true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +143,8 @@ export default function SuggestionsPage() {
           : "Suggestion posted successfully!",
         "success"
       );
-      loadData();
+      setOffset(0);
+      loadData(0, false);
     } catch (err) {
       console.error(err);
       showToast("Failed to submit post", "error");
@@ -144,7 +169,7 @@ export default function SuggestionsPage() {
     } catch (err) {
       console.error(err);
       showToast("Could not register vote", "error");
-      loadData();
+      loadData(0, false);
     }
   };
 
@@ -246,11 +271,9 @@ export default function SuggestionsPage() {
       return true;
     })
     .sort((a, b) => {
-      // 1. User's own posts always come first
       if (a.is_mine !== b.is_mine) {
         return a.is_mine ? -1 : 1;
       }
-      // 2. Newest posts first
       const aTime = a.created_at_iso ? new Date(a.created_at_iso).getTime() : 0;
       const bTime = b.created_at_iso ? new Date(b.created_at_iso).getTime() : 0;
       return bTime - aTime;
@@ -289,9 +312,7 @@ export default function SuggestionsPage() {
       <div className="mt-6 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-2xl border border-neutral-200 dark:border-white/5">
           <button
-            onClick={() => {
-              setActiveTab("suggestion");
-            }}
+            onClick={() => setActiveTab("suggestion")}
             className={`px-5 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
               activeTab === "suggestion"
                 ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
@@ -303,9 +324,7 @@ export default function SuggestionsPage() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab("feedback");
-            }}
+            onClick={() => setActiveTab("feedback")}
             className={`px-5 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
               activeTab === "feedback"
                 ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
@@ -548,6 +567,24 @@ export default function SuggestionsPage() {
                 </Card>
               );
             })}
+
+            {/* Load More Button (Identical to Transactions / Activity Page) */}
+            {hasMore && (
+              <div className="flex justify-center pt-4 pb-4">
+                <Button
+                  onClick={handleLoadMore}
+                  variant="ghost"
+                  disabled={loadingMore}
+                  className="w-full py-3.5 text-primary-600 dark:text-primary-400 font-bold hover:bg-neutral-50 dark:hover:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl transition-colors flex justify-center items-center text-xs"
+                >
+                  {loadingMore ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-600 border-t-transparent" />
+                  ) : (
+                    "Load More"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 rounded-3xl space-y-3">
