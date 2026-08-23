@@ -9,27 +9,52 @@ import Toast from "@/components/ui/Toast";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import { 
   Lightbulb, 
-  Plus, 
   MessageSquare, 
   CheckCircle2, 
-  Clock, 
-  AlertCircle, 
   Send,
   MessageCircle,
   HelpCircle,
-  Bug
+  Bug,
+  ThumbsUp,
+  Heart,
+  AlertTriangle,
+  Clock,
+  Sparkles,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  X,
+  Filter,
+  User,
+  Check
 } from "lucide-react";
 
 export default function SuggestionsPage() {
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<string>("all");
+  // Active Main Tab: "suggestion" | "feedback"
+  const [activeTab, setActiveTab] = useState<"suggestion" | "feedback">("suggestion");
+  
+  // Segment filter: "mine" | "all"
+  const [viewSegment, setViewSegment] = useState<"mine" | "all">("mine");
+  
+  // Status filter
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  // Form state
+  // Form modal state
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [type, setType] = useState("feature");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [type, setType] = useState("feature"); // "feature", "bug", "feedback"
+  const [submitting, setSubmitting] = useState(false);
+
+  // Data & loading
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Comment expand state & inputs
+  const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
+  const [postingComment, setPostingComment] = useState<Record<number, boolean>>({});
 
   const [toast, setToast] = useState({
     message: "",
@@ -50,22 +75,28 @@ export default function SuggestionsPage() {
     }
   };
 
-  const loadSuggestions = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await api.getUserFeedback();
-      setSuggestions(data || []);
+      const data = await api.getPublicSuggestions(activeTab);
+      setItems(data || []);
     } catch (err) {
       console.error(err);
-      showToast("Failed to load suggestions", "error");
+      showToast("Failed to load community board", "error");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadSuggestions();
-  }, []);
+    loadData();
+    // Default type depending on activeTab
+    if (activeTab === "suggestion") {
+      setType("feature");
+    } else {
+      setType("appreciation");
+    }
+  }, [activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,80 +105,159 @@ export default function SuggestionsPage() {
     setSubmitting(true);
     try {
       await api.submitFeedback({
+        main_category: activeTab,
         type,
         title: title.trim(),
         body: body.trim() || undefined,
       });
       setTitle("");
       setBody("");
-      setType("feature");
-      showToast("Suggestion submitted successfully!", "success");
-      loadSuggestions();
+      setShowFormModal(false);
+      showToast(
+        activeTab === "feedback" 
+          ? "Feedback posted successfully!" 
+          : "Suggestion posted successfully!",
+        "success"
+      );
+      loadData();
     } catch (err) {
       console.error(err);
-      showToast("Failed to submit suggestion", "error");
+      showToast("Failed to submit post", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Helper to format status text nicely
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "in_progress": return "In Progress";
-      case "not_feasible": return "Not Feasible";
-      case "new": return "New";
-      case "accepted": return "Accepted";
-      case "resolved": return "Action Taken";
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
+  const handleToggleAgree = async (itemId: number) => {
+    try {
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === itemId) {
+            const hasAgreed = !item.has_agreed;
+            const agreeCount = hasAgreed ? item.agree_count + 1 : Math.max(0, item.agree_count - 1);
+            return { ...item, has_agreed: hasAgreed, agree_count: agreeCount };
+          }
+          return item;
+        })
+      );
+      await api.toggleFeedbackAgree(itemId);
+    } catch (err) {
+      console.error(err);
+      showToast("Could not register vote", "error");
+      loadData();
     }
   };
 
-  // Status badge styling helper
-  const getStatusBadgeStyle = (status: string) => {
+  const handleToggleComments = (itemId: number) => {
+    setOpenComments((prev) => ({ ...prev, [itemId]: !prev[itemId] }));
+  };
+
+  const handleAddComment = async (itemId: number) => {
+    const commentText = commentInputs[itemId]?.trim();
+    if (!commentText) return;
+
+    setPostingComment((prev) => ({ ...prev, [itemId]: true }));
+    try {
+      const newComment = await api.submitFeedbackComment(itemId, commentText);
+      setCommentInputs((prev) => ({ ...prev, [itemId]: "" }));
+      setItems((prev) =>
+        prev.map((item) => {
+          if (item.id === itemId) {
+            const updatedComments = [...(item.comments || []), newComment];
+            return {
+              ...item,
+              comments: updatedComments,
+              comments_count: updatedComments.length,
+            };
+          }
+          return item;
+        })
+      );
+      showToast("Reply added", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to add reply", "error");
+    } finally {
+      setPostingComment((prev) => ({ ...prev, [itemId]: false }));
+    }
+  };
+
+  // Helper formatting for status badge
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "accepted":
-        return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+        return { label: "Accepted", cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" };
       case "in_progress":
-        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+        return { label: "In Progress", cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" };
       case "resolved":
-        return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+        return { label: "Action Taken", cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" };
       case "not_feasible":
-        return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+        return { label: "Shelved", cls: "bg-neutral-500/10 text-neutral-500 dark:text-neutral-400 border-neutral-500/20" };
       default:
-        return "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400 border-neutral-500/20";
+        return { label: "Under Review", cls: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" };
     }
   };
 
-  // Type badge styling helper
-  const getTypeBadgeStyle = (type: string) => {
-    switch (type) {
+  // Sub-category badge styling & icons
+  const getSubCategoryBadge = (subType: string) => {
+    switch (subType) {
+      case "appreciation":
+        return { label: "Appreciation", style: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20", icon: Heart };
+      case "criticism":
+        return { label: "Criticism", style: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20", icon: AlertTriangle };
+      case "data_mismatch":
+        return { label: "Data Mismatch", style: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20", icon: AlertTriangle };
+      case "delay":
+        return { label: "Response Delay", style: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20", icon: Clock };
       case "bug":
-        return "bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400";
+        return { label: "Bug Report", style: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20", icon: Bug };
+      case "ui_ux":
+        return { label: "UI / UX Idea", style: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20", icon: Sparkles };
+      case "idea":
+        return { label: "General Idea", style: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20", icon: Lightbulb };
       case "feature":
-        return "bg-yellow-100 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400";
       default:
-        return "bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400";
+        return { label: "Feature Request", style: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20", icon: Lightbulb };
     }
   };
 
-  // Filter suggestions
-  const filteredSuggestions = suggestions.filter((item) => {
-    if (activeFilter === "all") return true;
-    return item.status === activeFilter;
-  });
-
-  const filterTabs = [
-    { id: "all", label: "All Suggestions" },
-    { id: "new", label: "New" },
-    { id: "accepted", label: "Accepted" },
-    { id: "in_progress", label: "In Progress" },
-    { id: "resolved", label: "Action Taken" },
-    { id: "not_feasible", label: "Not Feasible" },
+  // Category tags options for active tab
+  const suggestionTypes = [
+    { id: "feature", label: "Feature Request", icon: Lightbulb },
+    { id: "ui_ux", label: "UI / UX Idea", icon: Sparkles },
+    { id: "idea", label: "General Idea", icon: MessageSquare },
   ];
 
+  const feedbackTypes = [
+    { id: "appreciation", label: "Appreciation", icon: Heart },
+    { id: "criticism", label: "Criticism", icon: AlertTriangle },
+    { id: "data_mismatch", label: "Data Mismatch", icon: AlertTriangle },
+    { id: "delay", label: "Response Delay", icon: Clock },
+    { id: "bug", label: "Bug Report", icon: Bug },
+  ];
+
+  const categoryOptions = activeTab === "suggestion" ? suggestionTypes : feedbackTypes;
+
+  // Filter items based on segment view and status filter, placing user's own posts FIRST
+  const filteredItems = items
+    .filter((item) => {
+      if (viewSegment === "mine" && !item.is_mine) return false;
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // 1. User's own posts always come first
+      if (a.is_mine !== b.is_mine) {
+        return a.is_mine ? -1 : 1;
+      }
+      // 2. Newest posts first
+      const aTime = a.created_at_iso ? new Date(a.created_at_iso).getTime() : 0;
+      const bTime = b.created_at_iso ? new Date(b.created_at_iso).getTime() : 0;
+      return bTime - aTime;
+    });
+
   return (
-    <div className="pb-32 lg:pb-10 min-h-screen animate-fade-in text-neutral-900 dark:text-white px-4">
+    <div className="pb-32 lg:pb-12 min-h-screen animate-fade-in text-neutral-900 dark:text-white px-4 max-w-5xl mx-auto">
       <Toast
         message={toast.message}
         type={toast.type}
@@ -155,50 +265,361 @@ export default function SuggestionsPage() {
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
 
-      {/* Header */}
-      <div className="pt-8 pb-6">
-        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-          <Lightbulb className="w-7 h-7 text-yellow-500 animate-pulse" />
-          Investor Suggestions
-        </h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-          Share your ideas, feature requests, or report bugs to help elevate the Arthavi platform.
-        </p>
+      {/* Top Title Bar */}
+      <div className="pt-8 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/5">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
+            Community Hub
+          </h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            Share feature suggestions, report issues, or provide feedback to the Arthavi team.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setShowFormModal(true)}
+          className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-md shadow-primary-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+        >
+          <Plus size={16} />
+          <span>New {activeTab === "suggestion" ? "Suggestion" : "Feedback"}</span>
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Form Card */}
-        <div className="lg:col-span-1">
-          <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm sticky top-24">
-            <h2 className="text-lg font-bold text-neutral-800 dark:text-white mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-primary-500" />
-              New Suggestion
+      {/* Main Tabs (Suggestions vs Feedback) */}
+      <div className="mt-6 flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-2xl border border-neutral-200 dark:border-white/5">
+          <button
+            onClick={() => {
+              setActiveTab("suggestion");
+            }}
+            className={`px-5 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
+              activeTab === "suggestion"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
+            }`}
+          >
+            <Lightbulb size={15} className="text-yellow-500" />
+            <span>Suggestions</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab("feedback");
+            }}
+            className={`px-5 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
+              activeTab === "feedback"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
+            }`}
+          >
+            <MessageCircle size={15} className="text-pink-500" />
+            <span>Feedback & Experience</span>
+          </button>
+        </div>
+
+        {/* Secondary Filter Controls */}
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          {/* Segment: Mine vs All */}
+          <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl border border-neutral-200 dark:border-white/5">
+            <button
+              onClick={() => setViewSegment("mine")}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                viewSegment === "mine"
+                  ? "bg-white dark:bg-surface text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+              }`}
+            >
+              My Posts
+            </button>
+            <button
+              onClick={() => setViewSegment("all")}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                viewSegment === "all"
+                  ? "bg-white dark:bg-surface text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+              }`}
+            >
+              All Community Posts
+            </button>
+          </div>
+
+          {/* Status Dropdown Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 rounded-xl px-3 py-1.5 font-medium outline-none text-xs"
+          >
+            <option value="all">All Statuses</option>
+            <option value="new">Under Review</option>
+            <option value="accepted">Accepted</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Action Taken</option>
+            <option value="not_feasible">Shelved</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Main Community Feed Board */}
+      <div className="mt-6">
+        {loading ? (
+          <AppSkeleton />
+        ) : filteredItems.length > 0 ? (
+          <div className="space-y-4">
+            {filteredItems.map((item) => {
+              const subCat = getSubCategoryBadge(item.type);
+              const SubIcon = subCat.icon;
+              const statusInfo = getStatusBadge(item.status);
+              const commentsOpen = !!openComments[item.id];
+              const commentsList = item.comments || [];
+
+              return (
+                <Card
+                  key={item.id}
+                  className={`p-5 bg-white dark:bg-surface border rounded-2xl flex flex-col gap-3.5 hover:shadow-md transition-shadow relative overflow-hidden ${
+                    item.is_mine 
+                      ? "border-primary-500/40 dark:border-primary-500/30 ring-1 ring-primary-500/10 shadow-sm shadow-primary-500/5" 
+                      : "border-neutral-200 dark:border-white/5"
+                  }`}
+                >
+                  {/* Top Bar: Badges & Privacy Author Header */}
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      {/* Sub-Category Pill */}
+                      <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold border flex items-center gap-1 ${subCat.style}`}>
+                        <SubIcon size={12} />
+                        {subCat.label}
+                      </span>
+
+                      {/* Status Tag */}
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusInfo.cls}`}>
+                        {statusInfo.label}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs font-medium text-neutral-400">
+                      {item.is_mine ? (
+                        <span className="text-primary-600 dark:text-primary-400 font-extrabold bg-primary-500/15 border border-primary-500/20 px-2.5 py-0.5 rounded-md text-[10px] flex items-center gap-1 shadow-2xs">
+                          📌 My Post
+                        </span>
+                      ) : (
+                        <span>Community Member</span>
+                      )}
+                      <span>•</span>
+                      <span>{item.created_at}</span>
+                    </div>
+                  </div>
+
+                  {/* Content Title & Body */}
+                  <div>
+                    <h3 className="text-base font-bold text-neutral-900 dark:text-white leading-snug">
+                      {item.title}
+                    </h3>
+                    {item.body && (
+                      <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap leading-relaxed">
+                        {item.body}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Official Team Response Box */}
+                  {item.action_taken && (
+                    <div className="mt-1 p-3.5 rounded-xl bg-primary-50/60 dark:bg-primary-500/5 border border-primary-500/15 text-xs">
+                      <div className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-bold mb-1">
+                        <CheckCircle2 size={14} />
+                        <span>Arthavi Team Response</span>
+                      </div>
+                      <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed italic">
+                        &ldquo;{item.action_taken}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Card Actions Footer: Vote Agree & Reply Thread */}
+                  <div className="pt-2 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      {/* I Agree Vote Button */}
+                      <button
+                        onClick={() => handleToggleAgree(item.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                          item.has_agreed
+                            ? "bg-primary-600 text-white border-primary-600 shadow-xs"
+                            : "bg-neutral-50 dark:bg-white/5 border-neutral-200 dark:border-white/5 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10"
+                        }`}
+                      >
+                        <ThumbsUp size={14} className={item.has_agreed ? "fill-current" : ""} />
+                        <span>I Agree</span>
+                        {item.agree_count > 0 && (
+                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                            item.has_agreed ? "bg-white/20 text-white" : "bg-neutral-200 dark:bg-white/10 text-neutral-600 dark:text-neutral-300"
+                          }`}>
+                            {item.agree_count}
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Replies Toggle Button */}
+                      <button
+                        onClick={() => handleToggleComments(item.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/5 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 transition-all"
+                      >
+                        <MessageSquare size={14} />
+                        <span>Replies</span>
+                        <span className="bg-neutral-200 dark:bg-white/10 px-1.5 py-0.2 rounded-full text-[10px]">
+                          {commentsList.length}
+                        </span>
+                        {commentsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Collapsible Comment Thread Drawer */}
+                  {commentsOpen && (
+                    <div className="mt-2 pt-3 border-t border-neutral-100 dark:border-white/5 space-y-3">
+                      {commentsList.length > 0 ? (
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {commentsList.map((c: any) => (
+                            <div
+                              key={c.id}
+                              className={`p-3 rounded-xl text-xs ${
+                                c.is_admin
+                                  ? "bg-primary-50/70 dark:bg-primary-500/10 border border-primary-500/20"
+                                  : "bg-neutral-50 dark:bg-white/[0.03] border border-neutral-100 dark:border-white/5"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  {c.is_admin && <ShieldCheck size={13} className="text-primary-500 shrink-0" />}
+                                  <span className={c.is_admin ? "text-primary-600 dark:text-primary-400" : "text-neutral-800 dark:text-white"}>
+                                    {c.is_admin ? "Arthavi Team" : c.is_mine ? "You" : "Community Member"}
+                                  </span>
+                                  {c.is_admin && (
+                                    <span className="bg-primary-500 text-white text-[9px] px-1.5 py-0.2 rounded font-semibold">
+                                      Official
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-neutral-400 font-medium">
+                                  {c.created_at}
+                                </span>
+                              </div>
+                              <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed font-normal">
+                                {c.comment}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-neutral-400 italic text-center py-2">
+                          No replies yet. Share your thoughts above!
+                        </p>
+                      )}
+
+                      {/* Comment Input Box */}
+                      <div className="flex gap-2 pt-1">
+                        <input
+                          type="text"
+                          placeholder="Write a reply..."
+                          value={commentInputs[item.id] || ""}
+                          onChange={(e) =>
+                            setCommentInputs((prev) => ({ ...prev, [item.id]: e.target.value }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleAddComment(item.id);
+                          }}
+                          className="flex-1 px-3 py-2 text-xs bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 rounded-xl outline-none focus:border-primary-500 text-neutral-900 dark:text-white"
+                        />
+                        <button
+                          onClick={() => handleAddComment(item.id)}
+                          disabled={postingComment[item.id] || !commentInputs[item.id]?.trim()}
+                          className="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                        >
+                          {postingComment[item.id] ? (
+                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent" />
+                          ) : (
+                            <>
+                              <Send size={12} />
+                              <span>Reply</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 rounded-3xl space-y-3">
+            <HelpCircle className="w-9 h-9 text-neutral-400 mx-auto" />
+            <p className="text-base font-bold text-neutral-800 dark:text-white">No posts found</p>
+            <p className="text-xs text-neutral-400 max-w-sm mx-auto">
+              {viewSegment === "mine"
+                ? "You haven't created any posts in this category yet."
+                : "Be the first to submit a post in this channel!"}
+            </p>
+            <button
+              onClick={() => setShowFormModal(true)}
+              className="mt-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-sm inline-flex items-center gap-1.5"
+            >
+              <Plus size={14} />
+              <span>Create Post</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Form Submission Modal (Clean & Professional) */}
+      {showFormModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#121621] border border-neutral-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setShowFormModal(false)}
+              className="absolute top-5 right-5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 mb-1">
+              {activeTab === "suggestion" ? (
+                <>
+                  <Lightbulb size={20} className="text-yellow-500" />
+                  New Suggestion
+                </>
+              ) : (
+                <>
+                  <MessageCircle size={20} className="text-pink-500" />
+                  New Feedback & Experience
+                </>
+              )}
             </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-5">
+              Posting to channel: <strong className="text-neutral-800 dark:text-neutral-200 capitalize">{activeTab}</strong>
+            </p>
+
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Category Tag Selection */}
               <div>
                 <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-                  Category
+                  Category Tag
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "feature", label: "Feature", icon: Lightbulb },
-                    { id: "bug", label: "Bug", icon: Bug },
-                    { id: "feedback", label: "General", icon: MessageCircle }
-                  ].map((opt) => {
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {categoryOptions.map((opt) => {
                     const Icon = opt.icon;
+                    const isSelected = type === opt.id;
                     return (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => setType(opt.id)}
-                        className={`flex flex-col items-center gap-1 py-2 border rounded-xl transition-all ${
-                          type === opt.id
-                            ? "bg-primary-50 dark:bg-primary-500/10 border-primary-500 text-primary-600 dark:text-primary-400 font-medium"
+                        className={`flex items-center gap-2 p-2 border rounded-xl transition-all text-left ${
+                          isSelected
+                            ? "bg-primary-50 dark:bg-primary-500/10 border-primary-500 text-primary-600 dark:text-primary-400 font-bold shadow-xs"
                             : "border-neutral-200 dark:border-white/5 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-white/5"
                         }`}
                       >
-                        <Icon size={16} />
-                        <span className="text-[10px]">{opt.label}</span>
+                        <Icon size={14} className="shrink-0" />
+                        <span className="text-xs truncate">{opt.label}</span>
                       </button>
                     );
                   })}
@@ -209,125 +630,55 @@ export default function SuggestionsPage() {
                 label="Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Brief summary of your suggestion..."
+                placeholder={
+                  activeTab === "suggestion"
+                    ? "e.g., Add tax report export in CSV format..."
+                    : "e.g., Appreciation for the new statement parser..."
+                }
                 required
                 autoComplete="off"
               />
 
               <div>
                 <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">
-                  Detailed Description (Optional)
+                  Details / Context (Optional)
                 </label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Describe your request in detail, including why it would be helpful..."
+                  placeholder="Describe your request or experience in detail..."
                   rows={4}
                   className="w-full px-3 py-2 text-sm bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 rounded-xl outline-none transition-all text-neutral-900 dark:text-white resize-none"
                 />
               </div>
 
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                ) : (
-                  <>
-                    <Send size={16} />
-                    Submit Suggestion
-                  </>
-                )}
-              </Button>
-            </form>
-          </Card>
-        </div>
-
-        {/* Right Column: Library Board */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Filters */}
-          <div className="flex gap-2 overflow-x-auto pb-1 max-w-full no-scrollbar select-none">
-            {filterTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shrink-0 ${
-                  activeFilter === tab.id
-                    ? "bg-primary-600 border-primary-600 text-white shadow-sm shadow-primary-500/20"
-                    : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Suggestions List */}
-          {loading ? (
-            <AppSkeleton />
-          ) : filteredSuggestions.length > 0 ? (
-            <div className="space-y-4">
-              {filteredSuggestions.map((item) => (
-                <Card
-                  key={item.id}
-                  className="p-5 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 rounded-2xl flex flex-col gap-3.5 hover:shadow-md transition-shadow relative overflow-hidden"
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFormModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white transition-colors"
                 >
-                  {/* Status Bar */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider ${getTypeBadgeStyle(item.type)}`}>
-                        {item.type}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeStyle(item.status)}`}>
-                        {getStatusText(item.status)}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-neutral-400 font-medium">
-                      {item.created_at}
-                    </span>
-                  </div>
-
-                  {/* Content */}
-                  <div>
-                    <h3 className="text-base font-bold text-neutral-900 dark:text-white leading-snug">
-                      {item.title}
-                    </h3>
-                    {item.body && (
-                      <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400 whitespace-pre-wrap leading-relaxed">
-                        {item.body}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Team Response / Action Taken */}
-                  {item.action_taken && (
-                    <div className="mt-2.5 p-4 rounded-xl bg-primary-50/50 dark:bg-primary-500/5 border border-primary-500/10 dark:border-primary-500/20 text-xs text-neutral-600 dark:text-neutral-300">
-                      <div className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-bold mb-1.5">
-                        <CheckCircle2 size={14} className="shrink-0" />
-                        <span>Response from Arthavi Team</span>
-                      </div>
-                      <p className="leading-relaxed font-medium italic">
-                        &ldquo;{item.action_taken}&rdquo;
-                      </p>
-                    </div>
+                  Cancel
+                </button>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2 text-xs flex items-center justify-center gap-1.5"
+                >
+                  {submitting ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      <span>Post</span>
+                    </>
                   )}
-
-                  {/* Card bottom spacing */}
-                  <div className="mt-1" />
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-neutral-500 dark:text-neutral-400 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 rounded-3xl space-y-2">
-              <HelpCircle className="w-8 h-8 text-neutral-400 mx-auto" />
-              <p className="text-sm font-semibold">No suggestions found</p>
-              <p className="text-xs text-neutral-400">Be the first to submit a suggestion using the form!</p>
-            </div>
-          )}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

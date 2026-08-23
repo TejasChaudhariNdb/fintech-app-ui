@@ -757,7 +757,7 @@ export const api = {
       body: JSON.stringify({ token }),
     }),
 
-  submitFeedback: (data: { type: string; title: string; body?: string }) =>
+  submitFeedback: (data: { main_category?: string; type: string; title: string; body?: string }) =>
     api.fetch("/feedback/submit", {
       method: "POST",
       body: JSON.stringify(data),
@@ -766,8 +766,20 @@ export const api = {
   getUserFeedback: () =>
     api.fetch("/feedback/list"),
 
-  getPublicSuggestions: () =>
-    api.fetch("/feedback/public/list"),
+  getPublicSuggestions: (category?: string) =>
+    api.fetch(category ? `/feedback/public/list?category=${encodeURIComponent(category)}` : "/feedback/public/list"),
+
+  toggleFeedbackAgree: (feedbackId: number) =>
+    api.fetch(`/feedback/${feedbackId}/agree`, {
+      method: "POST",
+    }),
+
+  submitFeedbackComment: (feedbackId: number, comment: string) =>
+    api.fetch(`/feedback/${feedbackId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ comment }),
+    }),
+
 
 
   trackSupportClick: (paymentApp: string) =>
