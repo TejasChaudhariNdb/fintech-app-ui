@@ -86,7 +86,19 @@ export default function SuggestionsPage() {
       }
 
       const res = await api.getPublicSuggestions(activeTab, LIMIT, currentOffset);
-      const newItems = res?.items || [];
+      
+      let newItems: any[] = [];
+      let serverHasMore = false;
+
+      if (Array.isArray(res)) {
+        // Support deployed server returning raw array [...]
+        newItems = res;
+        serverHasMore = res.length >= LIMIT;
+      } else if (res && typeof res === "object") {
+        // Support object { items: [...], has_more: boolean }
+        newItems = Array.isArray(res.items) ? res.items : [];
+        serverHasMore = !!res.has_more;
+      }
 
       if (isAppend) {
         setItems((prev) => [...prev, ...newItems]);
@@ -94,7 +106,7 @@ export default function SuggestionsPage() {
         setItems(newItems);
       }
 
-      setHasMore(!!res?.has_more);
+      setHasMore(serverHasMore);
     } catch (err) {
       console.error(err);
       showToast("Failed to load community board", "error");
