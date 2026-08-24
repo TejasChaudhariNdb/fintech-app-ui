@@ -32,8 +32,8 @@ export default function SuggestionsPage() {
   // Active Main Tab: "suggestion" | "feedback"
   const [activeTab, setActiveTab] = useState<"suggestion" | "feedback">("suggestion");
   
-  // Segment filter: "mine" | "all"
-  const [viewSegment, setViewSegment] = useState<"mine" | "all">("mine");
+  // Segment filter: "all" | "mine"
+  const [viewSegment, setViewSegment] = useState<"all" | "mine">("all");
   
   // Status filter
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -241,7 +241,7 @@ export default function SuggestionsPage() {
       case "appreciation":
         return { label: "Appreciation", style: "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20", icon: Heart };
       case "criticism":
-        return { label: "Criticism", style: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20", icon: AlertTriangle };
+        return { label: "Area for Improvement", style: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20", icon: AlertTriangle };
       case "data_mismatch":
         return { label: "Data Mismatch", style: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20", icon: AlertTriangle };
       case "delay":
@@ -267,7 +267,7 @@ export default function SuggestionsPage() {
 
   const feedbackTypes = [
     { id: "appreciation", label: "Appreciation", icon: Heart },
-    { id: "criticism", label: "Criticism", icon: AlertTriangle },
+    { id: "criticism", label: "Area for Improvement", icon: AlertTriangle },
     { id: "data_mismatch", label: "Data Mismatch", icon: AlertTriangle },
     { id: "delay", label: "Response Delay", icon: Clock },
     { id: "bug", label: "Bug Report", icon: Bug },
@@ -350,18 +350,8 @@ export default function SuggestionsPage() {
 
         {/* Secondary Filter Controls */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
-          {/* Segment: Mine vs All */}
+          {/* Segment: All vs Mine */}
           <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl border border-neutral-200 dark:border-white/5">
-            <button
-              onClick={() => setViewSegment("mine")}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                viewSegment === "mine"
-                  ? "bg-white dark:bg-surface text-neutral-900 dark:text-white shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
-              }`}
-            >
-              My Posts
-            </button>
             <button
               onClick={() => setViewSegment("all")}
               className={`px-3 py-1 rounded-lg font-semibold transition-all ${
@@ -371,6 +361,16 @@ export default function SuggestionsPage() {
               }`}
             >
               All Community Posts
+            </button>
+            <button
+              onClick={() => setViewSegment("mine")}
+              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+                viewSegment === "mine"
+                  ? "bg-white dark:bg-surface text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+              }`}
+            >
+              My Posts Only
             </button>
           </div>
 
