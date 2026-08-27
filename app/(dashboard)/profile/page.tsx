@@ -36,6 +36,7 @@ import {
   ExternalLink,
   Sparkles,
   Lightbulb,
+  Share2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -474,6 +475,39 @@ export default function ProfilePage() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     showToast("Copied to clipboard!", "success");
+  };
+
+  const PLAYSTORE_URL = "https://play.google.com/store/apps/details?id=com.arthavi.app.twa";
+  const WEB_APP_URL = "https://app.arthavi.com";
+
+  const getReferralShareMessage = (code: string) => {
+    return `📈 Hey! I track all my Mutual Funds, Stocks, XIRR, and Tax Reports seamlessly on Arthavi.\n\n📲 Android App (Play Store):\n${PLAYSTORE_URL}\n\n🌐 Web & iOS App:\n${WEB_APP_URL}/auth?ref=${code}\n\n🎁 Use my referral code: *${code}* to unlock unlimited AI Portfolio Insights! 🚀`;
+  };
+
+  const handleShareWhatsApp = (code: string) => {
+    if (!code) return;
+    const msg = getReferralShareMessage(code);
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleNativeShare = async (code: string) => {
+    if (!code) return;
+    const msg = getReferralShareMessage(code);
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: "Join me on Arthavi",
+          text: msg,
+          url: PLAYSTORE_URL,
+        });
+        showToast("Shared successfully!", "success");
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    copyToClipboard(msg);
   };
 
   const handleLogout = () => {
@@ -1001,86 +1035,134 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Refer & Earn Gradient Card */}
-        <div
-          id="refer-earn-section"
-          className="bg-linear-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-neutral-900 border border-neutral-200 dark:border-white/5 rounded-3xl p-5 text-white shadow-md relative overflow-hidden"
-        >
-          <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-white/10 rounded-full blur-xl animate-pulse pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-4 -mb-4 w-20 h-20 bg-black/10 rounded-full blur-xl pointer-events-none" />
-
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Gift className="text-yellow-300" size={20} />
-                <h2 className="text-lg font-bold">Refer &amp; Earn</h2>
+        {/* Section: Refer & Earn */}
+        <div>
+          <p className="px-1 text-[11px] font-bold uppercase tracking-[0.15em] text-neutral-400 dark:text-neutral-500 mb-2">
+            Refer &amp; Earn
+          </p>
+          <div
+            id="refer-earn-section"
+            className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl p-5 shadow-xs transition-all space-y-4"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 shrink-0">
+                  <Gift size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    Invite Friends to Arthavi
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Share your code to unlock unlimited AI portfolio insights for both of you.
+                  </p>
+                </div>
               </div>
+
               {userProfile.is_ai_unlocked ? (
-                <div className="bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 border border-white/30">
-                  <Unlock size={10} /> Premium Unlocked
-                </div>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 shrink-0">
+                  <Unlock size={11} /> Premium Active
+                </span>
               ) : (
-                <div className="bg-white/20 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-semibold border border-white/30">
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 shrink-0">
                   {freeChatsLeft} Free Chats Left
-                </div>
+                </span>
               )}
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3.5 border border-white/20 mb-3 flex items-center justify-between gap-3">
+            {/* Referral Code Box */}
+            <div className="bg-neutral-50 dark:bg-black/20 border border-neutral-200/80 dark:border-white/10 rounded-xl p-3.5 flex items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] text-indigo-200 uppercase font-semibold mb-1 tracking-wider">
+                <p className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-semibold tracking-wider">
                   Your Referral Code
                 </p>
-                <code className="text-xl font-mono font-bold tracking-wider">
+                <code className="text-xl font-mono font-bold tracking-wider text-primary-600 dark:text-primary-400">
                   {userProfile.referral_code || "..."}
                 </code>
               </div>
-              <div className="flex flex-col items-end gap-1.5">
+              <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(userProfile.referral_code)}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors active:scale-95 bg-white/10 cursor-pointer"
+                  className="px-3 py-1.5 bg-white dark:bg-white/10 hover:bg-neutral-100 dark:hover:bg-white/15 border border-neutral-200 dark:border-white/10 rounded-lg text-xs font-semibold text-neutral-700 dark:text-neutral-200 flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <Copy size={16} />
+                  <Copy size={13} />
+                  <span>Copy</span>
                 </button>
-                <div className="text-[10px] text-indigo-200 flex items-center gap-1">
-                  <User size={10} />
-                  <span>{userProfile.referral_count} referred</span>
-                </div>
               </div>
             </div>
 
+            {/* Sharing actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleShareWhatsApp(userProfile.referral_code)}
+                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer text-xs shadow-xs"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                </svg>
+                <span>Share on WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleNativeShare(userProfile.referral_code)}
+                className="w-full bg-neutral-100 hover:bg-neutral-200 dark:bg-white/10 dark:hover:bg-white/15 text-neutral-700 dark:text-neutral-200 font-semibold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer text-xs border border-neutral-200/60 dark:border-white/5"
+              >
+                <Share2 size={14} />
+                <span>More Share Options</span>
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400 pt-0.5">
+              <span className="flex items-center gap-1">
+                <Users size={12} className="text-neutral-400" />
+                <span>{userProfile.referral_count || 0} friends joined</span>
+              </span>
+              <span className="text-neutral-400 dark:text-neutral-500 text-[10px]">
+                Includes Play Store &amp; Web/iOS links
+              </span>
+            </div>
+
+            {/* Redeem Friend's Code */}
             {!userProfile.referred_by && !userProfile.is_ai_unlocked && (
-              <div className="flex flex-col gap-1">
-                <div className="bg-black/20 rounded-xl p-1 flex items-center">
+              <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-col gap-1.5">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                  Have a friend&apos;s referral code?
+                </p>
+                <div className="bg-neutral-50 dark:bg-black/20 rounded-xl p-1 flex items-center border border-neutral-200 dark:border-white/10">
                   <input
                     type="text"
                     value={referralInput}
                     onChange={(e) => {
-                      setReferralInput(e.target.value);
+                      setReferralInput(e.target.value.toUpperCase());
                       setReferralError("");
                     }}
-                    placeholder="Enter friend's code"
-                    className="bg-transparent border-none text-white placeholder:text-white/40 text-xs focus:ring-0 w-full px-3 py-1.5"
+                    placeholder="ENTER CODE"
+                    className="bg-transparent border-none text-neutral-900 dark:text-white placeholder:text-neutral-400 text-xs font-mono uppercase focus:ring-0 w-full px-3 py-1.5"
                   />
                   <button
                     onClick={handleApplyReferral}
                     disabled={isApplyingReferral || !referralInput.trim()}
-                    className="bg-white text-indigo-600 px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-indigo-50 disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors shrink-0 cursor-pointer shadow-xs"
                   >
-                    {isApplyingReferral ? "..." : "Apply"}
+                    {isApplyingReferral ? "Applying..." : "Apply"}
                   </button>
                 </div>
                 {referralError && (
-                  <p className="text-[10px] text-red-300 px-2 font-medium bg-red-500/10 rounded-md py-0.5">
+                  <p className="text-[11px] text-red-600 dark:text-red-400 px-1 font-medium">
                     {referralError}
                   </p>
                 )}
               </div>
             )}
+
             {userProfile.referred_by && (
-              <div className="text-[10px] text-indigo-200 flex items-center gap-1 mt-2">
-                <CheckCircle size={10} className="text-green-400" />
-                Referred by {userProfile.referred_by}
+              <div className="text-xs text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5 pt-1">
+                <CheckCircle size={13} className="text-emerald-500" />
+                <span>Referred by <strong className="font-semibold">{userProfile.referred_by}</strong></span>
               </div>
             )}
           </div>

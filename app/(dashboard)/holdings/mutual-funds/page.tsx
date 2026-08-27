@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud, Grid, List, Download } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -60,8 +60,17 @@ export default function MutualFundsPage() {
   // Filter & Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<
-    "value" | "name" | "profit" | "dayChange" | "rank" | "categoryRank" | "overallRank"
-  >("name");
+    | "xirr"
+    | "gains"
+    | "profit"
+    | "value"
+    | "dayChange"
+    | "name"
+    | "rank"
+    | "categoryRank"
+    | "overallRank"
+  >("xirr");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
   const [prefillSchemeId, setPrefillSchemeId] = useState<number | null>(null);
@@ -249,24 +258,35 @@ export default function MutualFundsPage() {
   const filteredSchemes = schemes
     .filter((s) => s.scheme?.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === "value") return b.current - a.current;
-      if (sortBy === "profit") return b.profit - a.profit;
-      if (sortBy === "dayChange") return b.day_change - a.day_change;
-      if (sortBy === "categoryRank" || sortBy === "rank") {
+      let comparison = 0;
+      if (sortBy === "xirr") {
+        const aVal = a.xirr !== null && a.xirr !== undefined ? Number(a.xirr) : -Infinity;
+        const bVal = b.xirr !== null && b.xirr !== undefined ? Number(b.xirr) : -Infinity;
+        comparison = bVal - aVal;
+      } else if (sortBy === "gains") {
+        comparison = (b.return_pct ?? 0) - (a.return_pct ?? 0);
+      } else if (sortBy === "value") {
+        comparison = b.current - a.current;
+      } else if (sortBy === "profit") {
+        comparison = (b.profit ?? 0) - (a.profit ?? 0);
+      } else if (sortBy === "dayChange") {
+        comparison = (b.day_change ?? 0) - (a.day_change ?? 0);
+      } else if (sortBy === "categoryRank" || (sortBy as string) === "rank") {
         const catCompare = (a.category_label || "").localeCompare(b.category_label || "");
         if (catCompare !== 0) return catCompare;
-        return (
+        comparison =
           (a.category_rank || Number.MAX_SAFE_INTEGER) -
-          (b.category_rank || Number.MAX_SAFE_INTEGER)
-        );
-      }
-      if (sortBy === "overallRank") {
-        return (
+          (b.category_rank || Number.MAX_SAFE_INTEGER);
+      } else if (sortBy === "overallRank") {
+        comparison =
           (a.overall_rank || Number.MAX_SAFE_INTEGER) -
-          (b.overall_rank || Number.MAX_SAFE_INTEGER)
-        );
+          (b.overall_rank || Number.MAX_SAFE_INTEGER);
+      } else {
+        // "name"
+        comparison = (a.scheme || "").localeCompare(b.scheme || "");
       }
-      return a.scheme?.localeCompare(b.scheme);
+
+      return sortOrder === "desc" ? comparison : -comparison;
     });
   const allocationData =
     allocationView === "amc" ? amcAllocation : schemeAllocationChartData;
@@ -585,29 +605,43 @@ export default function MutualFundsPage() {
               </button>
             </div>
 
-            <select
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(
-                  e.target.value as
-                    | "value"
-                    | "name"
-                    | "profit"
-                    | "dayChange"
-                    | "rank"
-                    | "categoryRank"
-                    | "overallRank",
-                )
-              }
-              aria-label="Sort schemes"
-              className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
-              <option value="name">Sort: Name</option>
-              <option value="value">Sort: Value</option>
-              <option value="profit">Sort: Profit</option>
-              <option value="dayChange">Sort: Daily Change</option>
-              <option value="categoryRank">Sort: Category Rank</option>
-              <option value="overallRank">Sort: Overall Rank</option>
-            </select>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(
+                    e.target.value as
+                      | "xirr"
+                      | "gains"
+                      | "profit"
+                      | "value"
+                      | "dayChange"
+                      | "name"
+                      | "categoryRank"
+                      | "overallRank",
+                  )
+                }
+                aria-label="Sort schemes"
+                className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none cursor-pointer">
+                <option value="xirr">Sort: XIRR (%)</option>
+                <option value="gains">Sort: Overall Return (%)</option>
+                <option value="profit">Sort: Overall Profit (₹)</option>
+                <option value="value">Sort: Current Value</option>
+                <option value="dayChange">Sort: Daily Change</option>
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="categoryRank">Sort: Category Rank</option>
+                <option value="overallRank">Sort: Overall Rank</option>
+              </select>
+
+              <button
+                onClick={() => setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))}
+                title={sortOrder === "desc" ? "Descending (Highest first)" : "Ascending (Lowest first)"}
+                className="p-2 bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center justify-center gap-1 text-xs font-medium"
+              >
+                <ArrowDownUp size={14} className={sortOrder === "desc" ? "text-primary-600 dark:text-primary-400" : "text-neutral-500 rotate-180 transition-transform"} />
+                <span className="hidden sm:inline text-[11px] font-semibold">{sortOrder === "desc" ? "High to Low" : "Low to High"}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -615,7 +649,7 @@ export default function MutualFundsPage() {
           {filteredSchemes.length > 0 ? (
             viewMode === "compact" ? (
               <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
-                <div className="grid gap-3 min-w-[760px]">
+                <div className="grid gap-3 min-w-[780px]">
                   {filteredSchemes.map((scheme) => {
                     const invested = scheme.current - (scheme.profit || 0);
                     const gain = scheme.profit || 0;
@@ -684,7 +718,7 @@ export default function MutualFundsPage() {
 
                           <div className="flex gap-6 justify-end items-center text-right shrink-0">
                             <div className="w-24">
-                              <span className="text-neutral-400 mr-1">P&L:</span>
+                              <span className="text-neutral-400 mr-1">Return:</span>
                               <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
                                 {isPositive ? "+" : ""}{scheme.return_pct.toFixed(2)}%
                               </span>
