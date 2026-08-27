@@ -49,6 +49,10 @@ function AuthForm() {
     }
     const errorParam = searchParams.get("error");
     if (errorParam) setError(decodeURIComponent(errorParam));
+    const sessionExpired = searchParams.get("session_expired");
+    if (sessionExpired === "true") {
+      setError("Your session has expired. Please sign in again.");
+    }
     document.title = "Sign In — Arthavi";
     if (localStorage.getItem("access_token")) {
       router.replace("/");

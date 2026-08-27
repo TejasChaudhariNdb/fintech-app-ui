@@ -39,6 +39,30 @@ function checkDemoRestriction() {
   }
 }
 
+function handleUnauthorized(endpoint: string) {
+  if (typeof window === "undefined") return;
+  const isAuthEndpoint =
+    endpoint.startsWith("/auth/login") ||
+    endpoint.startsWith("/auth/reactivate") ||
+    endpoint.startsWith("/auth/check-email") ||
+    endpoint.startsWith("/auth/register");
+  if (isAuthEndpoint) return;
+
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("user_email");
+  localStorage.removeItem("active_profile_id");
+
+  const path = window.location.pathname;
+  if (
+    !path.startsWith("/auth") &&
+    !path.startsWith("/login") &&
+    !path.startsWith("/register") &&
+    !path.startsWith("/demo")
+  ) {
+    window.location.href = "/auth?session_expired=true";
+  }
+}
+
 export const api = {
   async fetch(
     endpoint: string,
@@ -111,6 +135,10 @@ export const api = {
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          handleUnauthorized(endpoint);
+        }
+
         let errMsg = "Request failed";
         let reactivationToken = "";
         try {
@@ -132,6 +160,7 @@ export const api = {
           }
         } catch {}
         const error = new Error(errMsg);
+        (error as any).status = res.status;
         if (reactivationToken) {
           (error as any).reactivationToken = reactivationToken;
         }
@@ -152,8 +181,18 @@ export const api = {
       }
 
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.warn(`API Error (${endpoint}):`, error);
+
+      // Do NOT serve stale offline cache if request failed due to authentication (401)
+      if (
+        error?.status === 401 ||
+        error?.message === "Invalid token" ||
+        error?.message === "User not found" ||
+        error?.message === "Account is deactivated"
+      ) {
+        throw error;
+      }
 
       // Offline Fallback: Try to return cached data
       if (options.cacheKey && typeof window !== "undefined") {
@@ -359,7 +398,12 @@ export const api = {
       },
     });
 
-    if (!res.ok) throw new Error("Export failed");
+    if (!res.ok) {
+      if (res.status === 401) {
+        handleUnauthorized("/portfolio/export/transactions");
+      }
+      throw new Error("Export failed");
+    }
 
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
@@ -416,7 +460,12 @@ export const api = {
       },
     });
 
-    if (!res.ok) throw new Error("CSV Export failed");
+    if (!res.ok) {
+      if (res.status === 401) {
+        handleUnauthorized("/reports/capital-gains/csv");
+      }
+      throw new Error("CSV Export failed");
+    }
 
     const disposition = res.headers.get("Content-Disposition");
     let filename = `capital_gains_${reportType}.csv`;
