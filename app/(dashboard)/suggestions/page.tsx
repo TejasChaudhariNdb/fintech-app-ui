@@ -25,7 +25,9 @@ import {
   ChevronUp,
   Plus,
   X,
-  Filter
+  Filter,
+  ExternalLink,
+  TrendingUp,
 } from "lucide-react";
 
 export default function SuggestionsPage() {
@@ -48,6 +50,7 @@ export default function SuggestionsPage() {
 
   // Form modal state
   const [showFormModal, setShowFormModal] = useState(false);
+  const [modalCategory, setModalCategory] = useState<"suggestion" | "feedback">("suggestion");
   const [type, setType] = useState("feature");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -141,7 +144,7 @@ export default function SuggestionsPage() {
     setSubmitting(true);
     try {
       await api.submitFeedback({
-        main_category: activeTab,
+        main_category: modalCategory,
         type,
         title: title.trim(),
         body: body.trim() || undefined,
@@ -150,16 +153,21 @@ export default function SuggestionsPage() {
       setBody("");
       setShowFormModal(false);
       showToast(
-        activeTab === "feedback" 
-          ? "Feedback posted successfully!" 
-          : "Suggestion posted successfully!",
+        modalCategory === "feedback"
+          ? "Feedback submitted successfully!"
+          : "Suggestion submitted successfully!",
         "success"
       );
-      setOffset(0);
-      loadData(0, false);
+      
+      if (activeTab !== modalCategory) {
+        setActiveTab(modalCategory);
+      } else {
+        setOffset(0);
+        loadData(0, false);
+      }
     } catch (err) {
       console.error(err);
-      showToast("Failed to submit post", "error");
+      showToast("Failed to submit", "error");
     } finally {
       setSubmitting(false);
     }
@@ -250,6 +258,8 @@ export default function SuggestionsPage() {
         return { label: "Bug Report", style: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20", icon: Bug };
       case "ui_ux":
         return { label: "UI / UX Idea", style: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20", icon: Sparkles };
+      case "other":
+        return { label: "Other", style: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20", icon: HelpCircle };
       case "idea":
         return { label: "General Idea", style: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20", icon: Lightbulb };
       case "feature":
@@ -263,6 +273,7 @@ export default function SuggestionsPage() {
     { id: "feature", label: "Feature Request", icon: Lightbulb },
     { id: "ui_ux", label: "UI / UX Idea", icon: Sparkles },
     { id: "idea", label: "General Idea", icon: MessageSquare },
+    { id: "other", label: "Other", icon: HelpCircle },
   ];
 
   const feedbackTypes = [
@@ -304,20 +315,67 @@ export default function SuggestionsPage() {
       <div className="pt-8 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/5">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
-            Community Hub
+            Suggestions &amp; Feedback
           </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Share feature suggestions, report issues, or provide feedback to the Arthavi team.
+            Share feature requests, report issues, and help shape Arthavi.
           </p>
         </div>
 
         <button
-          onClick={() => setShowFormModal(true)}
-          className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-md shadow-primary-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+          onClick={() => {
+            setModalCategory(activeTab);
+            setType(activeTab === "suggestion" ? "feature" : "bug");
+            setShowFormModal(true);
+          }}
+          className="px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 cursor-pointer"
         >
-          <Plus size={16} />
-          <span>New {activeTab === "suggestion" ? "Suggestion" : "Feedback"}</span>
+          {activeTab === "suggestion" ? (
+            <>
+              <Lightbulb size={15} className="text-white" />
+              <span>New Suggestion</span>
+            </>
+          ) : (
+            <>
+              <MessageCircle size={15} className="text-white" />
+              <span>New Feedback</span>
+            </>
+          )}
         </button>
+      </div>
+
+      {/* Official WhatsApp Channel Banner */}
+      <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-white dark:bg-white/5 border border-[#25D366]/30 dark:border-[#25D366]/20 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3.5">
+          <div className="p-2.5 rounded-xl bg-[#25D366]/10 text-[#25D366] shrink-0">
+            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+            </svg>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-white">
+                Arthavi Official WhatsApp Channel
+              </h2>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#25D366]/15 text-[#25D366] uppercase tracking-wider">
+                Updates
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Follow our official WhatsApp channel for live release updates, feature announcements, and financial discussions.
+            </p>
+          </div>
+        </div>
+
+        <a
+          href="https://whatsapp.com/channel/0029VbDJYC42ER6nb5bslr1K"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 active:scale-98 cursor-pointer"
+        >
+          <span>Join WhatsApp Channel</span>
+          <ExternalLink size={13} />
+        </a>
       </div>
 
       {/* Main Tabs (Suggestions vs Feedback) */}
@@ -325,26 +383,26 @@ export default function SuggestionsPage() {
         <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-2xl border border-neutral-200 dark:border-white/5">
           <button
             onClick={() => setActiveTab("suggestion")}
-            className={`px-5 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === "suggestion"
-                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-xs"
                 : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
             }`}
           >
-            <Lightbulb size={15} className="text-yellow-500" />
-            <span>Suggestions</span>
+            <Lightbulb size={14} className="text-amber-500" />
+            <span>Suggestions &amp; Ideas</span>
           </button>
 
           <button
             onClick={() => setActiveTab("feedback")}
-            className={`px-5 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 ${
+            className={`px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === "feedback"
-                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-xs"
                 : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
             }`}
           >
-            <MessageCircle size={15} className="text-pink-500" />
-            <span>Feedback & Experience</span>
+            <MessageCircle size={14} className="text-pink-500" />
+            <span>Feedback &amp; Issues</span>
           </button>
         </div>
 
@@ -354,23 +412,23 @@ export default function SuggestionsPage() {
           <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl border border-neutral-200 dark:border-white/5">
             <button
               onClick={() => setViewSegment("all")}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 viewSegment === "all"
                   ? "bg-white dark:bg-surface text-neutral-900 dark:text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
               }`}
             >
-              All Community Posts
+              All Submissions
             </button>
             <button
               onClick={() => setViewSegment("mine")}
-              className={`px-3 py-1 rounded-lg font-semibold transition-all ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 viewSegment === "mine"
                   ? "bg-white dark:bg-surface text-neutral-900 dark:text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
               }`}
             >
-              My Posts Only
+              My Submissions
             </button>
           </div>
 
@@ -378,7 +436,7 @@ export default function SuggestionsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 rounded-xl px-3 py-1.5 font-medium outline-none text-xs"
+            className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 rounded-xl px-3 py-1.5 font-medium outline-none text-xs cursor-pointer"
           >
             <option value="all">All Statuses</option>
             <option value="new">Under Review</option>
@@ -430,7 +488,7 @@ export default function SuggestionsPage() {
                     <div className="flex items-center gap-2 text-xs font-medium text-neutral-400">
                       {item.is_mine ? (
                         <span className="text-primary-600 dark:text-primary-400 font-extrabold bg-primary-500/15 border border-primary-500/20 px-2.5 py-0.5 rounded-md text-[10px] flex items-center gap-1 shadow-2xs">
-                          📌 My Post
+                          📌 My Submission
                         </span>
                       ) : (
                         <span>Community Member</span>
@@ -599,21 +657,38 @@ export default function SuggestionsPage() {
             )}
           </div>
         ) : (
-          <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 rounded-3xl space-y-3">
+          <div className="text-center py-16 text-neutral-500 dark:text-neutral-400 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 rounded-3xl space-y-4">
             <HelpCircle className="w-9 h-9 text-neutral-400 mx-auto" />
-            <p className="text-base font-bold text-neutral-800 dark:text-white">No posts found</p>
-            <p className="text-xs text-neutral-400 max-w-sm mx-auto">
-              {viewSegment === "mine"
-                ? "You haven't created any posts in this category yet."
-                : "Be the first to submit a post in this channel!"}
-            </p>
-            <button
-              onClick={() => setShowFormModal(true)}
-              className="mt-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-sm inline-flex items-center gap-1.5"
-            >
-              <Plus size={14} />
-              <span>Create Post</span>
-            </button>
+            <div>
+              <p className="text-base font-bold text-neutral-800 dark:text-white">No submissions found</p>
+              <p className="text-xs text-neutral-400 max-w-sm mx-auto mt-1">
+                {viewSegment === "mine"
+                  ? "You haven't submitted any requests or feedback in this category yet."
+                  : "Be the first to suggest a new feature or share feedback with us!"}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 pt-1">
+              <button
+                onClick={() => {
+                  setModalCategory(activeTab);
+                  setType(activeTab === "suggestion" ? "feature" : "bug");
+                  setShowFormModal(true);
+                }}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs rounded-xl shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                {activeTab === "suggestion" ? (
+                  <>
+                    <Lightbulb size={14} />
+                    <span>Submit a Suggestion</span>
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={14} />
+                    <span>Give Feedback</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -624,78 +699,120 @@ export default function SuggestionsPage() {
           <div className="bg-white dark:bg-[#121621] border border-neutral-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
             <button
               onClick={() => setShowFormModal(false)}
-              className="absolute top-5 right-5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+              className="absolute top-5 right-5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
 
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2 mb-1">
-              {activeTab === "suggestion" ? (
-                <>
-                  <Lightbulb size={20} className="text-yellow-500" />
-                  New Suggestion
-                </>
-              ) : (
-                <>
-                  <MessageCircle size={20} className="text-pink-500" />
-                  New Feedback & Experience
-                </>
-              )}
-            </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-5">
-              Posting to channel: <strong className="text-neutral-800 dark:text-neutral-200 capitalize">{activeTab}</strong>
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                {modalCategory === "suggestion" ? (
+                  <>
+                    <Lightbulb size={20} className="text-amber-500" />
+                    Suggest a Feature or Idea
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle size={20} className="text-pink-500" />
+                    Submit Feedback or Issue
+                  </>
+                )}
+              </h2>
+            </div>
+
+            {/* Modal Category Switcher */}
+            <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-2xl border border-neutral-200 dark:border-white/5 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalCategory("suggestion");
+                  setType("feature");
+                }}
+                className={`flex-1 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  modalCategory === "suggestion"
+                    ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-xs"
+                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
+                }`}
+              >
+                <Lightbulb size={13} className="text-amber-500" />
+                <span>Feature Suggestion</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModalCategory("feedback");
+                  setType("bug");
+                }}
+                className={`flex-1 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  modalCategory === "feedback"
+                    ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-xs"
+                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300"
+                }`}
+              >
+                <MessageCircle size={13} className="text-pink-500" />
+                <span>Feedback &amp; Issue</span>
+              </button>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Category Tag Selection */}
+              {/* Category Selection */}
               <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
-                  Category Tag
+                <label className="block text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                  Choose Category Tag
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {categoryOptions.map((opt) => {
+                <div className="grid grid-cols-2 gap-2.5">
+                  {(modalCategory === "suggestion" ? suggestionTypes : feedbackTypes).map((opt) => {
                     const Icon = opt.icon;
                     const isSelected = type === opt.id;
+
                     return (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => setType(opt.id)}
-                        className={`flex items-center gap-2 p-2 border rounded-xl transition-all text-left ${
+                        className={`flex items-center gap-2.5 p-3 border rounded-xl transition-all text-left cursor-pointer ${
                           isSelected
-                            ? "bg-primary-50 dark:bg-primary-500/10 border-primary-500 text-primary-600 dark:text-primary-400 font-bold shadow-xs"
-                            : "border-neutral-200 dark:border-white/5 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-white/5"
+                            ? "bg-primary-50 dark:bg-primary-500/10 border-primary-500 text-primary-600 dark:text-primary-400 font-bold shadow-xs ring-1 ring-primary-500/20"
+                            : "border-neutral-200 dark:border-white/5 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/5"
                         }`}
                       >
-                        <Icon size={14} className="shrink-0" />
-                        <span className="text-xs truncate">{opt.label}</span>
+                        <Icon size={16} className={`shrink-0 ${modalCategory === "suggestion" ? "text-amber-500" : "text-pink-500"}`} />
+                        <span className="text-xs font-medium">{opt.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <Input
-                label="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={
-                  activeTab === "suggestion"
-                    ? "e.g., Add tax report export in CSV format..."
-                    : "e.g., Appreciation for the new statement parser..."
-                }
-                required
-                autoComplete="off"
-              />
+              <div>
+                <label className="block text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1.5">
+                  Title
+                </label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={
+                    modalCategory === "suggestion"
+                      ? "e.g., Add tax report export in CSV format..."
+                      : "e.g., Issue with portfolio sync, or feedback..."
+                  }
+                  required
+                  autoComplete="off"
+                />
+              </div>
 
               <div>
-                <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">
-                  Details / Context (Optional)
+                <label className="block text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1.5">
+                  Details / Notes (Optional)
                 </label>
                 <textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Describe your request or experience in detail..."
+                  placeholder={
+                    modalCategory === "suggestion"
+                      ? "Describe your suggestion or feature idea in detail..."
+                      : "Describe your feedback, issue, or steps to reproduce..."
+                  }
                   rows={4}
                   className="w-full px-3 py-2 text-sm bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 rounded-xl outline-none transition-all text-neutral-900 dark:text-white resize-none"
                 />
@@ -705,21 +822,21 @@ export default function SuggestionsPage() {
                 <button
                   type="button"
                   onClick={() => setShowFormModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <Button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 text-xs flex items-center justify-center gap-1.5"
+                  className="px-5 py-2 text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   {submitting ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                   ) : (
                     <>
                       <Send size={14} />
-                      <span>Post</span>
+                      <span>{modalCategory === "suggestion" ? "Submit Suggestion" : "Submit Feedback"}</span>
                     </>
                   )}
                 </Button>

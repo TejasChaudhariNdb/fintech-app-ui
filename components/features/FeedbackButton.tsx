@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MessageSquarePlus } from "lucide-react";
 
 export default function FeedbackButton() {
+  const pathname = usePathname();
+
+  if (pathname === "/suggestions") {
+    return null;
+  }
+
   return (
     <Link
       href="/suggestions"
