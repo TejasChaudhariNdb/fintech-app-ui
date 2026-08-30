@@ -132,8 +132,8 @@ export default function DashboardLayout({
             {/* Left: What's New Shortcut */}
             <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push("/profile/whats-new")}
-                className="relative flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold"
+                onPointerDown={() => router.push("/profile/whats-new")}
+                className="relative flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold touch-manipulation"
                 title="What's New"
               >
                 <Megaphone className="w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:scale-105 transition-transform" />
@@ -156,7 +156,12 @@ export default function DashboardLayout({
               You are offline. Showing cached data.
             </div>
           )}
-          <div className="lg:px-8">{children}</div>
+          <div className="lg:px-8">
+            {/* Page enter animation — re-triggers on every route change */}
+            <div key={pathname} className="page-enter">
+              {children}
+            </div>
+          </div>
         </main>
 
         <div className="lg:hidden">

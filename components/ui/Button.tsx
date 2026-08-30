@@ -1,4 +1,6 @@
-import React, { ButtonHTMLAttributes } from "react";
+"use client";
+
+import React, { ButtonHTMLAttributes, useState } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger" | "ghost" | "outline";
@@ -13,10 +15,15 @@ export default function Button({
   size = "md",
   isLoading = false,
   disabled,
+  onPointerDown,
+  onPointerUp,
+  onPointerLeave,
   ...props
 }: ButtonProps) {
+  const [pressed, setPressed] = useState(false);
+
   const baseClasses =
-    "relative inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0B0E14] disabled:opacity-50 disabled:cursor-not-allowed";
+    "relative inline-flex items-center justify-center rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0B0E14] disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation select-none";
 
   const sizes = {
     sm: "px-4 py-2 text-sm",
@@ -39,9 +46,26 @@ export default function Button({
 
   return (
     <button
-      className={`${baseClasses} ${sizes[size]} ${variants[variant]} ${className}`}
+      className={`
+        ${baseClasses} ${sizes[size]} ${variants[variant]} ${className}
+        transition-[transform,opacity] duration-75 will-change-transform
+        ${pressed ? "scale-[0.95] opacity-80" : "scale-100 opacity-100"}
+      `}
       disabled={disabled || isLoading}
-      {...props}>
+      onPointerDown={(e) => {
+        setPressed(true);
+        onPointerDown?.(e);
+      }}
+      onPointerUp={(e) => {
+        setPressed(false);
+        onPointerUp?.(e);
+      }}
+      onPointerLeave={(e) => {
+        setPressed(false);
+        onPointerLeave?.(e);
+      }}
+      {...props}
+    >
       {isLoading ? (
         <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
       ) : null}
