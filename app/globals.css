@@ -93,6 +93,11 @@
 }
 
 @layer base {
+  /* Eliminate 300ms tap delay on all touch devices globally */
+  html {
+    touch-action: manipulation;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-text-primary);
@@ -104,6 +109,16 @@
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     overscroll-behavior-y: none;
+    /* Smooth momentum scrolling like native */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ensure all interactive elements respond instantly */
+  a, button, [role="button"] {
+    touch-action: manipulation;
+    cursor: pointer;
+    /* Hint browser to composite on GPU for zero-jank transitions */
+    will-change: transform;
   }
 
   input,
