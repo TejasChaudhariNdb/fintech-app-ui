@@ -49,7 +49,7 @@ function GoogleCallbackHandler() {
           },
         });
 
-        router.push("/");
+        window.location.href = "/";
       } catch (err: any) {
         console.error("Code exchange failed:", err);
         if (err.message === "Account is deactivated") {

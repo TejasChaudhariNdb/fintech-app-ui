@@ -139,7 +139,7 @@ function AuthForm() {
       localStorage.setItem("user_email", email);
       analytics.identifyUser(email, email);
       analytics.track({ name: "auth_login_success", properties: { method: "email" } });
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       const reason = err.message || "Incorrect password";
       analytics.track({ name: "auth_login_failed", properties: { method: "email", reason } });
@@ -163,7 +163,7 @@ function AuthForm() {
       localStorage.setItem("user_email", email);
       analytics.identifyUser(email, email);
       analytics.track({ name: "auth_reactivation_success", properties: { method: "email" } });
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       setError(err.message || "Failed to reactivate account. Please try again.");
     } finally {
@@ -187,7 +187,7 @@ function AuthForm() {
       analytics.identifyUser(email, email, { signup_source: "other" });
       analytics.track({ name: "auth_register_success", properties: { method: "email" } });
       analytics.track({ name: "signup_completed", properties: { email, signup_source: "other" } });
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       const reason = err.message || "Registration failed";
       analytics.track({ name: "auth_register_failed", properties: { method: "email", reason } });

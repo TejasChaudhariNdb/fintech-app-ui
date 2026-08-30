@@ -41,6 +41,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   }>({ show: false, message: "", type: "info" });
 
   const fetchProfiles = async () => {
+    if (typeof window === "undefined") return;
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const data = await api.getProfiles();

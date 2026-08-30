@@ -41,24 +41,20 @@ function checkDemoRestriction() {
 
 function handleUnauthorized(endpoint: string) {
   if (typeof window === "undefined") return;
-  const isAuthEndpoint =
-    endpoint.startsWith("/auth/login") ||
-    endpoint.startsWith("/auth/reactivate") ||
-    endpoint.startsWith("/auth/check-email") ||
-    endpoint.startsWith("/auth/register");
+  const isAuthEndpoint = endpoint.startsWith("/auth");
   if (isAuthEndpoint) return;
-
-  localStorage.removeItem("access_token");
-  localStorage.removeItem("user_email");
-  localStorage.removeItem("active_profile_id");
 
   const path = window.location.pathname;
   if (
     !path.startsWith("/auth") &&
     !path.startsWith("/login") &&
     !path.startsWith("/register") &&
-    !path.startsWith("/demo")
+    !path.startsWith("/demo") &&
+    !path.startsWith("/google-callback")
   ) {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("active_profile_id");
     window.location.href = "/auth?session_expired=true";
   }
 }
