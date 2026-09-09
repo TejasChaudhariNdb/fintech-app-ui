@@ -16,6 +16,7 @@ import {
   Plus,
   Copy,
   Check,
+  FileSpreadsheet,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -41,6 +42,7 @@ export default function OnboardingWizard({
   const router = useRouter();
   const [step, setStep] = useState(initialStep); // 1: Intro, 2: Upload
   const [file, setFile] = useState<File | null>(null);
+  const [uploadFormat, setUploadFormat] = useState<"CAS" | "CSV">("CAS");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -103,7 +105,8 @@ export default function OnboardingWizard({
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !password) return;
+    if (!file) return;
+    if (uploadFormat === "CAS" && !password) return;
     if (!selectedProfileId) {
       setError("Please select a specific profile to import data into.");
       return;
@@ -113,12 +116,16 @@ export default function OnboardingWizard({
     setError("");
 
     try {
-      await api.uploadCAS(file, password, selectedProfileId);
+      if (uploadFormat === "CAS") {
+        await api.uploadCAS(file, password, selectedProfileId);
+      } else {
+        await api.importMFTransactionsCSV(file, selectedProfileId);
+      }
       
       // Track portfolio creation event
       analytics.track({
         name: "portfolio_created",
-        properties: { source: "cams", asset_count: 0 },
+        properties: { source: uploadFormat === "CAS" ? "cams" : "csv", asset_count: 0 },
       });
 
       // Success!
@@ -133,7 +140,7 @@ export default function OnboardingWizard({
       }, 2000);
 
     } catch (err: any) {
-      setError(err.message || "Upload failed. Check your password.");
+      setError(err.message || (uploadFormat === "CAS" ? "Upload failed. Check your password." : "Upload failed. Check your CSV file format."));
       setUploading(false);
     }
   };
@@ -358,17 +365,70 @@ export default function OnboardingWizard({
         <div className="max-w-xl mx-auto">
           <Card className="p-6 md:p-8 border border-neutral-200 dark:border-white/5 shadow-xl shadow-neutral-200/50 dark:shadow-none bg-white dark:bg-[#151A23]">
             <form onSubmit={handleUpload} className="space-y-6">
+              {/* Format Toggle */}
+              <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadFormat("CAS");
+                    setFile(null);
+                    setError("");
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    uploadFormat === "CAS"
+                      ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}>
+                  <FileText className="w-4 h-4" />
+                  CAS Statement (PDF)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadFormat("CSV");
+                    setFile(null);
+                    setError("");
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                    uploadFormat === "CSV"
+                      ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}>
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                  Transaction CSV
+                </button>
+              </div>
+
               <div className="text-center mb-6">
                 <div className="mx-auto h-12 w-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mb-3">
-                  <FileText className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                  {uploadFormat === "CAS" ? (
+                    <FileText className="h-6 w-6 text-primary-600 dark:text-primary-400" />
+                  ) : (
+                    <FileSpreadsheet className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                  )}
                 </div>
                 <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
-                  Upload CAS File
+                  {uploadFormat === "CAS" ? "Upload CAS File" : "Upload Transaction CSV"}
                 </h3>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  Import your &quot;Detailed&quot; CAS PDF
+                  {uploadFormat === "CAS"
+                    ? "Import your \"Detailed\" CAS PDF from CAMS / KFintech"
+                    : "Upload mutual fund transactions from spreadsheet or broker CSV"}
                 </p>
               </div>
+
+              {uploadFormat === "CSV" && (
+                <div className="bg-emerald-50 dark:bg-emerald-500/10 p-3.5 rounded-xl text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3">
+                  <span>Supported columns: Date, Scheme Name, Type (Buy/SIP/Sell), Units, NAV, Amount.</span>
+                  <a
+                    href="/assets/mf_transaction_template.csv"
+                    download="mf_transaction_template.csv"
+                    className="flex items-center gap-1 font-semibold bg-white dark:bg-white/10 border border-emerald-200 dark:border-emerald-500/30 px-2.5 py-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-500/20 transition-colors shrink-0 shadow-sm">
+                    <Download size={12} />
+                    Sample CSV
+                  </a>
+                </div>
+              )}
 
               {error && (
                 <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm rounded-lg flex items-center gap-2">
@@ -401,7 +461,7 @@ export default function OnboardingWizard({
                 <div className="relative">
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept={uploadFormat === "CAS" ? ".pdf" : ".csv"}
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                     className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
                     required
@@ -431,7 +491,7 @@ export default function OnboardingWizard({
                       <>
                         <Download className="text-neutral-400 mb-2" size={24} />
                         <p className="font-medium text-neutral-900 dark:text-white text-sm mb-1">
-                          Select PDF
+                          {uploadFormat === "CAS" ? "Select PDF" : "Select CSV"}
                         </p>
                         <p className="text-xs text-neutral-400 text-center">
                           Or drag & drop
@@ -442,23 +502,25 @@ export default function OnboardingWizard({
                 </div>
               </div>
 
-              <div className="relative">
-                <Input
-                  label="PDF Password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="********"
-                  required
-                  className="dark:bg-black/20 dark:border-white/10 pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              {uploadFormat === "CAS" && (
+                <div className="relative">
+                  <Input
+                    label="PDF Password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="********"
+                    required
+                    className="dark:bg-black/20 dark:border-white/10 pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-[34px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              )}
 
               <Button
                 type="submit"

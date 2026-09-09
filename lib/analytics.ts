@@ -5,7 +5,7 @@ export type AnalyticsEvent =
   | { name: 'landing_page_view'; properties?: { signup_source?: string; referral_code?: string } }
   | { name: 'signup_started'; properties?: { signup_source?: string; referral_code?: string } }
   | { name: 'signup_completed'; properties: { email?: string; signup_source?: string; referral_code?: string } }
-  | { name: 'portfolio_created'; properties: { source: 'plaid' | 'manual' | 'demo' | 'cams'; asset_count: number } }
+  | { name: 'portfolio_created'; properties: { source: 'plaid' | 'manual' | 'demo' | 'cams' | 'csv'; asset_count: number } }
   | { name: 'first_stock_added'; properties: { symbol: string; asset_class: string } }
   | { name: 'ai_insight_viewed'; properties: { insight_id: string; insight_type: string } }
   | { name: 'weekly_summary_clicked'; properties: { medium: 'email' | 'push'; cohort_week: string } }

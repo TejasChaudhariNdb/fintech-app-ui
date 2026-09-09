@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp, FileSpreadsheet } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -73,6 +73,7 @@ export default function MutualFundsPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
+  const [addTxInitialTab, setAddTxInitialTab] = useState<"MANUAL" | "IMPORT">("MANUAL");
   const [prefillSchemeId, setPrefillSchemeId] = useState<number | null>(null);
   const [prefillMfType, setPrefillMfType] = useState<"PURCHASE" | "REDEMPTION">(
     "PURCHASE",
@@ -320,16 +321,22 @@ export default function MutualFundsPage() {
       <>
         <MutualFundsZeroState
           onImportClick={() => setShowImportWizard(true)}
-          onManualClick={() => setShowAddTx(true)}
+          onImportCsvClick={() => {
+            setAddTxInitialTab("IMPORT");
+            setShowAddTx(true);
+          }}
+          onManualClick={() => {
+            setAddTxInitialTab("MANUAL");
+            setShowAddTx(true);
+          }}
         />
         <AddTransactionModal
           isOpen={showAddTx}
+          initialTab={addTxInitialTab}
           onClose={() => setShowAddTx(false)}
           onSuccess={() => {
             loadData();
-            // If success, we likely have data now, so the parent re-render
-            // will show the main dashboard instead of zero state.
-            showToast("Transaction added successfully", "success");
+            showToast("Transactions updated successfully", "success");
           }}
         />
       </>
@@ -525,6 +532,15 @@ export default function MutualFundsPage() {
           <div className="flex w-full sm:w-auto items-center gap-2">
             <button
               onClick={() => {
+                setAddTxInitialTab("IMPORT");
+                setShowAddTx(true);
+              }}
+              className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+              <FileSpreadsheet size={16} className="text-emerald-500" />
+              <span>Import CSV</span>
+            </button>
+            <button
+              onClick={() => {
                 setShowImportWizard(true);
               }}
               className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
@@ -535,6 +551,7 @@ export default function MutualFundsPage() {
               onClick={() => {
                 setPrefillSchemeId(null);
                 setPrefillMfType("PURCHASE");
+                setAddTxInitialTab("MANUAL");
                 setShowAddTx(true);
               }}
               className="flex-1 sm:flex-none px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition-colors shadow-lg shadow-primary-500/20">
@@ -827,14 +844,16 @@ export default function MutualFundsPage() {
 
       <AddTransactionModal
         isOpen={showAddTx}
+        initialTab={addTxInitialTab}
         onClose={() => {
           setShowAddTx(false);
           setPrefillSchemeId(null);
           setPrefillMfType("PURCHASE");
+          setAddTxInitialTab("MANUAL");
         }}
         onSuccess={() => {
           loadData();
-          showToast("Transaction added successfully", "success");
+          showToast("Transactions updated successfully", "success");
         }}
         initialSchemeId={prefillSchemeId}
         initialTransactionType={prefillMfType}

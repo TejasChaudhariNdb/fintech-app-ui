@@ -592,6 +592,30 @@ export const api = {
     return r.json();
   },
 
+  importMFTransactionsCSV: async (file: File, profileId?: string) => {
+    checkDemoRestriction();
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("access_token");
+    const url = profileId 
+      ? `${API_URL}/portfolio/transactions/import-csv?profile_id=${profileId}` 
+      : `${API_URL}/portfolio/transactions/import-csv`;
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Import failed" }));
+      throw new Error(err.detail || "Import failed");
+    }
+    api.clearPortfolioCache();
+    return r.json();
+  },
+
   // User Profile
   getUserProfile: () => api.fetch("/users/me", { cacheKey: "user-profile" }),
 
