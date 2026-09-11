@@ -11,7 +11,7 @@ import { useProfile } from "@/context/ProfileContext";
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (message?: string) => void;
   initialSchemeId?: number | null;
   initialTransactionType?: "PURCHASE" | "REDEMPTION";
   initialTab?: "MANUAL" | "IMPORT";
@@ -73,12 +73,14 @@ export default function AddTransactionModal({
       setImportError(null);
       setImportSuccess(null);
 
+      let initialProfId = "";
       if (activeProfileId && activeProfileId !== "all") {
-        setTargetProfileId(activeProfileId);
+        initialProfId = activeProfileId;
       } else if (profiles.length > 0) {
         const def = profiles.find((p) => p.is_default) || profiles[0];
-        setTargetProfileId(String(def.id));
+        initialProfId = String(def.id);
       }
+      setTargetProfileId(initialProfId);
 
       const nextType = initialTransactionType || "PURCHASE";
       setMode("EXISTING");
@@ -90,7 +92,7 @@ export default function AddTransactionModal({
         scheme_id: initialSchemeId ? String(initialSchemeId) : "",
         type: nextType,
       });
-      loadSchemes();
+      loadSchemes(initialProfId);
     } else {
       setMode("EXISTING");
       setSearchQuery("");
@@ -100,9 +102,10 @@ export default function AddTransactionModal({
     }
   }, [isOpen, initialSchemeId, initialTransactionType, initialTab, activeProfileId, profiles]);
 
-  const loadSchemes = async () => {
+  const loadSchemes = async (profId?: string) => {
     try {
-      const data = await api.getSchemes();
+      const activeId = profId || targetProfileId;
+      const data = await api.getSchemes(activeId && activeId !== "all" ? activeId : undefined);
       setSchemes(data);
       if (data.length === 0) {
         setMode("NEW");
@@ -144,6 +147,10 @@ export default function AddTransactionModal({
 
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!targetProfileId) {
+      alert("Please select a target profile.");
+      return;
+    }
     setLoading(true);
     try {
       const payload: any = {
@@ -166,12 +173,13 @@ export default function AddTransactionModal({
         payload.scheme_name = selectedNewScheme.schemeName;
       }
 
-      await api.addManualTransaction(payload);
-      onSuccess();
+      await api.addManualTransaction(payload, targetProfileId);
+      const actionMsg = formData.type === "REDEMPTION" ? "Redemption transaction recorded successfully!" : "Purchase transaction added successfully!";
+      onSuccess(actionMsg);
       onClose();
     } catch (err: any) {
       if (err.message !== "This action is disabled in demo mode.") {
-        alert("Failed to add transaction");
+        alert(err.message || "Failed to add transaction");
       }
     } finally {
       setLoading(false);
@@ -198,9 +206,9 @@ export default function AddTransactionModal({
       const msg = `Successfully imported ${res.imported_count} transaction${res.imported_count === 1 ? "" : "s"} across ${res.schemes_affected} scheme${res.schemes_affected === 1 ? "" : "s"}!${res.skipped_count ? ` (${res.skipped_count} duplicate${res.skipped_count === 1 ? "" : "s"} skipped)` : ""}`;
       setImportSuccess(msg);
       setTimeout(() => {
-        onSuccess();
+        onSuccess(msg);
         onClose();
-      }, 1500);
+      }, 800);
     } catch (err: any) {
       setImportError(err.message || "Failed to import CSV. Please verify column headers.");
     } finally {
@@ -240,28 +248,33 @@ export default function AddTransactionModal({
         </button>
       </div>
 
+      {/* Target Profile Selector (Applies to both Manual and Import) */}
+      {profiles.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
+            Target Profile
+          </label>
+          <select
+            value={targetProfileId}
+            onChange={(e) => {
+              const newProfId = e.target.value;
+              setTargetProfileId(newProfId);
+              loadSchemes(newProfId);
+            }}
+            required
+            className="w-full bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-primary-500 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition-all dark:text-white">
+            <option value="" disabled>Select Profile</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.relation})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {activeTab === "IMPORT" ? (
         <form onSubmit={handleCsvImport} className="space-y-4">
-          {/* Target Profile Selector */}
-          {profiles.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
-                Target Profile
-              </label>
-              <select
-                value={targetProfileId}
-                onChange={(e) => setTargetProfileId(e.target.value)}
-                required
-                className="w-full bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-primary-500 rounded-xl px-3 py-2.5 text-sm font-semibold outline-none transition-all dark:text-white">
-                <option value="" disabled>Select Profile</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.relation})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Instructions Banner */}
           <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 rounded-xl text-sm text-emerald-900 dark:text-emerald-200 leading-relaxed flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">

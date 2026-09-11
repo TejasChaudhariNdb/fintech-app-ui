@@ -346,7 +346,12 @@ export const api = {
   // Portfolio
   getPortfolioSummary: () =>
     api.fetch("/portfolio/summary", { cacheKey: "portfolio-summary" }),
-  getSchemes: () => api.fetch("/portfolio/schemes", { cacheKey: "schemes" }),
+  getSchemes: (profileId?: string) => {
+    const endpoint = profileId && profileId !== "all"
+      ? `/portfolio/schemes?profile_id=${profileId}`
+      : "/portfolio/schemes";
+    return api.fetch(endpoint, { cacheKey: "schemes" });
+  },
   getSchemeDetail: (id: number) =>
     api.fetch(`/portfolio/schemes/${id}`, { cacheKey: `scheme-${id}` }),
   updateScheme: (
@@ -496,8 +501,11 @@ export const api = {
   // Schemesy: "portfolio-history" }),
   getInsights: () => api.fetch("/portfolio/insights", { cacheKey: "insights" }),
 
-  addManualTransaction: async (data: Record<string, unknown>) => {
-    const res = await api.fetch("/portfolio/transactions/manual", {
+  addManualTransaction: async (data: Record<string, unknown>, profileId?: string) => {
+    const endpoint = profileId && profileId !== "all"
+      ? `/portfolio/transactions/manual?profile_id=${profileId}`
+      : "/portfolio/transactions/manual";
+    const res = await api.fetch(endpoint, {
       method: "POST",
       body: JSON.stringify(data),
     });

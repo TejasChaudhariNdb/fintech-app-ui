@@ -319,6 +319,12 @@ export default function MutualFundsPage() {
   if (schemes.length === 0 && !isLoading) {
     return (
       <>
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          isVisible={toast.isVisible}
+          onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
+        />
         <MutualFundsZeroState
           onImportClick={() => setShowImportWizard(true)}
           onImportCsvClick={() => {
@@ -334,9 +340,10 @@ export default function MutualFundsPage() {
           isOpen={showAddTx}
           initialTab={addTxInitialTab}
           onClose={() => setShowAddTx(false)}
-          onSuccess={() => {
-            loadData();
-            showToast("Transactions updated successfully", "success");
+          onSuccess={async (customMsg?: string) => {
+            showToast(customMsg || "Transaction saved! Updating portfolio...", "success");
+            api.clearPortfolioCache();
+            await loadData();
           }}
         />
       </>
@@ -529,23 +536,29 @@ export default function MutualFundsPage() {
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-white">
             All Schemes ({schemes.length})
           </h3>
-          <div className="flex w-full sm:w-auto items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => {
                 setAddTxInitialTab("IMPORT");
                 setShowAddTx(true);
               }}
-              className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-              <FileSpreadsheet size={16} className="text-emerald-500" />
-              <span>Import CSV</span>
+              className="flex-1 sm:flex-none h-10 px-2.5 sm:px-3.5 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-200 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors whitespace-nowrap shadow-sm dark:shadow-none active:scale-[0.98]">
+              <FileSpreadsheet size={15} className="text-emerald-500 shrink-0" />
+              <span>
+                <span className="inline sm:hidden">CSV</span>
+                <span className="hidden sm:inline">Import CSV</span>
+              </span>
             </button>
             <button
               onClick={() => {
                 setShowImportWizard(true);
               }}
-              className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-              <UploadCloud size={16} />
-              <span>Import CAS</span>
+              className="flex-1 sm:flex-none h-10 px-2.5 sm:px-3.5 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-200 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors whitespace-nowrap shadow-sm dark:shadow-none active:scale-[0.98]">
+              <UploadCloud size={15} className="text-blue-500 shrink-0" />
+              <span>
+                <span className="inline sm:hidden">CAS</span>
+                <span className="hidden sm:inline">Import CAS</span>
+              </span>
             </button>
             <button
               onClick={() => {
@@ -554,9 +567,12 @@ export default function MutualFundsPage() {
                 setAddTxInitialTab("MANUAL");
                 setShowAddTx(true);
               }}
-              className="flex-1 sm:flex-none px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-1 transition-colors shadow-lg shadow-primary-500/20">
-              <Plus size={16} />
-              <span>Buy / Sell MF</span>
+              className="flex-1 sm:flex-none h-10 px-3 sm:px-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 transition-all shadow-md shadow-primary-500/25 active:scale-[0.98] whitespace-nowrap">
+              <Plus size={15} className="shrink-0" />
+              <span>
+                <span className="inline sm:hidden">Buy / Sell</span>
+                <span className="hidden sm:inline">Buy / Sell MF</span>
+              </span>
             </button>
           </div>
         </div>
@@ -851,9 +867,10 @@ export default function MutualFundsPage() {
           setPrefillMfType("PURCHASE");
           setAddTxInitialTab("MANUAL");
         }}
-        onSuccess={() => {
-          loadData();
-          showToast("Transactions updated successfully", "success");
+        onSuccess={async (customMsg?: string) => {
+          showToast(customMsg || "Transaction saved! Updating portfolio...", "success");
+          api.clearPortfolioCache();
+          await loadData();
         }}
         initialSchemeId={prefillSchemeId}
         initialTransactionType={prefillMfType}
