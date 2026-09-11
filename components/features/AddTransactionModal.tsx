@@ -106,6 +106,14 @@ export default function AddTransactionModal({
       setSchemes(data);
       if (data.length === 0) {
         setMode("NEW");
+      } else if (initialSchemeId) {
+        const found = data.find((sc: any) => String(sc.scheme_id || sc.id) === String(initialSchemeId));
+        if (found?.nav) {
+          setFormData((prev) => ({
+            ...prev,
+            nav: prev.nav || String(found.nav),
+          }));
+        }
       }
     } catch (err) {
       console.error("Failed to load schemes", err);
@@ -401,22 +409,33 @@ export default function AddTransactionModal({
                 </label>
                 <select
                   value={formData.scheme_id}
-                  onChange={(e) =>
-                    setFormData({ ...formData, scheme_id: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const found = schemes.find((sc) => String(sc.scheme_id || sc.id) === selectedId);
+                    setFormData((prev) => ({
+                      ...prev,
+                      scheme_id: selectedId,
+                      nav: found?.nav ? String(found.nav) : prev.nav,
+                    }));
+                  }}
                   required
                   className="w-full bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl px-4 py-3 text-sm outline-none transition-all dark:text-white">
                   <option value="" disabled>
                     Select a scheme from your portfolio
                   </option>
-                  {schemes.map((s) => (
-                    <option
-                      key={s.id}
-                      value={s.id}
-                      className="dark:bg-neutral-900">
-                      {s.scheme_name} ({s.folio_number})
-                    </option>
-                  ))}
+                  {schemes.map((s) => {
+                    const id = s.scheme_id || s.id;
+                    const name = s.scheme || s.scheme_name || "Unknown Scheme";
+                    const subtitle = s.amc || s.folio_number || "";
+                    return (
+                      <option
+                        key={id}
+                        value={id}
+                        className="dark:bg-neutral-900">
+                        {name} {subtitle ? `(${subtitle})` : ""}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             ) : (
