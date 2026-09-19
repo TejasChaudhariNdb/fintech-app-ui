@@ -594,6 +594,8 @@ export default function ChatWidget() {
                 key={idx}
                 role={m.role}
                 content={m.content}
+                sessionId={currentSessionId}
+                userQuery={idx > 0 && messages[idx - 1]?.role === "user" ? messages[idx - 1].content : undefined}
                 onSelectFollowUp={sendMessage}
               />
             ))}

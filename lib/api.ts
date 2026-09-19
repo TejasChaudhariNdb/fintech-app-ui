@@ -727,6 +727,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message, session_id: sessionId, active_profile_id: activeProfileId }),
     }),
+  submitAIFeedback: (data: {
+    session_id?: number;
+    message_content?: string;
+    user_query?: string;
+    feedback_type: "thumbs_up" | "thumbs_down";
+    reason?: string;
+    comment?: string;
+  }) =>
+    api.fetch("/ai/feedback", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   chatWithAIStream: async (
     message: string,
     sessionId: number | undefined,

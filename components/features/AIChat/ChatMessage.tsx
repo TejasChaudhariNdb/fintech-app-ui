@@ -1,17 +1,32 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, User, Sparkles, Copy, Check, ChevronRight } from "lucide-react";
+import { Bot, User, Sparkles, Copy, Check, ChevronRight, ThumbsUp, ThumbsDown, X } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
+  sessionId?: number;
+  userQuery?: string;
   onSelectFollowUp?: (question: string) => void;
 }
 
-export default function ChatMessage({ role, content, onSelectFollowUp }: ChatMessageProps) {
+export default function ChatMessage({
+  role,
+  content,
+  sessionId,
+  userQuery,
+  onSelectFollowUp,
+}: ChatMessageProps) {
   const isUser = role === "user";
   const [copied, setCopied] = useState(false);
+  const [feedbackState, setFeedbackState] = useState<"up" | "down" | null>(null);
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [selectedReason, setSelectedReason] = useState<string>("");
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   // Extract "You might also want to know" follow-up questions for rich clickable cards
   const followUpHeaderMatch = content.match(/(?:###\s*|\*\*)?You might also want to know[:\*\s]*/i);
@@ -47,6 +62,48 @@ export default function ChatMessage({ role, content, onSelectFollowUp }: ChatMes
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy message:", err);
+    }
+  };
+
+  const handleThumbsUp = async () => {
+    if (feedbackState === "up") return;
+    setFeedbackState("up");
+    try {
+      await api.submitAIFeedback({
+        session_id: sessionId,
+        feedback_type: "thumbs_up",
+        message_content: content,
+        user_query: userQuery,
+      });
+    } catch (err) {
+      console.error("Failed to submit thumbs up feedback", err);
+    }
+  };
+
+  const handleThumbsDownClick = () => {
+    if (feedbackSubmitted) return;
+    setShowFeedbackDialog(true);
+  };
+
+  const handleFeedbackSubmit = async () => {
+    if (!selectedReason || isSubmittingFeedback) return;
+    setIsSubmittingFeedback(true);
+    try {
+      await api.submitAIFeedback({
+        session_id: sessionId,
+        feedback_type: "thumbs_down",
+        reason: selectedReason,
+        comment: feedbackComment.trim() || undefined,
+        message_content: content,
+        user_query: userQuery,
+      });
+      setFeedbackState("down");
+      setFeedbackSubmitted(true);
+      setShowFeedbackDialog(false);
+    } catch (err) {
+      console.error("Failed to submit feedback", err);
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -198,11 +255,44 @@ export default function ChatMessage({ role, content, onSelectFollowUp }: ChatMes
 
         {/* Bottom Actions for Assistant Message */}
         {role === "assistant" && (
-          <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-neutral-100 dark:border-white/5">
-            <div />
+          <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-neutral-100 dark:border-white/5">
+            {/* Feedback Buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleThumbsUp}
+                disabled={feedbackState !== null}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer ${
+                  feedbackState === "up"
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold"
+                    : "hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                }`}
+                title="Good response (Helpful)"
+                aria-label="Thumbs up">
+                <ThumbsUp size={13} className={feedbackState === "up" ? "fill-emerald-500/20 stroke-emerald-600" : ""} />
+                {feedbackState === "up" && <span className="text-[10px]">Helpful</span>}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleThumbsDownClick}
+                disabled={feedbackState === "up" || feedbackSubmitted}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer ${
+                  feedbackState === "down"
+                    ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 font-semibold"
+                    : "hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+                }`}
+                title="Provide feedback to improve response"
+                aria-label="Thumbs down">
+                <ThumbsDown size={13} className={feedbackState === "down" ? "fill-rose-500/20 stroke-rose-600" : ""} />
+                {feedbackSubmitted && <span className="text-[10px]">Feedback recorded</span>}
+              </button>
+            </div>
+
+            {/* Copy Button */}
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-all text-xs font-medium active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-all text-xs font-medium active:scale-95 cursor-pointer opacity-80 hover:opacity-100"
               title="Copy response"
               aria-label="Copy AI response">
               {copied ? (
@@ -217,6 +307,76 @@ export default function ChatMessage({ role, content, onSelectFollowUp }: ChatMes
                 </>
               )}
             </button>
+          </div>
+        )}
+
+        {/* Inline Thumbs Down Feedback Modal */}
+        {showFeedbackDialog && (
+          <div className="mt-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-[#131722] border border-neutral-200/80 dark:border-white/10 animate-in fade-in zoom-in-95 duration-200 space-y-3 shadow-xs">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-neutral-900 dark:text-white">
+                What could be improved with this response?
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowFeedbackDialog(false)}
+                className="p-1 rounded-lg hover:bg-neutral-200/60 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 cursor-pointer">
+                <X size={13} />
+              </button>
+            </div>
+
+            {/* Reason Chips */}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                "Inaccurate / Factually incorrect",
+                "Didn't answer my question",
+                "Missing numbers / data",
+                "Confusing / Hard to read",
+                "Other",
+              ].map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setSelectedReason(reason)}
+                  className={`px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all cursor-pointer border ${
+                    selectedReason === reason
+                      ? "bg-primary-500 text-white border-primary-500 shadow-xs"
+                      : "bg-white dark:bg-white/5 border-neutral-200/80 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300"
+                  }`}>
+                  {reason}
+                </button>
+              ))}
+            </div>
+
+            {/* Optional Detailed Comment Textarea */}
+            <textarea
+              rows={2}
+              value={feedbackComment}
+              onChange={(e) => setFeedbackComment(e.target.value)}
+              placeholder="Tell us what went wrong or how to improve (optional)..."
+              className="w-full text-xs p-2.5 rounded-xl bg-white dark:bg-black/20 border border-neutral-200/80 dark:border-white/10 outline-none focus:border-primary-500 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 resize-none leading-relaxed"
+            />
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowFeedbackDialog(false)}
+                className="px-3 py-1.5 rounded-xl hover:bg-neutral-200/60 dark:hover:bg-white/10 text-neutral-500 text-xs font-semibold cursor-pointer">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleFeedbackSubmit}
+                disabled={isSubmittingFeedback || !selectedReason}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shadow-xs ${
+                  selectedReason && !isSubmittingFeedback
+                    ? "bg-primary-600 hover:bg-primary-500 cursor-pointer active:scale-95"
+                    : "bg-neutral-300 dark:bg-white/10 text-neutral-400 cursor-not-allowed opacity-50"
+                }`}>
+                {isSubmittingFeedback ? "Submitting..." : "Submit Feedback"}
+              </button>
+            </div>
           </div>
         )}
 
