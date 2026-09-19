@@ -52,67 +52,6 @@ interface AIChatResult {
   session_title: string;
 }
 
-const AVAILABLE_MODELS = [
-  {
-    id: "claude-haiku",
-    name: "Claude 3 Haiku",
-    provider: "Anthropic",
-    status: "active",
-  },
-  {
-    id: "chatgpt",
-    name: "ChatGPT",
-    provider: "OpenAI",
-    status: "soon",
-  },
-  {
-    id: "gemini",
-    name: "Gemini",
-    provider: "Google",
-    status: "soon",
-  },
-  {
-    id: "grok",
-    name: "Grok",
-    provider: "xAI",
-    status: "soon",
-  },
-];
-
-const ClaudeLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" fill="currentColor" className={className}>
-    <path d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z" />
-  </svg>
-);
-
-const ChatGPTLogo = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 320 320" fill="currentColor" className={className}>
-    <path d="m297.06 130.97c7.26-21.79 4.76-45.66-6.85-65.48-17.46-30.4-52.56-46.04-86.84-38.68-15.25-17.18-37.16-26.95-60.13-26.81-35.04-.08-66.13 22.48-76.91 55.82-22.51 4.61-41.94 18.7-53.31 38.67-17.59 30.32-13.58 68.54 9.92 94.54-7.26 21.79-4.76 45.66 6.85 65.48 17.46 30.4 52.56 46.04 86.84 38.68 15.24 17.18 37.16 26.95 60.13 26.8 35.06.09 66.16-22.49 76.94-55.86 22.51-4.61 41.94-18.7 53.31-38.67 17.57-30.32 13.55-68.51-9.94-94.51zm-120.28 168.11c-14.03.02-27.62-4.89-38.39-13.88.49-.26 1.34-.73 1.89-1.07l63.72-36.8c3.26-1.85 5.26-5.32 5.24-9.07v-89.83l26.93 15.55c.29.14.48.42.52.74v74.39c-.04 33.08-26.83 59.9-59.91 59.97zm-128.84-55.03c-7.03-12.14-9.56-26.37-7.15-40.18.47.28 1.3.79 1.89 1.13l63.72 36.8c3.23 1.89 7.23 1.89 10.47 0l77.79-44.92v31.1c.02.32-.13.63-.38.83l-64.41 37.19c-28.69 16.52-65.33 6.7-81.92-21.95zm-16.77-139.09c7-12.16 18.05-21.46 31.21-26.29 0 .55-.03 1.52-.03 2.2v73.61c-.02 3.74 1.98 7.21 5.23 9.06l77.79 44.91-26.93 15.55c-.27.18-.61.21-.91.08l-64.42-37.22c-28.63-16.58-38.45-53.21-21.95-81.89zm221.26 51.49-77.79-44.92 26.93-15.54c.27-.18.61-.21.91-.08l64.42 37.19c28.68 16.57 38.51 53.26 21.94 81.94-7.01 12.14-18.05 21.44-31.2 26.28v-75.81c.03-3.74-1.96-7.2-5.2-9.06zm26.8-40.34c-.47-.29-1.3-.79-1.89-1.13l-63.72-36.8c-3.23-1.89-7.23-1.89-10.47 0l-77.79 44.92v-31.1c-.02-.32.13-.63.38-.83l64.41-37.16c28.69-16.55 65.37-6.7 81.91 22 6.99 12.12 9.52 26.31 7.15 40.1zm-168.51 55.43-26.94-15.55c-.29-.14-.48-.42-.52-.74v-74.39c.02-33.12 26.89-59.96 60.01-59.94 14.01 0 27.57 4.92 38.34 13.88-.49.26-1.33.73-1.89 1.07l-63.72 36.8c-3.26 1.85-5.26 5.31-5.24 9.06l-.04 89.79zm14.63-31.54 34.65-20.01 34.65 20v40.01l-34.65 20-34.65-20z" />
-  </svg>
-);
-
-const GeminiLogo = ({ className }: { className?: string }) => (
-  <div className={className + " relative overflow-hidden"}>
-    <Image
-      src="/icons/gemini.png"
-      alt="Gemini Logo"
-      fill
-      className="object-contain"
-    />
-  </div>
-);
-
-const GrokLogo = ({ className }: { className?: string }) => (
-  <div className={className + " relative overflow-hidden"}>
-    <Image
-      src="/icons/grok.png"
-      alt="Grok Logo"
-      fill
-      className="object-contain"
-    />
-  </div>
-);
-
 export default function ChatWidget() {
   const { activeProfileId } = useProfile();
   const [isOpen, setIsOpen] = useState(false);
@@ -142,14 +81,10 @@ export default function ChatWidget() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [disclaimerExpanded, setDisclaimerExpanded] = useState(false);
 
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0]);
-  const [showModelSelector, setShowModelSelector] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingTextRef = useRef("");
-  const modelSelectorRef = useRef<HTMLDivElement>(null);
 
   // Auto-resize textarea height smoothly as user types (from 44px up to 180px)
   useEffect(() => {
@@ -188,19 +123,6 @@ export default function ChatWidget() {
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modelSelectorRef.current &&
-        !modelSelectorRef.current.contains(event.target as Node)
-      ) {
-        setShowModelSelector(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const loadSessions = async () => {
@@ -246,7 +168,6 @@ export default function ChatWidget() {
     ]);
     setCurrentSessionId(undefined);
     setShowHistory(false);
-    setShowModelSelector(false);
   };
 
   const handleStopResponse = () => {
@@ -267,7 +188,11 @@ export default function ChatWidget() {
     abortControllerRef.current = abortController;
 
     try {
-      let res: AIChatResult;
+      let res: AIChatResult = {
+        response: "",
+        session_id: currentSessionId || 0,
+        session_title: "",
+      };
       let usedFallback = false;
       try {
         res = await api.chatWithAIStream(
@@ -327,71 +252,45 @@ export default function ChatWidget() {
       }
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
-        if (streamingTextRef.current.trim()) {
-          setMessages((prev) => [
-            ...prev,
-            { role: "assistant", content: streamingTextRef.current.trim() },
-          ]);
-        }
         return;
       }
 
       console.error(err);
-      let errorMessage =
-        "Sorry, I'm having trouble connecting right now. Please try again later.";
-
-      if (err instanceof Error && err.message.includes("403")) {
-        errorMessage =
-          "You have reached your free chat limit. Refer a friend in Profile to unlock unlimited access!";
-      } else if (
-        err instanceof Error &&
-        err.message.includes("Free chat limit reached")
-      ) {
-        errorMessage =
-          "You have reached your free chat limit. Refer a friend in Profile to unlock unlimited access!";
-      }
-
+      setStreamingText("");
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: errorMessage,
+          content:
+            "Sorry, I encountered an error. Please check your network or try again.",
         },
       ]);
     } finally {
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "44px";
-      }
-      abortControllerRef.current = null;
       setIsResponding(false);
       setLiveLoadingStage(null);
-      setStreamingText("");
-      streamingTextRef.current = "";
+      abortControllerRef.current = null;
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Send on Enter (without Shift)
+    // If Enter is pressed without Shift, submit the form
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (inputValue.trim() && !isResponding && !isLoadingSession) {
-        sendMessage(inputValue);
-      }
+      sendMessage(inputValue);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.trim() && !isResponding && !isLoadingSession) {
-      sendMessage(inputValue);
-    }
+    sendMessage(inputValue);
   };
 
   return (
     <div className="fixed bottom-24 lg:bottom-10 right-6 z-50 flex flex-col items-end pointer-events-none font-sans">
+      {/* Main Chat Modal / Window */}
       <div
         className={`pointer-events-auto bg-white dark:bg-[#0B0E14] border border-neutral-200 dark:border-white/10 shadow-2xl flex flex-col transition-all duration-300 origin-bottom-right
-        fixed inset-0 lg:inset-auto lg:relative lg:w-[400px] lg:h-[600px] lg:max-h-[70vh] lg:rounded-2xl lg:mb-4 z-50 lg:z-auto
+        fixed inset-0 lg:inset-auto lg:relative lg:w-[480px] xl:w-[520px] lg:h-[700px] lg:max-h-[82vh] lg:rounded-2xl lg:mb-4 z-50 lg:z-auto
         ${
           isOpen
             ? "scale-100 opacity-100 translate-y-0"
@@ -539,7 +438,7 @@ export default function ChatWidget() {
 
               <div className="space-y-1 px-2 pb-4">
                 {filteredSessions.map((session) => (
-                   <button
+                  <button
                     key={session.id}
                     onClick={() => handleLoadSession(session.id)}
                     className={`w-full text-left p-3 rounded-xl transition-all duration-200 flex items-center gap-3 group ${
@@ -598,7 +497,7 @@ export default function ChatWidget() {
                       <button
                         onClick={() => setHistorySearch("")}
                         className="mt-4 text-xs font-bold text-primary-500 hover:text-primary-600">
-                        Clear search
+                        Clear Search
                       </button>
                     )}
                   </div>
@@ -607,10 +506,10 @@ export default function ChatWidget() {
             </div>
           )}
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-50/50 dark:bg-black/20">
-            {messages.map((m, i) => (
-              <ChatMessage key={i} role={m.role} content={m.content} />
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+            {messages.map((m, idx) => (
+              <ChatMessage key={idx} role={m.role} content={m.content} />
             ))}
             {messages.length === 1 && !isResponding && !streamingText && (
               <div className="flex flex-col gap-4 mt-8 px-2 sm:px-4 sm:ml-[40px]">
@@ -682,21 +581,15 @@ export default function ChatWidget() {
               </div>
             )}
             {isResponding && !streamingText && (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center shrink-0">
-                  <Bot
-                    size={16}
-                    className="text-neutral-500 dark:text-neutral-400"
-                  />
+              <div className="flex items-start gap-3 rounded-2xl border border-neutral-200/80 bg-neutral-50/90 p-3.5 dark:border-white/10 dark:bg-[#131722]/80 animate-in fade-in duration-200">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-500 text-white shadow-sm">
+                  <Sparkles size={14} />
                 </div>
-                <div className="bg-white dark:bg-neutral-800 rounded-2xl rounded-tl-none px-4 py-3 border border-neutral-200 dark:border-white/10 max-w-[80%]">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <Sparkles
-                      size={14}
-                      className="text-primary-500 animate-pulse"
-                    />
-                    <p className="text-xs font-medium text-neutral-800 dark:text-neutral-200">
-                      {liveLoadingStage?.title ?? "Working on your request"}
+                    <span className="h-2 w-2 rounded-full bg-primary-500 animate-pulse" />
+                    <p className="text-xs font-semibold text-neutral-900 dark:text-white">
+                      {liveLoadingStage?.title ?? "Analyzing your request..."}
                     </p>
                   </div>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
@@ -715,58 +608,6 @@ export default function ChatWidget() {
         {/* Input */}
         {!showHistory && (
           <div className="p-4 border-t border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0B0E14] lg:rounded-b-2xl pb-safe-bottom">
-            {/* Model Selector */}
-            {/* Model Selector Dropdown */}
-            {showModelSelector && (
-              <div className="mb-3 p-2 bg-white dark:bg-[#1A1D24] border border-neutral-200 dark:border-white/5 rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-2xl overflow-hidden">
-                <div className="space-y-0.5">
-                  {AVAILABLE_MODELS.map((model) => {
-                    const isSoon = model.status === "soon";
-                    return (
-                      <button
-                        key={model.id}
-                        disabled={isSoon}
-                        onClick={() => {
-                          setSelectedModel(model);
-                          setShowModelSelector(false);
-                        }}
-                        className={`w-full flex items-center justify-between p-3 rounded-xl transition-all duration-200 group text-left ${
-                          isSoon 
-                            ? "opacity-40 cursor-not-allowed grayscale" 
-                            : "hover:bg-neutral-100 dark:hover:bg-white/5 active:scale-[0.98]"
-                        }`}>
-                        <div className="flex items-center gap-3">
-                          <div className="text-neutral-700 dark:text-white">
-                            {model.provider === "Anthropic" && <ClaudeLogo className="w-5 h-5" />}
-                            {model.provider === "OpenAI" && <ChatGPTLogo className="w-5 h-5" />}
-                            {model.provider === "Google" && <GeminiLogo className="w-5 h-5" />}
-                            {model.provider === "xAI" && <GrokLogo className="w-5 h-5" />}
-                          </div>
-                          <h4 className={`text-sm font-semibold transition-colors ${
-                            selectedModel.id === model.id ? "text-primary-500" : "text-neutral-900 dark:text-white"
-                          }`}>
-                            {model.name}
-                          </h4>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isSoon && (
-                            <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-[9px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
-                              Soon
-                            </span>
-                          )}
-                          {selectedModel.id === model.id && (
-                            <div className="w-5 h-5 rounded-full bg-primary-500/10 flex items-center justify-center">
-                              <Check size={12} className="text-primary-500" />
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             <form
               onSubmit={handleSubmit}
               className="relative flex flex-col bg-neutral-50 dark:bg-[#131722]/90 rounded-2xl border border-neutral-200/80 dark:border-white/10 focus-within:border-primary-500/60 focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:bg-white dark:focus-within:bg-[#0E1118] shadow-xs hover:border-neutral-300 dark:hover:border-white/20 transition-all duration-200">
@@ -785,25 +626,10 @@ export default function ChatWidget() {
               </div>
 
               {/* Bottom toolbar */}
-              <div className="flex items-center justify-between px-2.5 pb-2 pt-1 border-t border-transparent">
-                {/* Left: Model Selector Pill */}
+              <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-transparent">
+                {/* Left: Hint */}
                 <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowModelSelector(!showModelSelector)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-200/60 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 transition-all text-xs font-semibold cursor-pointer border border-neutral-200/60 dark:border-white/5 active:scale-95 shadow-2xs"
-                    title="Change AI Model">
-                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
-                      {selectedModel.provider === "Anthropic" && <ClaudeLogo className="w-4 h-4 text-primary-500" />}
-                      {selectedModel.provider === "OpenAI" && <ChatGPTLogo className="w-4 h-4 text-primary-500" />}
-                      {selectedModel.provider === "Google" && <GeminiLogo className="w-4 h-4 text-primary-500" />}
-                      {selectedModel.provider === "xAI" && <GrokLogo className="w-4 h-4 text-primary-500" />}
-                    </div>
-                    <span className="text-[11px] font-bold tracking-tight">{selectedModel.name}</span>
-                    <ChevronUp size={11} className={`text-neutral-400 transition-transform duration-200 ${showModelSelector ? "" : "rotate-180"}`} />
-                  </button>
-
-                  <span className="hidden sm:inline-block text-[10px] text-neutral-400 dark:text-neutral-500 pl-1 select-none">
+                  <span className="text-[11px] text-neutral-400 dark:text-neutral-500 select-none">
                     Shift + ↵ for new line
                   </span>
                 </div>
@@ -814,10 +640,10 @@ export default function ChatWidget() {
                     <button
                       type="button"
                       onClick={handleStopResponse}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md shadow-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer animate-pulse"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md shadow-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer animate-pulse"
                       title="Stop Generating">
-                      <Square size={11} fill="currentColor" />
-                      <span className="text-[11px]">Stop</span>
+                      <Square size={12} fill="currentColor" />
+                      <span>Stop</span>
                     </button>
                   ) : (
                     <button
