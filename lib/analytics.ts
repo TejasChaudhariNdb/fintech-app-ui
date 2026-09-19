@@ -45,7 +45,14 @@ class AnalyticsService {
     if (typeof window === 'undefined' || this.isInitialized) return;
 
     // Defensive polyfill for any webview/extension calling closeMobileMenu globally
-    (window as any).closeMobileMenu = (window as any).closeMobileMenu || function () {};
+    (window as any).closeMobileMenu = (window as any).closeMobileMenu || function () { };
+
+    // Completely disable PostHog analytics and session recording on localhost / local environments
+    const isLocalhost =
+      window.location.hostname === 'localhost'
+    if (isLocalhost) {
+      return;
+    }
 
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
     const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
@@ -70,9 +77,9 @@ class AnalyticsService {
           const excType = String(props['$exception_type'] || props['$exception_name'] || '');
           const excValue = String(
             props['$exception_message'] ||
-              props['$exception_value'] ||
-              props['$exception_list']?.[0]?.value ||
-              ''
+            props['$exception_value'] ||
+            props['$exception_list']?.[0]?.value ||
+            ''
           );
 
           // 1. Filter out cross-origin "Script error." (CORS policy masked errors)
@@ -130,7 +137,7 @@ class AnalyticsService {
   }
 
   identifyUser(userId: string, email: string, traits?: Record<string, any>) {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !this.isInitialized) return;
     posthog.identify(userId, {
       email,
       ...traits,
@@ -138,12 +145,12 @@ class AnalyticsService {
   }
 
   reset() {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !this.isInitialized) return;
     posthog.reset();
   }
 
   track(event: AnalyticsEvent) {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !this.isInitialized) return;
 
     const deviceProperties = {
       $screen_width: window.innerWidth,

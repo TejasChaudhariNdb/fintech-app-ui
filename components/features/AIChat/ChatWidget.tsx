@@ -145,9 +145,31 @@ export default function ChatWidget() {
   const [showModelSelector, setShowModelSelector] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingTextRef = useRef("");
   const modelSelectorRef = useRef<HTMLDivElement>(null);
+
+  // Auto-resize textarea height smoothly as user types (from 44px up to 180px)
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const nextHeight = Math.min(textareaRef.current.scrollHeight, 180);
+      textareaRef.current.style.height = `${Math.max(44, nextHeight)}px`;
+    }
+  }, [inputValue]);
+
+  // Focus input automatically on open (desktop/tablet)
+  useEffect(() => {
+    if (isOpen && !showHistory) {
+      const timer = setTimeout(() => {
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+          textareaRef.current?.focus();
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, showHistory]);
 
   useEffect(() => {
     if (isOpen) {
@@ -336,6 +358,9 @@ export default function ChatWidget() {
         },
       ]);
     } finally {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "44px";
+      }
       abortControllerRef.current = null;
       setIsResponding(false);
       setLiveLoadingStage(null);
@@ -344,9 +369,21 @@ export default function ChatWidget() {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Send on Enter (without Shift)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (inputValue.trim() && !isResponding && !isLoadingSession) {
+        sendMessage(inputValue);
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(inputValue);
+    if (inputValue.trim() && !isResponding && !isLoadingSession) {
+      sendMessage(inputValue);
+    }
   };
 
   return (
@@ -704,44 +741,71 @@ export default function ChatWidget() {
 
             <form
               onSubmit={handleSubmit}
-              className="relative flex flex-col bg-neutral-50 dark:bg-white/5 rounded-2xl border border-neutral-200 dark:border-white/10 focus-within:border-primary-500/50 focus-within:ring-4 focus-within:ring-primary-500/5 transition-all">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your portfolio..."
-                className="w-full bg-transparent outline-none text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 px-4 pt-3 pb-2"
-              />
-              <div className="flex items-center justify-between px-2 pb-2">
-                <button
-                  type="button"
-                  onClick={() => setShowModelSelector(!showModelSelector)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-neutral-200/50 dark:hover:bg-white/10 transition-colors text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">
-                  <div className="w-4 h-4 flex items-center justify-center overflow-hidden">
-                    {selectedModel.provider === "Anthropic" && <ClaudeLogo className="w-4 h-4 text-primary-500" />}
-                    {selectedModel.provider === "OpenAI" && <ChatGPTLogo className="w-4 h-4 text-primary-500" />}
-                    {selectedModel.provider === "Google" && <GeminiLogo className="w-4 h-4 text-primary-500" />}
-                    {selectedModel.provider === "xAI" && <GrokLogo className="w-4 h-4 text-primary-500" />}
-                  </div>
-                  {selectedModel.name}
-                  <ChevronUp size={10} className={`transition-transform duration-200 ${showModelSelector ? "" : "rotate-180"}`} />
-                </button>
+              className="relative flex flex-col bg-neutral-50 dark:bg-[#131722]/90 rounded-2xl border border-neutral-200/80 dark:border-white/10 focus-within:border-primary-500/60 focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:bg-white dark:focus-within:bg-[#0E1118] shadow-xs hover:border-neutral-300 dark:hover:border-white/20 transition-all duration-200">
+              
+              {/* Multi-line auto-expanding textarea */}
+              <div className="relative flex items-center w-full px-3.5 pt-3 pb-1">
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about your portfolio, stocks, mutual funds..."
+                  className="w-full bg-transparent outline-none text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-44 min-h-[44px] leading-relaxed"
+                />
+              </div>
 
-                {isResponding ? (
+              {/* Bottom toolbar */}
+              <div className="flex items-center justify-between px-2.5 pb-2 pt-1 border-t border-transparent">
+                {/* Left: Model Selector Pill */}
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={handleStopResponse}
-                    className="p-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-lg shadow-rose-500/20 transition-all active:scale-95">
-                    <Square size={14} fill="currentColor" />
+                    onClick={() => setShowModelSelector(!showModelSelector)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-200/60 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 transition-all text-xs font-semibold cursor-pointer border border-neutral-200/60 dark:border-white/5 active:scale-95 shadow-2xs"
+                    title="Change AI Model">
+                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                      {selectedModel.provider === "Anthropic" && <ClaudeLogo className="w-4 h-4 text-primary-500" />}
+                      {selectedModel.provider === "OpenAI" && <ChatGPTLogo className="w-4 h-4 text-primary-500" />}
+                      {selectedModel.provider === "Google" && <GeminiLogo className="w-4 h-4 text-primary-500" />}
+                      {selectedModel.provider === "xAI" && <GrokLogo className="w-4 h-4 text-primary-500" />}
+                    </div>
+                    <span className="text-[11px] font-bold tracking-tight">{selectedModel.name}</span>
+                    <ChevronUp size={11} className={`text-neutral-400 transition-transform duration-200 ${showModelSelector ? "" : "rotate-180"}`} />
                   </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={!inputValue.trim() || isLoadingSession}
-                    className="p-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl shadow-lg shadow-primary-500/20 transition-all active:scale-95">
-                    <Send size={14} />
-                  </button>
-                )}
+
+                  <span className="hidden sm:inline-block text-[10px] text-neutral-400 dark:text-neutral-500 pl-1 select-none">
+                    Shift + ↵ for new line
+                  </span>
+                </div>
+
+                {/* Right: Actions */}
+                <div className="flex items-center gap-2">
+                  {isResponding ? (
+                    <button
+                      type="button"
+                      onClick={handleStopResponse}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md shadow-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer animate-pulse"
+                      title="Stop Generating">
+                      <Square size={11} fill="currentColor" />
+                      <span className="text-[11px]">Stop</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={!inputValue.trim() || isLoadingSession}
+                      className={`p-2 rounded-xl text-white transition-all duration-200 flex items-center justify-center active:scale-95 ${
+                        inputValue.trim() && !isLoadingSession
+                          ? "bg-primary-600 hover:bg-primary-500 shadow-md shadow-primary-500/25 cursor-pointer"
+                          : "bg-neutral-200 dark:bg-white/10 text-neutral-400 dark:text-neutral-500 cursor-not-allowed opacity-50"
+                      }`}
+                      title="Send message (Enter)"
+                      aria-label="Send message">
+                      <Send size={14} className={inputValue.trim() ? "translate-x-px -translate-y-px" : ""} />
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
 
