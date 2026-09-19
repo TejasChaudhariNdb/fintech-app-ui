@@ -8,7 +8,8 @@ import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
 import { useProfile } from "@/context/ProfileContext";
 import ProfileSwitcher from "@/components/features/ProfileSwitcher";
-import { Megaphone } from "lucide-react";
+import { Megaphone, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 
 import DemoRibbon from "@/components/ui/DemoRibbon";
@@ -27,11 +28,17 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const { activeProfileId, activeProfile } = useProfile();
   const [isChecking, setIsChecking] = useState(true);
   const [isLockEnabled, setIsLockEnabled] = useState(false);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
   const isDemo = useIsDemo();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -129,7 +136,7 @@ export default function DashboardLayout({
           {/* Top Header Bar */}
           <header className={`flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky z-30 transition-all duration-300 ${isDemo ? 'top-10' : 'top-0'}`}>
 
-            {/* Left: What's New Shortcut */}
+            {/* Left: What's New Shortcut & Theme Toggle */}
             <div className="flex items-center gap-2">
               <button
                 onPointerDown={() => router.push("/profile/whats-new")}
@@ -140,6 +147,30 @@ export default function DashboardLayout({
                 <span className="hidden sm:inline-block">What&apos;s New</span>
                 {hasUnreadUpdates && (
                   <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary-500 border-2 border-white dark:border-[#0B0E14] rounded-full animate-pulse shadow-sm shadow-primary-500/50" />
+                )}
+              </button>
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                className="relative flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold touch-manipulation cursor-pointer"
+                title={mounted ? `Switch to ${resolvedTheme === "dark" ? "Light" : "Dark"} Mode` : "Toggle Theme"}
+                aria-label="Toggle Theme"
+              >
+                {mounted ? (
+                  resolvedTheme === "dark" ? (
+                    <>
+                      <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
+                      <span className="hidden md:inline-block text-[11px] font-medium text-neutral-300">Light</span>
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="w-4 h-4 text-neutral-600 dark:text-neutral-400 group-hover:-rotate-12 transition-transform duration-300" />
+                      <span className="hidden md:inline-block text-[11px] font-medium text-neutral-600">Dark</span>
+                    </>
+                  )
+                ) : (
+                  <div className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-white/10 animate-pulse" />
                 )}
               </button>
             </div>

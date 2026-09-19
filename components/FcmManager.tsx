@@ -6,18 +6,30 @@ import { getMessaging, onMessage } from "firebase/messaging";
 import { app } from "../lib/firebase";
 import { Bell, X } from "lucide-react";
 
+const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000; // 4 days snooze
+
 const FcmManager = () => {
   const { permission, requestPermission } = useFcmToken();
   const [showBanner, setShowBanner] = useState(false);
 
+  const dismissBanner = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "fcm_permission_later_until",
+        String(Date.now() + FOUR_DAYS_MS)
+      );
+    }
+    setShowBanner(false);
+  };
+
   useEffect(() => {
-    console.log("Permission:", permission);
-    // Show banner only if permission is default, supported, and user hasn't already enabled.
+    // Show banner only if permission is default, supported, and user hasn't already enabled or snoozed.
     if (typeof window === "undefined") return;
     if (!("Notification" in window)) return;
     if (permission !== "default") return;
     if (localStorage.getItem("fcm_permission") === "granted") return;
     if (localStorage.getItem("fcm_opt_out") === "true") return;
+    
     const laterUntil = localStorage.getItem("fcm_permission_later_until");
     if (laterUntil && Number(laterUntil) > Date.now()) return;
 
@@ -87,25 +99,21 @@ const FcmManager = () => {
                 setShowBanner(false);
                 await requestPermission();
               }}
-              className="bg-white text-blue-700 hover:bg-blue-50 text-xs px-3 py-1.5 rounded-md font-medium transition-colors">
+              className="bg-white text-blue-700 hover:bg-blue-50 text-xs px-3 py-1.5 rounded-md font-medium transition-colors cursor-pointer">
               Enable Now
             </button>
             <button
-              onClick={() => {
-                localStorage.setItem(
-                  "fcm_permission_later_until",
-                  String(Date.now() + 12 * 60 * 60 * 1000),
-                );
-                setShowBanner(false);
-              }}
-              className="bg-transparent hover:bg-white/10 text-white text-xs px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20">
+              onClick={dismissBanner}
+              className="bg-transparent hover:bg-white/10 text-white text-xs px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20 cursor-pointer">
               Maybe Later
             </button>
           </div>
         </div>
         <button
-          onClick={() => setShowBanner(false)}
-          className="text-white/60 hover:text-white shrink-0">
+          onClick={dismissBanner}
+          className="text-white/60 hover:text-white shrink-0 cursor-pointer p-1 rounded-md hover:bg-white/10 transition-colors"
+          title="Dismiss for 4 days"
+          aria-label="Close notification banner">
           <X className="w-4 h-4" />
         </button>
       </div>

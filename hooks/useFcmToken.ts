@@ -25,6 +25,7 @@ const useFcmToken = () => {
 
         if (currentPermission === "granted") {
           localStorage.setItem("fcm_permission", "granted");
+          localStorage.removeItem("fcm_permission_later_until");
           // Dynamic SW Registration with Versioning to force update
           const swUrl = `/firebase-messaging-sw.js?v=2&apiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`;
 
@@ -56,6 +57,12 @@ const useFcmToken = () => {
               "No registration token available. Request permission to generate one.",
             );
           }
+        } else {
+          // If user closed native prompt without granting, snooze banner for 4 days
+          localStorage.setItem(
+            "fcm_permission_later_until",
+            String(Date.now() + 4 * 24 * 60 * 60 * 1000)
+          );
         }
       }
     } catch (error) {
