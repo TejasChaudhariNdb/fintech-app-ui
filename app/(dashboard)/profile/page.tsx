@@ -43,6 +43,7 @@ import { usePrivacy } from "@/context/PrivacyContext";
 import useFcmToken from "@/hooks/useFcmToken";
 import { useProfile } from "@/context/ProfileContext";
 import Toast from "@/components/ui/Toast";
+import NotificationSettingsModal from "@/components/NotificationSettingsModal";
 
 function SectionCard({
   title,
@@ -231,6 +232,7 @@ export default function ProfilePage() {
   const [referralError, setReferralError] = useState("");
   const [isApplyingReferral, setIsApplyingReferral] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [originalProfile, setOriginalProfile] = useState<any>(null); // For cancel
   const [showAllFamily, setShowAllFamily] = useState(false);
@@ -811,7 +813,7 @@ export default function ProfilePage() {
 
           {/* Notifications Toggle */}
           <button
-            onClick={toggleNotifications}
+            onClick={() => setShowNotificationModal(true)}
             className="flex flex-col items-center justify-center text-center p-3.5 rounded-2xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-all select-none active:scale-95 cursor-pointer shadow-xs"
           >
             <div className={`p-2 rounded-xl transition-colors ${notificationsEnabled ? "bg-primary-500/10 text-primary-500" : "bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"}`}>
@@ -819,7 +821,7 @@ export default function ProfilePage() {
             </div>
             <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 mt-2">Alerts</span>
             <span className={`text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded-md ${notificationsEnabled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-neutral-100 dark:bg-white/10 text-neutral-500"}`}>
-              {notificationsEnabled ? "Enabled" : "Disabled"}
+              {notificationsEnabled ? "Configured" : "Disabled"}
             </span>
           </button>
         </div>
@@ -858,6 +860,29 @@ export default function ProfilePage() {
                     Pending Action
                   </span>
                 )}
+                <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
+              </div>
+            </button>
+
+            <button
+              onClick={() => setShowNotificationModal(true)}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">Email &amp; Notification Preferences</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Daily nudges, weekly summaries, and push alerts
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center rounded-full bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                  Manage
+                </span>
                 <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
               </div>
             </button>
@@ -2087,6 +2112,13 @@ export default function ProfilePage() {
           })()}
         </div>
       </Modal>
+
+      {/* Notification & Email Settings Modal */}
+      <NotificationSettingsModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        onToast={(msg) => showToast(msg, "success")}
+      />
     </div>
   );
 }

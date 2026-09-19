@@ -885,4 +885,24 @@ export const api = {
   getLatestAnnouncement: () => api.fetch("/updates/latest-announcement"),
   markUpdatesAsSeen: () => api.fetch("/updates/seen", { method: "POST" }),
   markUpdateAsSeen: (id: number) => api.fetch(`/updates/${id}/seen`, { method: "POST" }),
+
+  // Email & Notification Preferences
+  getNotificationPreferences: () => api.fetch("/notifications/preferences"),
+  updateNotificationPreferences: (data: any) =>
+    api.fetch("/notifications/preferences", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  getPublicNotificationPreferences: (token: string) =>
+    api.fetch(`/notifications/preferences/public?token=${encodeURIComponent(token)}`),
+  updatePublicNotificationPreferences: (data: any) =>
+    api.fetch("/notifications/preferences/public", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  oneClickUnsubscribe: (token: string, reason?: string) => {
+    let url = `/notifications/unsubscribe/one-click?token=${encodeURIComponent(token)}`;
+    if (reason) url += `&reason=${encodeURIComponent(reason)}`;
+    return api.fetch(url, { method: "POST" });
+  },
 };
