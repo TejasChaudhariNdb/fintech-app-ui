@@ -11,6 +11,8 @@ import {
   Info,
   X,
   ChevronRight,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
@@ -27,9 +29,22 @@ interface InsightsCardProps {
 
 export default function InsightsCard({ insights }: InsightsCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
   const { light } = useHaptic();
 
   const current = insights && insights.length > 0 ? insights[currentIndex] : null;
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!current) return;
+    try {
+      await navigator.clipboard.writeText(`${current.title}\n${current.message}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy insight", err);
+    }
+  };
 
   useEffect(() => {
     if (current) {
@@ -119,13 +134,28 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
               {current.message}
             </p>
           </div>
-          {insights.length > 1 && (
+          <div className="flex items-center gap-1 shrink-0">
             <button
-              onClick={handleNext}
-              className="shrink-0 p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-              <ChevronRight size={18} />
+              onClick={handleCopy}
+              className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-all active:scale-95 cursor-pointer opacity-70 hover:opacity-100"
+              title="Copy insight"
+              aria-label="Copy insight">
+              {copied ? (
+                <Check size={16} className="text-emerald-500" />
+              ) : (
+                <Copy size={16} />
+              )}
             </button>
-          )}
+            {insights.length > 1 && (
+              <button
+                onClick={handleNext}
+                className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Next insight"
+                aria-label="Next insight">
+                <ChevronRight size={18} />
+              </button>
+            )}
+          </div>
         </div>
       </Card>
     </div>

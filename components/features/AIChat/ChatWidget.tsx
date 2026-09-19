@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
-  Phone,
+  History,
+  Headphones,
   Search,
   Settings2,
   Check,
@@ -396,71 +397,112 @@ export default function ChatWidget() {
             ? "scale-100 opacity-100 translate-y-0"
             : "scale-95 opacity-0 translate-y-8 pointer-events-none"
         }`}>
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-200 dark:border-white/10 flex items-center justify-between bg-white/50 dark:bg-white/5 backdrop-blur-md lg:rounded-t-2xl pt-safe-top">
-          <div className="flex items-center gap-3">
-            {showHistory ? (
-              <button
-                onClick={() => setShowHistory(false)}
-                className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-lg text-neutral-600 dark:text-neutral-400">
-                <ChevronLeft size={20} />
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setShowHistory(true);
-                  loadSessions();
-                }}
-                className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-lg text-neutral-600 dark:text-neutral-400"
-                title="Chats">
-                <MessageSquare size={20} />
-              </button>
-            )}
+        {/* Modern Header */}
+        <div className="px-4 py-3 border-b border-neutral-200/80 dark:border-white/10 bg-white/80 dark:bg-[#0E1118]/90 backdrop-blur-md lg:rounded-t-2xl pt-safe-top transition-all">
+          {showHistory ? (
+            /* History Header */
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 font-semibold text-xs transition-all active:scale-95 cursor-pointer border border-neutral-200/60 dark:border-white/5"
+                  title="Back to Active Chat">
+                  <ChevronLeft size={16} />
+                  <span>Back to Chat</span>
+                </button>
+                <span className="text-xs font-bold text-neutral-900 dark:text-white hidden sm:inline-block">
+                  Chat History
+                </span>
+              </div>
 
-            <div className="relative h-8 w-8">
-              <Image
-                src="/logo.webp"
-                alt="Arthavi Logo"
-                fill
-                className="object-contain"
-              />
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleNewChat}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold shadow-xs shadow-primary-500/25 transition-all active:scale-95 cursor-pointer"
+                  title="Start New Chat">
+                  <Plus size={14} />
+                  <span>New Chat</span>
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-all active:scale-95 cursor-pointer"
+                  title="Close"
+                  aria-label="Close Chat">
+                  <X size={16} />
+                </button>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 dark:text-white text-sm tracking-tight">
-                {showHistory ? "Recent Conversations" : "Arthavi Assistant"}
-              </h3>
-              {!showHistory && (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                    Online
-                  </p>
+          ) : (
+            /* Active Chat Header */
+            <div className="flex items-center justify-between w-full">
+              {/* Left: Branding & Assistant Info */}
+              <div className="flex items-center gap-2.5">
+                <div className="relative h-8 w-8 rounded-xl bg-primary-500/10 dark:bg-primary-500/20 border border-primary-500/20 p-1 flex items-center justify-center shrink-0">
+                  <Image
+                    src="/logo.webp"
+                    alt="Arthavi Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
                 </div>
-              )}
-            </div>
-          </div>
+                <div>
+                  <h3 className="font-bold text-neutral-900 dark:text-white text-sm tracking-tight leading-none">
+                    Arthavi AI
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <p className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 leading-none">
+                      Online
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          <div className="flex items-center gap-1">
-            {!showHistory && (
-              <button
-                onClick={handleNewChat}
-                className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-lg text-neutral-500 dark:text-neutral-400 transition-colors"
-                title="New Chat">
-                <Plus size={18} />
-              </button>
-            )}
-            <button
-              onClick={() => setShowContactModal(true)}
-              className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-lg text-neutral-500 dark:text-neutral-400 transition-colors"
-              title="Support">
-              <Phone size={18} />
-            </button>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-2 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-lg text-neutral-500 dark:text-neutral-400 transition-colors">
-              <X size={18} />
-            </button>
-          </div>
+              {/* Right: Grouped Actions */}
+              <div className="flex items-center gap-1">
+                {/* New Chat Button */}
+                <button
+                  onClick={handleNewChat}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-neutral-100 dark:bg-white/5 hover:bg-primary-500/10 hover:text-primary-600 dark:hover:bg-primary-500/20 dark:hover:text-primary-400 text-neutral-700 dark:text-neutral-200 transition-all text-xs font-semibold active:scale-95 cursor-pointer border border-neutral-200/50 dark:border-white/5 shadow-2xs"
+                  title="Start New Chat">
+                  <Plus size={14} />
+                  <span className="text-[11px]">New</span>
+                </button>
+
+                {/* History Button */}
+                <button
+                  onClick={() => {
+                    setShowHistory(true);
+                    loadSessions();
+                  }}
+                  className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-all active:scale-95 cursor-pointer"
+                  title="Chat History">
+                  <History size={16} />
+                </button>
+
+                {/* Support Button */}
+                <button
+                  onClick={() => setShowContactModal(true)}
+                  className="p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-all active:scale-95 cursor-pointer"
+                  title="Support"
+                  aria-label="Support">
+                  <Headphones size={16} />
+                </button>
+
+                {/* Divider */}
+                <div className="h-4 w-px bg-neutral-200 dark:bg-white/10 mx-0.5" />
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 text-neutral-400 dark:text-neutral-400 transition-all active:scale-95 cursor-pointer"
+                  title="Close"
+                  aria-label="Close Chat">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content Area */}
@@ -468,33 +510,19 @@ export default function ChatWidget() {
           {/* History Overlay */}
           {showHistory && (
             <div className="absolute inset-0 z-10 bg-white dark:bg-[#0B0E14] overflow-y-auto">
-              <div className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-md dark:border-white/10 dark:bg-[#0B0E14]/95">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                      Chats
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleNewChat}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-500 px-3 py-2 text-xs font-medium text-white hover:bg-primary-600">
-                    <Plus size={14} />
-                    New Chat
-                  </button>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between gap-2">
+              <div className="sticky top-0 z-10 border-b border-neutral-200 bg-white/95 p-3.5 backdrop-blur-md dark:border-white/10 dark:bg-[#0B0E14]/95">
+                <div className="flex items-center justify-between gap-2">
                   <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-medium text-neutral-600 dark:bg-white/5 dark:text-neutral-400">
-                    {sessions.length} conversations
+                    {sessions.length} conversation{sessions.length === 1 ? "" : "s"}
                   </span>
                   {currentSessionId && (
                     <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium text-primary-600 dark:bg-primary-900/20 dark:text-primary-300">
-                      Current chat selected
+                      Current chat active
                     </span>
                   )}
                 </div>
 
-                <div className="relative mt-3">
+                <div className="relative mt-2.5">
                   <Search
                     size={14}
                     className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
@@ -503,7 +531,7 @@ export default function ChatWidget() {
                     type="text"
                     value={historySearch}
                     onChange={(e) => setHistorySearch(e.target.value)}
-                    placeholder="Search chat history..."
+                    placeholder="Search past conversations..."
                     className="w-full rounded-xl border border-neutral-200 bg-neutral-50 py-2 pl-9 pr-3 text-sm text-neutral-900 outline-none transition-colors placeholder:text-neutral-400 focus:border-primary-500 dark:border-white/10 dark:bg-white/5 dark:text-white"
                   />
                 </div>
