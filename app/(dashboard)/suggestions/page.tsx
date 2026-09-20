@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { api } from "@/lib/api";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
@@ -36,9 +37,39 @@ import {
   Users,
   Megaphone,
   Zap,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  Download,
+  Maximize2,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+function formatBytes(bytes?: number) {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isImageFile(filename?: string, mimeType?: string) {
+  if (mimeType && mimeType.startsWith("image/")) return true;
+  if (!filename) return false;
+  const ext = filename.split(".").pop()?.toLowerCase();
+  return ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext || "");
+}
+
+function getAttachmentFullUrl(url?: string | null) {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${API_URL}${url}`;
+}
+
 export default function SuggestionsPage() {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<"suggestion" | "feedback">("suggestion");
   const [viewSegment, setViewSegment] = useState<"all" | "mine">("mine");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -55,7 +86,13 @@ export default function SuggestionsPage() {
   const [type, setType] = useState("feature");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; title: string; filename?: string } | null>(null);
 
   const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
@@ -118,6 +155,36 @@ export default function SuggestionsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (showFormModal || lightboxImage) {
+      const scrollY = window.scrollY;
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalTop = document.body.style.top;
+      const originalWidth = document.body.style.width;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+
+      return () => {
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.top = originalTop;
+        document.body.style.width = originalWidth;
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [showFormModal, lightboxImage]);
+
+  useEffect(() => {
     setOffset(0);
     setItems([]);
     loadData(0, false);
@@ -129,10 +196,34 @@ export default function SuggestionsPage() {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (selectedFile && isImageFile(selectedFile.name, selectedFile.type)) {
+      const url = URL.createObjectURL(selectedFile);
+      setFilePreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setFilePreviewUrl(null);
+    }
+  }, [selectedFile]);
+
   const handleLoadMore = () => {
     const nextOffset = offset + LIMIT;
     setOffset(nextOffset);
     loadData(nextOffset, true);
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (file.size > 15 * 1024 * 1024) {
+      showToast("Attachment size exceeds 15MB limit", "error");
+      return;
+    }
+    setSelectedFile(file);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,9 +237,11 @@ export default function SuggestionsPage() {
         type,
         title: title.trim(),
         body: body.trim() || undefined,
+        file: selectedFile,
       });
       setTitle("");
       setBody("");
+      handleRemoveFile();
       setShowFormModal(false);
       showToast(
         modalCategory === "feedback"
@@ -163,9 +256,9 @@ export default function SuggestionsPage() {
         setOffset(0);
         loadData(0, false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to submit", "error");
+      showToast(err?.message || "Failed to submit", "error");
     } finally {
       setSubmitting(false);
     }
@@ -512,6 +605,66 @@ export default function SuggestionsPage() {
                           </p>
                         )}
 
+                        {item.attachment_url && (
+                          <div className="mt-3">
+                            {isImageFile(item.attachment_name, item.attachment_type) ? (
+                              <div className="inline-block max-w-full">
+                                <div
+                                  onClick={() =>
+                                    setLightboxImage({
+                                      url: getAttachmentFullUrl(item.attachment_url),
+                                      title: item.title,
+                                      filename: item.attachment_name,
+                                    })
+                                  }
+                                  className="group relative cursor-pointer overflow-hidden rounded-xl border border-neutral-200/80 dark:border-white/10 bg-neutral-50 dark:bg-white/[0.02] max-w-xs"
+                                >
+                                  <img
+                                    src={getAttachmentFullUrl(item.attachment_url)}
+                                    alt={item.attachment_name || "Attachment"}
+                                    className="max-h-44 w-full object-cover transition duration-200 group-hover:scale-[1.02]"
+                                    loading="lazy"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold">
+                                    <Maximize2 size={14} />
+                                    <span>Preview</span>
+                                  </div>
+                                </div>
+                                <div className="mt-1 flex items-center gap-1.5 text-[11px] text-neutral-400 font-medium">
+                                  <ImageIcon size={11} className="text-primary-500" />
+                                  <span className="truncate max-w-[200px]">{item.attachment_name || "Image"}</span>
+                                  {item.attachment_size && (
+                                    <span>• {formatBytes(item.attachment_size)}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <a
+                                href={getAttachmentFullUrl(item.attachment_url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={item.attachment_name || true}
+                                className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/10 hover:border-primary-400 dark:hover:border-primary-500/40 text-xs font-semibold text-neutral-800 dark:text-neutral-200 transition group cursor-pointer"
+                              >
+                                <div className="p-1.5 rounded-lg bg-primary-500/10 text-primary-500">
+                                  <FileText size={14} />
+                                </div>
+                                <div className="flex flex-col text-left min-w-0">
+                                  <span className="truncate max-w-[180px] sm:max-w-[240px] text-xs font-bold text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                                    {item.attachment_name || "Attached Document"}
+                                  </span>
+                                  {item.attachment_size && (
+                                    <span className="text-[10px] text-neutral-400 font-normal">
+                                      {formatBytes(item.attachment_size)}
+                                    </span>
+                                  )}
+                                </div>
+                                <Download size={14} className="text-neutral-400 group-hover:text-primary-500 shrink-0 ml-1" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+
                         {item.action_taken && (
                           <div className="mt-3 p-3 rounded-xl bg-primary-50/80 dark:bg-primary-500/8 border border-primary-400/20 text-xs">
                             <div className="flex items-center gap-1.5 text-primary-600 dark:text-primary-400 font-bold mb-1">
@@ -709,193 +862,363 @@ export default function SuggestionsPage() {
         </div>
       </div>
 
-      {/* Submission Modal */}
-      {showFormModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowFormModal(false);
-          }}
-        >
-          <div className="bg-white dark:bg-[#13161f] border-t sm:border border-neutral-200 dark:border-white/10 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg shadow-2xl relative max-h-[92vh] overflow-y-auto">
-            {/* Sticky modal header */}
-            <div className="sticky top-0 bg-white dark:bg-[#13161f] px-6 pt-5 pb-4 border-b border-neutral-100 dark:border-white/5 flex items-center justify-between z-10">
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`p-2 rounded-xl ${
-                    modalCategory === "suggestion" ? "bg-amber-500/10" : "bg-pink-500/10"
-                  }`}
-                >
-                  {modalCategory === "suggestion" ? (
-                    <Lightbulb size={18} className="text-amber-500" />
-                  ) : (
-                    <MessageCircle size={18} className="text-pink-500" />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-base font-extrabold text-neutral-900 dark:text-white leading-tight">
-                    {modalCategory === "suggestion" ? "Suggest a Feature" : "Submit Feedback"}
-                  </h2>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    {modalCategory === "suggestion"
-                      ? "Share an idea or improvement"
-                      : "Report an issue or share your experience"}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowFormModal(false)}
-                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="px-6 pb-6 pt-4 space-y-5">
-              {/* Category switcher */}
-              <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-2xl border border-neutral-200 dark:border-white/5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalCategory("suggestion");
-                    setType("feature");
-                  }}
-                  className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    modalCategory === "suggestion"
-                      ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-700"
-                  }`}
-                >
-                  <Lightbulb size={12} className="text-amber-500" />
-                  Feature Suggestion
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalCategory("feedback");
-                    setType("bug");
-                  }}
-                  className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    modalCategory === "feedback"
-                      ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-700"
-                  }`}
-                >
-                  <MessageCircle size={12} className="text-pink-500" />
-                  Feedback &amp; Issue
-                </button>
+      {/* Submission Modal via Portal */}
+      {mounted &&
+        showFormModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] bg-black/65 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 touch-none overscroll-none animate-fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                handleRemoveFile();
+                setShowFormModal(false);
+              }
+            }}
+            onTouchMove={(e) => {
+              if (e.target === e.currentTarget) {
+                e.preventDefault();
+              }
+            }}
+            onPaste={(e) => {
+              if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+                const file = e.clipboardData.files[0];
+                handleFileSelect(file);
+              }
+            }}
+          >
+            <div
+              className="bg-white dark:bg-[#13161f] border-t sm:border border-neutral-200/90 dark:border-white/10 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md shadow-2xl relative flex flex-col max-h-[85vh] sm:max-h-[85vh] overflow-hidden touch-pan-y overscroll-contain"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Mobile top handle bar */}
+              <div className="sm:hidden pt-2.5 pb-0 flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-white/20" />
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Category type */}
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
-                    Category
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(modalCategory === "suggestion" ? suggestionTypes : feedbackTypes).map((opt) => {
-                      const Icon = opt.icon;
-                      const isSelected = type === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setType(opt.id)}
-                          className={`flex items-center gap-2 p-3 border rounded-xl transition-all text-left cursor-pointer ${
-                            isSelected
-                              ? "bg-primary-50 dark:bg-primary-500/10 border-primary-500 text-primary-700 dark:text-primary-400 font-bold shadow-xs"
-                              : "border-neutral-200 dark:border-white/8 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/5"
-                          }`}
-                        >
-                          <Icon
-                            size={15}
-                            className={`shrink-0 ${
-                              isSelected
-                                ? modalCategory === "suggestion"
-                                  ? "text-amber-500"
-                                  : "text-pink-500"
-                                : "text-neutral-400"
-                            }`}
-                          />
-                          <span className="text-xs">{opt.label}</span>
-                        </button>
-                      );
-                    })}
+              {/* Sticky Modal Header */}
+              <div className="px-5 py-3 sm:px-6 sm:py-3.5 border-b border-neutral-100 dark:border-white/5 flex items-center justify-between shrink-0 bg-white dark:bg-[#13161f]">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className={`p-1.5 rounded-xl shrink-0 ${
+                      modalCategory === "suggestion" ? "bg-amber-500/10 text-amber-500" : "bg-pink-500/10 text-pink-500"
+                    }`}
+                  >
+                    {modalCategory === "suggestion" ? (
+                      <Lightbulb size={16} />
+                    ) : (
+                      <MessageCircle size={16} />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm sm:text-base font-extrabold text-neutral-900 dark:text-white leading-tight truncate">
+                      {modalCategory === "suggestion" ? "Suggest a Feature" : "Submit Feedback"}
+                    </h2>
+                    <p className="text-[10px] sm:text-[11px] text-neutral-400 mt-0.5 truncate">
+                      {modalCategory === "suggestion"
+                        ? "Share an idea or improvement"
+                        : "Report an issue or share feedback"}
+                    </p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRemoveFile();
+                    setShowFormModal(false);
+                  }}
+                  className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-                {/* Title */}
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1.5">
-                    Title <span className="text-red-400">*</span>
-                  </label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder={
-                      modalCategory === "suggestion"
-                        ? "e.g., Add tax report export in CSV format..."
-                        : "e.g., Portfolio sync not updating correctly..."
-                    }
-                    required
-                    autoComplete="off"
-                  />
-                </div>
-
-                {/* Details */}
-                <div>
-                  <label className="block text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1.5">
-                    Details{" "}
-                    <span className="text-neutral-300 dark:text-neutral-600 font-normal normal-case tracking-normal">
-                      (optional)
-                    </span>
-                  </label>
-                  <textarea
-                    value={body}
-                    onChange={(e) => setBody(e.target.value)}
-                    placeholder={
-                      modalCategory === "suggestion"
-                        ? "Describe your idea in detail — the more context, the better..."
-                        : "Describe the issue, steps to reproduce, or your feedback..."
-                    }
-                    rows={4}
-                    className="w-full px-3 py-2.5 text-sm bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/8 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 rounded-xl outline-none transition-all text-neutral-900 dark:text-white resize-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
-                  />
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-1">
+              {/* Scrollable Form Body */}
+              <div className="flex-1 overflow-y-auto px-5 py-3.5 sm:px-6 sm:py-4 space-y-3.5 touch-pan-y overscroll-contain">
+                {/* Category switcher */}
+                <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl border border-neutral-200/80 dark:border-white/5">
                   <button
                     type="button"
-                    onClick={() => setShowFormModal(false)}
-                    className="px-4 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white transition-colors cursor-pointer"
+                    onClick={() => {
+                      setModalCategory("suggestion");
+                      setType("feature");
+                    }}
+                    className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      modalCategory === "suggestion"
+                        ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-xs"
+                        : "text-neutral-500 hover:text-neutral-700"
+                    }`}
                   >
-                    Cancel
+                    <Lightbulb size={12} className="text-amber-500" />
+                    Feature Suggestion
                   </button>
-                  <Button
-                    type="submit"
-                    disabled={submitting || !title.trim()}
-                    className="px-5 py-2.5 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-xl"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalCategory("feedback");
+                      setType("bug");
+                    }}
+                    className={`flex-1 py-1.5 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      modalCategory === "feedback"
+                        ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-xs"
+                        : "text-neutral-500 hover:text-neutral-700"
+                    }`}
                   >
-                    {submitting ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                    ) : (
-                      <>
-                        <Send size={13} />
-                        <span>
-                          {modalCategory === "suggestion"
-                            ? "Submit Suggestion"
-                            : "Submit Feedback"}
-                        </span>
-                      </>
-                    )}
-                  </Button>
+                    <MessageCircle size={12} className="text-pink-500" />
+                    Feedback &amp; Issue
+                  </button>
                 </div>
-              </form>
+
+                <form id="suggestion-form" onSubmit={handleSubmit} className="space-y-3.5">
+                  {/* Category type */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1.5">
+                      Category
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(modalCategory === "suggestion" ? suggestionTypes : feedbackTypes).map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = type === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setType(opt.id)}
+                            className={`flex items-center gap-1.5 px-2.5 py-2 border rounded-xl transition-all text-left cursor-pointer ${
+                              isSelected
+                                ? "bg-primary-50 dark:bg-primary-500/10 border-primary-500 text-primary-700 dark:text-primary-400 font-bold shadow-xs"
+                                : "border-neutral-200 dark:border-white/8 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/5"
+                            }`}
+                          >
+                            <Icon
+                              size={13}
+                              className={`shrink-0 ${
+                                isSelected
+                                  ? modalCategory === "suggestion"
+                                    ? "text-amber-500"
+                                    : "text-pink-500"
+                                  : "text-neutral-400"
+                              }`}
+                            />
+                            <span className="text-xs truncate">{opt.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1">
+                      Title <span className="text-red-400">*</span>
+                    </label>
+                    <Input
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder={
+                        modalCategory === "suggestion"
+                          ? "e.g., Add tax report export in CSV format..."
+                          : "e.g., Portfolio sync not updating correctly..."
+                      }
+                      required
+                      autoComplete="off"
+                      className="text-xs sm:text-sm py-2"
+                    />
+                  </div>
+
+                  {/* Details */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-1">
+                      Details{" "}
+                      <span className="text-neutral-300 dark:text-neutral-600 font-normal normal-case tracking-normal">
+                        (optional)
+                      </span>
+                    </label>
+                    <textarea
+                      value={body}
+                      onChange={(e) => setBody(e.target.value)}
+                      placeholder={
+                        modalCategory === "suggestion"
+                          ? "Describe your idea in detail — context, mockups, ideas..."
+                          : "Describe the issue, steps to reproduce, or suggestions..."
+                      }
+                      rows={3}
+                      className="w-full px-3 py-2 text-xs sm:text-sm bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200 dark:border-white/8 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/30 rounded-xl outline-none transition-all text-neutral-900 dark:text-white resize-none placeholder:text-neutral-400 dark:placeholder:text-neutral-600"
+                    />
+                  </div>
+
+                  {/* File / Document Attachment (Box-Type Dropzone) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                        Attachment <span className="text-neutral-300 dark:text-neutral-600 font-normal normal-case">(optional)</span>
+                      </label>
+                      <span className="text-[9px] text-neutral-400">Max 15MB</span>
+                    </div>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx,.csv,.xls,.xlsx,.txt"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleFileSelect(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                    />
+
+                    {selectedFile ? (
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-primary-50/60 dark:bg-primary-500/10 border border-primary-500/30">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {filePreviewUrl ? (
+                            <img
+                              src={filePreviewUrl}
+                              alt="Preview"
+                              className="w-11 h-11 object-cover rounded-xl border border-primary-500/30 shrink-0 shadow-xs"
+                            />
+                          ) : (
+                            <div className="p-2.5 rounded-xl bg-primary-500/20 text-primary-600 dark:text-primary-400 shrink-0">
+                              <FileText size={20} />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-neutral-900 dark:text-white truncate max-w-[200px] sm:max-w-[260px]">
+                              {selectedFile.name}
+                            </p>
+                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                              {formatBytes(selectedFile.size)} • Attached
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveFile}
+                          className="p-2 rounded-xl text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer shrink-0"
+                          title="Remove attachment"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDragging(true);
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDragging(false);
+                          if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handleFileSelect(e.dataTransfer.files[0]);
+                          }
+                        }}
+                        className={`group border-2 border-dashed rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                          isDragging
+                            ? "border-primary-500 bg-primary-50/60 dark:bg-primary-500/15 scale-[1.01]"
+                            : "border-neutral-200 dark:border-white/10 hover:border-primary-400 dark:hover:border-primary-500/50 hover:bg-neutral-50/80 dark:hover:bg-white/[0.02]"
+                        }`}
+                      >
+                        <div className="p-2.5 rounded-2xl bg-neutral-100 dark:bg-white/5 text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 transition-colors mb-2">
+                          <UploadCloud size={22} />
+                        </div>
+                        <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                          <span className="text-primary-600 dark:text-primary-400 font-bold underline underline-offset-2">Click to browse</span> or drag and drop
+                        </p>
+                        <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">
+                          PDF, PNG, JPG, CSV, DOC (or paste screenshot)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </form>
+              </div>
+
+              {/* Sticky Modal Footer (Always Visible at Bottom) */}
+              <div className="px-5 py-3 sm:px-6 sm:py-3.5 border-t border-neutral-100 dark:border-white/5 bg-neutral-50/80 dark:bg-[#13161f]/95 backdrop-blur-sm flex items-center justify-end gap-2 shrink-0 z-10 pb-safe">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRemoveFile();
+                    setShowFormModal(false);
+                  }}
+                  className="px-3.5 py-2 text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+                <Button
+                  type="submit"
+                  form="suggestion-form"
+                  disabled={submitting || !title.trim()}
+                  className="px-4 py-2 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-xl font-bold shadow-xs active:scale-95"
+                >
+                  {submitting ? (
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <>
+                      <Send size={12} />
+                      <span>
+                        {modalCategory === "suggestion"
+                          ? "Submit Suggestion"
+                          : "Submit Feedback"}
+                      </span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
+
+      {/* Lightbox Modal for Attachment Previews via Portal */}
+      {mounted &&
+        lightboxImage &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 touch-none overscroll-contain animate-fade-in"
+            onClick={() => setLightboxImage(null)}
+          >
+            <div
+              className="relative max-w-4xl max-h-[90vh] flex flex-col items-center touch-pan-y overscroll-contain"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full flex items-center justify-between pb-3 text-white px-1">
+                <span className="text-sm font-bold truncate max-w-[70vw]">
+                  {lightboxImage.filename || lightboxImage.title}
+                </span>
+                <div className="flex items-center gap-3">
+                  <a
+                    href={lightboxImage.url}
+                    download={lightboxImage.filename || "screenshot.png"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition cursor-pointer flex items-center gap-1 text-xs"
+                  >
+                    <Download size={14} />
+                    <span>Download</span>
+                  </a>
+                  <button
+                    onClick={() => setLightboxImage(null)}
+                    className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              </div>
+              <img
+                src={lightboxImage.url}
+                alt={lightboxImage.title}
+                className="max-h-[80vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/10"
+              />
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

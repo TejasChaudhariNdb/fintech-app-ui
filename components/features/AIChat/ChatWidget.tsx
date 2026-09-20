@@ -88,6 +88,12 @@ export default function ChatWidget() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingTextRef = useRef("");
 
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener("open-ai-chat", handleOpen);
+    return () => window.removeEventListener("open-ai-chat", handleOpen);
+  }, []);
+
   const suggestionCards = [
     {
       title: "Your Portfolio Insights",
@@ -803,16 +809,18 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating Trigger Button (Shown only when chat is closed to avoid mobile & desktop overlap) */}
+      {/* Floating Trigger Button (Positioned comfortably above mobile bottom nav with safe-area spacing) */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-20 sm:bottom-24 lg:bottom-8 right-4 sm:right-6 z-40 group h-12 shadow-[0_8px_30px_rgb(0,0,0,0.18)] flex items-center gap-2.5 transition-all duration-300 border border-white/20 bg-gradient-to-br from-primary-500 via-primary-600 to-primary-700 hover:shadow-primary-500/30 text-white rounded-2xl px-5 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl font-sans">
-          <div className="relative">
-            <Sparkles size={20} className="relative z-10" />
-            <div className="absolute inset-0 bg-white/30 blur-lg animate-pulse" />
+          className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] lg:bottom-8 right-4 sm:right-6 z-40 group h-11 sm:h-12 shadow-[0_8px_25px_rgba(99,102,241,0.35)] dark:shadow-[0_8px_30px_rgba(99,102,241,0.45)] flex items-center gap-2 transition-all duration-200 border border-white/25 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 hover:shadow-indigo-500/40 text-white rounded-full px-4 sm:px-5 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl font-sans"
+          aria-label="Open Arthavi AI Assistant"
+        >
+          <div className="relative flex items-center justify-center">
+            <Sparkles size={17} className="relative z-10 animate-pulse" />
+            <div className="absolute inset-0 bg-white/40 blur-md rounded-full" />
           </div>
-          <span className="font-bold text-xs tracking-tight">Ask AI</span>
+          <span className="font-bold text-xs sm:text-sm tracking-tight">Ask AI</span>
         </button>
       )}
 

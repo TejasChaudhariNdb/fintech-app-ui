@@ -44,14 +44,31 @@ export default function Modal({
     }
   }, [isOpen]);
 
-  // Lock scroll
+  // Lock scroll with fixed positioning for iOS Safari / Mobile Chromium
   useEffect(() => {
     if (visible) {
+      const scrollY = window.scrollY;
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalTop = document.body.style.top;
+      const originalWidth = document.body.style.width;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+
+      document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+
+      return () => {
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.top = originalTop;
+        document.body.style.width = originalWidth;
+        window.scrollTo(0, scrollY);
+      };
     }
-    return () => { document.body.style.overflow = ""; };
   }, [visible]);
 
   // Escape key
@@ -79,7 +96,7 @@ export default function Modal({
   const onDragEnd = useCallback(() => {
     setIsDragging(false);
     dragStartY.current = null;
-    // Dismiss if dragged more than 120px or velocity is high
+    // Dismiss if dragged more than 120px
     if (dragOffset > 120) {
       onClose();
     } else {
@@ -93,23 +110,25 @@ export default function Modal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-4 pointer-events-auto`}
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 touch-none overscroll-none pointer-events-auto"
       style={{
         background: isClosing
           ? "rgba(0,0,0,0)"
-          : "rgba(0,0,0,0.55)",
+          : "rgba(0,0,0,0.65)",
         backdropFilter: isClosing ? "blur(0px)" : "blur(6px)",
         transition: "background 250ms ease, backdrop-filter 250ms ease",
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}
     >
       <div
         ref={sheetRef}
         className={`
-          bg-white dark:bg-[#151A23] dark:border dark:border-white/10
+          bg-white dark:bg-[#151A23] border-t sm:border border-neutral-200/90 dark:border-white/10
           rounded-t-3xl sm:rounded-3xl w-full max-w-md
           transition-colors duration-200
-          max-h-[90vh] flex flex-col shadow-2xl
+          max-h-[88vh] sm:max-h-[85vh] flex flex-col shadow-2xl overflow-hidden
+          touch-pan-y overscroll-contain pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-0
           ${isClosing ? "animate-none" : ""}
         `}
         style={{
@@ -140,21 +159,21 @@ export default function Modal({
         </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center px-6 pb-4 pt-2 flex-shrink-0 border-b border-neutral-100 dark:border-white/5">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+        <div className="flex justify-between items-center px-6 pb-3.5 pt-1.5 flex-shrink-0 border-b border-neutral-100 dark:border-white/5 bg-white dark:bg-[#151A23]">
+          <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white truncate pr-2">
             {title}
           </h2>
           <button
             onPointerDown={onClose}
             aria-label="Close modal"
-            className="text-neutral-400 hover:text-neutral-700 dark:text-neutral-500 dark:hover:text-white w-8 h-8 flex items-center justify-center transition-colors rounded-full hover:bg-neutral-100 dark:hover:bg-white/10 active:scale-90 touch-manipulation"
+            className="text-neutral-400 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-white w-8 h-8 flex items-center justify-center transition-colors rounded-xl hover:bg-neutral-100 dark:hover:bg-white/10 active:scale-90 touch-manipulation cursor-pointer shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto flex-1 min-h-0 px-6 py-4 scroll-native">
+        <div className="overflow-y-auto flex-1 min-h-0 px-6 py-4 touch-pan-y overscroll-contain">
           {children}
         </div>
       </div>

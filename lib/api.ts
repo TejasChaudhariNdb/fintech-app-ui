@@ -851,11 +851,43 @@ export const api = {
       body: JSON.stringify({ token }),
     }),
 
-  submitFeedback: (data: { main_category?: string; type: string; title: string; body?: string }) =>
-    api.fetch("/feedback/submit", {
+  submitFeedback: async (data: {
+    main_category?: string;
+    type: string;
+    title: string;
+    body?: string;
+    file?: File | null;
+  }) => {
+    checkDemoRestriction();
+    if (data.file) {
+      const formData = new FormData();
+      formData.append("main_category", data.main_category || "suggestion");
+      formData.append("type", data.type);
+      formData.append("title", data.title);
+      if (data.body) formData.append("body", data.body);
+      formData.append("file", data.file);
+
+      const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+      const res = await fetch(`${API_URL}/feedback/submit`, {
+        method: "POST",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Failed to submit" }));
+        throw new Error(err.detail || err.message || "Failed to submit");
+      }
+      return res.json();
+    }
+
+    return api.fetch("/feedback/submit", {
       method: "POST",
       body: JSON.stringify(data),
-    }),
+    });
+  },
 
   getUserFeedback: () =>
     api.fetch("/feedback/list"),

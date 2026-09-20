@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   FileSpreadsheet,
   Download,
@@ -41,7 +42,11 @@ interface RecordItem {
   fmv_2018_01_31?: number;
   ltcg?: number;
   profit_loss: number;
+  gain_loss?: number;
   holding_period: number;
+  holding_period_days?: number;
+  tax_rate_pct?: number;
+  est_tax?: number;
   asset_type: string;
 }
 
@@ -57,6 +62,9 @@ interface SummaryData {
   total_trades: number;
   ltcg_count: number;
   stcg_count: number;
+  total_stcg_gain?: number;
+  total_ltcg_gain?: number;
+  total_realized_gain?: number;
   est_stcg_tax: number;
   est_ltcg_tax: number;
   total_est_tax: number;
@@ -65,6 +73,7 @@ interface SummaryData {
 }
 
 export default function ReportsPage() {
+  const [mounted, setMounted] = useState(false);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
@@ -87,6 +96,37 @@ export default function ReportsPage() {
   const [editQuantity, setEditQuantity] = useState<string>("");
   const [savingEdit, setSavingEdit] = useState<boolean>(false);
   const [editSuccessMsg, setEditSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fixed scroll lock for iOS/mobile when editingRecord is open
+  useEffect(() => {
+    if (editingRecord) {
+      const scrollY = window.scrollY;
+      const originalOverflow = document.body.style.overflow;
+      const originalPosition = document.body.style.position;
+      const originalTop = document.body.style.top;
+      const originalWidth = document.body.style.width;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+
+      return () => {
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalOverflow;
+        document.body.style.position = originalPosition;
+        document.body.style.top = originalTop;
+        document.body.style.width = originalWidth;
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [editingRecord]);
 
   const fyOptions = useMemo(() => {
     const options: string[] = ["all"];
@@ -560,128 +600,158 @@ export default function ReportsPage() {
         </>
       ) : null}
 
-      {/* Edit Trade Modal Overlay */}
-      {editingRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#111622] border border-neutral-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-white/5 pb-4">
-              <div>
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-                  Edit Trade Details
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate max-w-sm">
-                  {editingRecord.scrip} ({editingRecord.asset_type})
-                </p>
+      {/* Edit Trade Modal Overlay via Portal */}
+      {mounted &&
+        editingRecord &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-sm touch-none overscroll-none animate-fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setEditingRecord(null);
+            }}
+            onTouchMove={(e) => {
+              if (e.target === e.currentTarget) e.preventDefault();
+            }}
+          >
+            <div
+              className="bg-white dark:bg-[#13161f] border-t sm:border border-neutral-200/90 dark:border-white/10 rounded-t-3xl sm:rounded-3xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden touch-pan-y overscroll-contain animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Mobile grab handle */}
+              <div className="sm:hidden pt-2.5 pb-0 flex justify-center shrink-0">
+                <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-white/20" />
               </div>
-              <button
-                onClick={() => setEditingRecord(null)}
-                className="p-2 rounded-xl bg-neutral-100 dark:bg-white/5 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer">
-                <X size={16} />
-              </button>
-            </div>
 
-            {editSuccessMsg ? (
-              <div className="py-6 flex flex-col items-center justify-center space-y-2 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 size={36} />
-                <p className="text-sm font-bold">{editSuccessMsg}</p>
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-white/5 px-6 py-3.5 shrink-0 bg-white dark:bg-[#13161f]">
+                <div className="min-w-0 pr-2">
+                  <h3 className="text-base font-extrabold text-neutral-900 dark:text-white truncate">
+                    Edit Trade Details
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                    {editingRecord.scrip} ({editingRecord.asset_type})
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditingRecord(null)}
+                  className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all cursor-pointer shrink-0"
+                >
+                  <X size={18} />
+                </button>
               </div>
-            ) : (
-              <form onSubmit={handleSaveTradeEdit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Buy Date */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                      Buy Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editBoughtDate}
-                      onChange={(e) => setEditBoughtDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                    />
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto flex-1 touch-pan-y overscroll-contain">
+                {editSuccessMsg ? (
+                  <div className="py-6 flex flex-col items-center justify-center space-y-2 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 size={36} />
+                    <p className="text-sm font-bold">{editSuccessMsg}</p>
                   </div>
+                ) : (
+                  <form id="edit-trade-form" onSubmit={handleSaveTradeEdit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Buy Date */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                          Buy Date
+                        </label>
+                        <input
+                          type="date"
+                          value={editBoughtDate}
+                          onChange={(e) => setEditBoughtDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
+                        />
+                      </div>
 
-                  {/* Sale Date */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                      Sale Date
-                    </label>
-                    <input
-                      type="date"
-                      value={editSoldDate}
-                      onChange={(e) => setEditSoldDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                    />
-                  </div>
+                      {/* Sale Date */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                          Sale Date
+                        </label>
+                        <input
+                          type="date"
+                          value={editSoldDate}
+                          onChange={(e) => setEditSoldDate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
+                        />
+                      </div>
 
-                  {/* Buy Rate */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                      Buy Rate (₹)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="e.g. 150.00"
-                      value={editBoughtRate}
-                      onChange={(e) => setEditBoughtRate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                    />
-                  </div>
+                      {/* Buy Rate */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                          Buy Rate (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 150.00"
+                          value={editBoughtRate}
+                          onChange={(e) => setEditBoughtRate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
+                        />
+                      </div>
 
-                  {/* Sale Rate */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                      Sale Rate (₹)
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="e.g. 200.00"
-                      value={editSoldRate}
-                      onChange={(e) => setEditSoldRate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                    />
-                  </div>
-                </div>
+                      {/* Sale Rate */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                          Sale Rate (₹)
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          placeholder="e.g. 200.00"
+                          value={editSoldRate}
+                          onChange={(e) => setEditSoldRate(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
+                        />
+                      </div>
+                    </div>
 
-                {/* Quantity */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                    Quantity / Units
-                  </label>
-                  <input
-                    type="number"
-                    step="any"
-                    placeholder="e.g. 50"
-                    value={editQuantity}
-                    onChange={(e) => setEditQuantity(e.target.value)}
-                    className="w-full px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                  />
-                </div>
+                    {/* Quantity */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                        Quantity / Units
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="e.g. 50"
+                        value={editQuantity}
+                        onChange={(e) => setEditQuantity(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
+                      />
+                    </div>
+                  </form>
+                )}
+              </div>
 
-                <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex items-center justify-end gap-3">
+              {/* Sticky Footer */}
+              {!editSuccessMsg && (
+                <div className="px-6 py-3.5 border-t border-neutral-100 dark:border-white/5 bg-neutral-50/80 dark:bg-[#13161f]/95 backdrop-blur-sm flex items-center justify-end gap-2 shrink-0 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-3.5">
                   <button
                     type="button"
                     onClick={() => setEditingRecord(null)}
-                    className="px-4 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 text-xs font-bold hover:bg-neutral-200 dark:hover:bg-white/10 transition-all cursor-pointer">
+                    className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 text-xs font-bold hover:bg-neutral-200 dark:hover:bg-white/10 transition-all cursor-pointer"
+                  >
                     Cancel
                   </button>
                   <button
                     type="submit"
+                    form="edit-trade-form"
                     disabled={savingEdit}
-                    className="px-5 py-2 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                    className="px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 shadow-xs"
+                  >
                     {savingEdit ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
                     ) : null}
                     Save Trade Details
                   </button>
                 </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

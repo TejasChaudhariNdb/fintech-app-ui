@@ -8,7 +8,7 @@ import SideNav from "@/components/features/SideNav";
 import { PrivacyProvider } from "@/context/PrivacyContext";
 import { useProfile } from "@/context/ProfileContext";
 import ProfileSwitcher from "@/components/features/ProfileSwitcher";
-import { Megaphone, Sun, Moon } from "lucide-react";
+import { Megaphone, Sun, Moon, MessageSquarePlus, Sparkles } from "lucide-react";
 import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 
@@ -134,49 +134,66 @@ export default function DashboardLayout({
           <DemoRibbon />
 
           {/* Top Header Bar */}
-          <header className={`flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-4 lg:px-8 sticky z-30 transition-all duration-300 ${isDemo ? 'top-10' : 'top-0'}`}>
+          <header className={`flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-3 sm:px-4 lg:px-8 sticky z-30 transition-all duration-300 ${isDemo ? 'top-10' : 'top-0'}`}>
 
-            {/* Left: What's New Shortcut & Theme Toggle */}
-            <div className="flex items-center gap-2">
+            {/* Left: What's New Shortcut, Suggestions & Theme Toggle */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onPointerDown={() => router.push("/profile/whats-new")}
-                className="relative flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold touch-manipulation"
+                className="relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold touch-manipulation"
                 title="What's New"
               >
-                <Megaphone className="w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:scale-105 transition-transform" />
-                <span className="hidden sm:inline-block">What&apos;s New</span>
+                <Megaphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-500 dark:text-neutral-400 group-hover:scale-105 transition-transform" />
+                <span className="hidden md:inline-block">What&apos;s New</span>
                 {hasUnreadUpdates && (
                   <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary-500 border-2 border-white dark:border-[#0B0E14] rounded-full animate-pulse shadow-sm shadow-primary-500/50" />
                 )}
               </button>
 
+              <button
+                onPointerDown={() => router.push("/suggestions")}
+                className="relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-pink-500/25 dark:border-pink-500/30 bg-pink-500/10 dark:bg-pink-500/15 text-pink-600 dark:text-pink-400 hover:bg-pink-500/20 transition-all active:scale-95 group text-xs font-bold touch-manipulation cursor-pointer shadow-xs"
+                title="Suggestions & Feedback"
+              >
+                <MessageSquarePlus className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-500 group-hover:scale-105 transition-transform" />
+                <span>Feedback</span>
+              </button>
+
               {/* Theme Toggle Button */}
               <button
                 onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                className="relative flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold touch-manipulation cursor-pointer"
+                className="relative flex items-center justify-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 rounded-full border border-neutral-200/60 dark:border-white/10 hover:bg-neutral-100/80 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all active:scale-95 group bg-white/50 dark:bg-[#0B0E14]/30 text-xs font-semibold touch-manipulation cursor-pointer"
                 title={mounted ? `Switch to ${resolvedTheme === "dark" ? "Light" : "Dark"} Mode` : "Toggle Theme"}
                 aria-label="Toggle Theme"
               >
                 {mounted ? (
                   resolvedTheme === "dark" ? (
                     <>
-                      <Sun className="w-4 h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
-                      <span className="hidden md:inline-block text-[11px] font-medium text-neutral-300">Light</span>
+                      <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 group-hover:rotate-45 transition-transform duration-300" />
+                      <span className="hidden lg:inline-block text-[11px] font-medium text-neutral-300">Light</span>
                     </>
                   ) : (
                     <>
-                      <Moon className="w-4 h-4 text-neutral-600 dark:text-neutral-400 group-hover:-rotate-12 transition-transform duration-300" />
-                      <span className="hidden md:inline-block text-[11px] font-medium text-neutral-600">Dark</span>
+                      <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-600 dark:text-neutral-400 group-hover:-rotate-12 transition-transform duration-300" />
+                      <span className="hidden lg:inline-block text-[11px] font-medium text-neutral-600">Dark</span>
                     </>
                   )
                 ) : (
-                  <div className="w-4 h-4 rounded-full bg-neutral-200 dark:bg-white/10 animate-pulse" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-neutral-200 dark:bg-white/10 animate-pulse" />
                 )}
               </button>
             </div>
 
-            {/* Right: Switcher Dropdown */}
-            <div className="flex items-center gap-3">
+            {/* Right: Ask AI Header button & Profile Switcher */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent("open-ai-chat"))}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary-600/15 via-indigo-600/15 to-purple-600/15 dark:from-primary-500/20 dark:via-indigo-500/20 dark:to-purple-500/20 border border-primary-500/30 text-primary-700 dark:text-primary-300 hover:bg-primary-500/25 transition-all text-xs font-bold active:scale-95 cursor-pointer shadow-xs"
+                title="Ask Arthavi AI"
+              >
+                <Sparkles size={13} className="text-primary-500 animate-pulse" />
+                <span>Ask AI</span>
+              </button>
               <ProfileSwitcher />
             </div>
           </header>
