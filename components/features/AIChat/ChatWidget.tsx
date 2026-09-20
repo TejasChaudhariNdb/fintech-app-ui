@@ -28,8 +28,14 @@ import {
   ChevronRight,
   ShieldCheck,
   Scale,
+  Clock,
+  Gift,
+  Copy,
+  Share2,
+  ExternalLink,
+  ArrowRight,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, AIQuotaStatus } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
 import ChatMessage from "./ChatMessage";
 import ContactSupportModal from "../ContactSupportModal";
@@ -81,6 +87,10 @@ export default function ChatWidget() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [disclaimerExpanded, setDisclaimerExpanded] = useState(false);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+
+  // 4-Hour Rolling Quota States
+  const [quotaStatus, setQuotaStatus] = useState<AIQuotaStatus | null>(null);
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -202,22 +212,59 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, showHistory]);
 
+  const loadQuotaStatus = async () => {
+    try {
+      const status = await api.getAIQuotaStatus();
+      setQuotaStatus(status);
+      if (status.resets_in_seconds) {
+        setCountdownSeconds(status.resets_in_seconds);
+      }
+    } catch (err) {
+      console.error("Failed to load AI quota status", err);
+    }
+  };
+
+  // Quota & countdown ticker
   useEffect(() => {
-    api
-      .getUserProfile()
-      .then((data) => {
-        if (data) setUserProfile(data);
-      })
-      .catch((err) => {
-        console.error("Failed to load user profile in chat", err);
-      });
-  }, []);
+    if (isOpen) {
+      loadQuotaStatus();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, []);
+    if (countdownSeconds <= 0) return;
+    const timer = setInterval(() => {
+      setCountdownSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          loadQuotaStatus();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdownSeconds]);
+
+  const formatCountdown = (seconds: number) => {
+    if (seconds <= 0) return "recharging now";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
+  const formatLocalTime = (isoString?: string | null) => {
+    if (!isoString) return "";
+    try {
+      const dt = new Date(isoString);
+      return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  };
 
   const loadSessions = async () => {
     try {
@@ -375,10 +422,10 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Main Full-Screen Chat Modal / Window */}
+      {/* Main Full-Screen / Centered Chat Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black/40 backdrop-blur-xs lg:p-3 xl:p-4 animate-in fade-in duration-200 font-sans">
-          <div className="w-full h-full flex flex-col bg-white dark:bg-[#0B0E14] lg:rounded-2xl lg:border lg:border-neutral-200/80 dark:lg:border-white/10 shadow-2xl overflow-hidden max-w-7xl mx-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 lg:p-6 animate-in fade-in duration-200 font-sans">
+          <div className="w-full h-full sm:h-[90vh] sm:max-h-[820px] max-w-5xl flex flex-col bg-white dark:bg-[#0B0E14] sm:rounded-3xl sm:border sm:border-neutral-200/80 dark:sm:border-white/10 shadow-2xl overflow-hidden">
             {/* Modern Header */}
             <div className="px-4 py-3 border-b border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-[#0E1118]/90 backdrop-blur-md pt-safe-top shrink-0">
               {showHistory ? (
@@ -430,9 +477,20 @@ export default function ChatWidget() {
                       />
                     </div>
                     <div>
-                      <h3 className="font-bold text-neutral-900 dark:text-white text-sm tracking-tight leading-none">
-                        Arthavi AI
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-neutral-900 dark:text-white text-sm tracking-tight leading-none">
+                          Arthavi AI
+                        </h3>
+                        {quotaStatus && quotaStatus.remaining <= 3 ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse"
+                            title={quotaStatus.resets_at ? `Resets at ${formatLocalTime(quotaStatus.resets_at)}` : "Recharges soon"}
+                          >
+                            <span>⚡</span>
+                            <span>{quotaStatus.remaining} {quotaStatus.remaining === 1 ? "chat" : "chats"} left</span>
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                         <p className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 leading-none">
@@ -606,9 +664,9 @@ export default function ChatWidget() {
               />
             ))}
             {messages.length === 0 && !isResponding && !streamingText && (
-              <div className="flex flex-col items-center justify-center py-4 sm:py-8 px-2 max-w-6xl mx-auto w-full animate-in fade-in duration-300">
+              <div className="flex flex-col items-center justify-center py-4 sm:py-6 px-2 max-w-5xl mx-auto w-full animate-in fade-in duration-300">
                 {/* Hero Greeting */}
-                <div className="flex flex-col items-center text-center mb-6 sm:mb-8">
+                <div className="flex flex-col items-center text-center mb-5 sm:mb-6">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 via-indigo-500 to-primary-500 flex items-center justify-center text-white shadow-lg shadow-purple-500/20 mb-3 animate-in zoom-in-75 duration-300">
                     <Sparkles size={22} className="animate-pulse" />
                   </div>
@@ -620,16 +678,26 @@ export default function ChatWidget() {
                   </p>
                 </div>
 
-                {/* Cards Container: Swipeable carousel on mobile, spacious multi-column layout on desktop */}
-                <div className="w-full">
+                {/* Horizontal Scroll Carousel for All Devices */}
+                <div className="w-full relative group/carousel">
+                  {/* Left Desktop Scroll Button */}
+                  <button
+                    type="button"
+                    onClick={() => scrollToCard(Math.max(0, activeCardIndex - 1))}
+                    disabled={activeCardIndex === 0}
+                    className="hidden sm:flex absolute -left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-[#151923] border border-neutral-200 dark:border-white/10 shadow-lg items-center justify-center text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer"
+                    aria-label="Previous suggestions">
+                    <ChevronLeft size={18} />
+                  </button>
+
                   <div
                     ref={carouselRef}
                     onScroll={handleCarouselScroll}
-                    className="flex lg:grid lg:grid-cols-3 xl:grid-cols-5 gap-3.5 overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory px-2 pb-2 no-scrollbar scroll-smooth">
+                    className="flex gap-3.5 overflow-x-auto snap-x snap-mandatory px-2 pb-2 no-scrollbar scroll-smooth">
                     {suggestionCards.map((card, idx) => (
                       <div
                         key={idx}
-                        className="w-[84vw] max-w-[340px] lg:w-auto shrink-0 snap-center rounded-3xl p-4 sm:p-5 border border-purple-200/70 dark:border-purple-500/20 bg-gradient-to-b from-purple-50/70 via-indigo-50/25 to-white dark:from-purple-950/20 dark:via-[#131722] dark:to-[#0B0E14] shadow-xs flex flex-col justify-between">
+                        className="w-[84vw] sm:w-[320px] md:w-[330px] shrink-0 snap-center rounded-3xl p-4 sm:p-5 border border-purple-200/70 dark:border-purple-500/20 bg-gradient-to-b from-purple-50/70 via-indigo-50/25 to-white dark:from-purple-950/20 dark:via-[#131722] dark:to-[#0B0E14] shadow-xs flex flex-col justify-between">
                         <div>
                           {/* Card Header */}
                           <div className="flex items-center gap-2.5 mb-3.5">
@@ -659,15 +727,25 @@ export default function ChatWidget() {
                     ))}
                   </div>
 
-                  {/* Dot Indicators for Mobile Carousel */}
-                  <div className="flex lg:hidden items-center justify-center gap-1.5 mt-4">
+                  {/* Right Desktop Scroll Button */}
+                  <button
+                    type="button"
+                    onClick={() => scrollToCard(Math.min(suggestionCards.length - 1, activeCardIndex + 1))}
+                    disabled={activeCardIndex >= suggestionCards.length - 1}
+                    className="hidden sm:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white dark:bg-[#151923] border border-neutral-200 dark:border-white/10 shadow-lg items-center justify-center text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-white/10 disabled:opacity-0 disabled:pointer-events-none transition-all cursor-pointer"
+                    aria-label="Next suggestions">
+                    <ChevronRight size={18} />
+                  </button>
+
+                  {/* Dot Indicators */}
+                  <div className="flex items-center justify-center gap-1.5 mt-4">
                     {suggestionCards.map((_, i) => (
                       <button
                         key={i}
                         onClick={() => scrollToCard(i)}
                         className={`transition-all duration-300 rounded-full cursor-pointer ${
                           activeCardIndex === i
-                            ? "w-5 h-1.5 bg-purple-600 dark:bg-purple-400"
+                            ? "w-6 h-1.5 bg-purple-600 dark:bg-purple-400"
                             : "w-1.5 h-1.5 bg-neutral-200 dark:bg-white/20 hover:bg-neutral-300 dark:hover:bg-white/40"
                         }`}
                         aria-label={`Go to slide ${i + 1}`}
@@ -702,106 +780,123 @@ export default function ChatWidget() {
           </div>
         </div>
 
-        {/* Input */}
+        {/* Input or Rate-Limited Screen */}
         {!showHistory && (
-          <div className="p-4 border-t border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0B0E14] lg:rounded-b-2xl pb-safe-bottom">
-            <form
-              onSubmit={handleSubmit}
-              className="relative flex flex-col bg-neutral-50 dark:bg-[#131722]/90 rounded-2xl border border-neutral-200/80 dark:border-white/10 focus-within:border-primary-500/60 focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:bg-white dark:focus-within:bg-[#0E1118] shadow-xs hover:border-neutral-300 dark:hover:border-white/20 transition-all duration-200">
-              
-              {/* Multi-line auto-expanding textarea */}
-              <div className="relative flex items-center w-full px-3.5 pt-3 pb-1">
-                <textarea
-                  ref={textareaRef}
-                  rows={1}
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask about your portfolio, stocks, mutual funds..."
-                  className="w-full bg-transparent outline-none text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-44 min-h-[44px] leading-relaxed"
-                />
-              </div>
+          <div className="p-3 sm:p-4 border-t border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0B0E14] sm:rounded-b-3xl pb-safe-bottom">
+            <div className="max-w-4xl mx-auto w-full">
+              {quotaStatus && quotaStatus.remaining === 0 ? (
+                <div className="p-4 rounded-2xl bg-gradient-to-b from-neutral-50 to-white dark:from-[#131722] dark:to-[#0B0E14] border border-amber-500/30 dark:border-amber-500/20 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/20 shadow-xs">
+                      <Clock size={20} className="animate-spin-slow" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                          4-Hour Limit Reached (15/15 Chats Used)
+                        </h4>
+                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                          Cooldown
+                        </span>
+                      </div>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1.5 leading-relaxed">
+                        You’ve used all 15 chats for this 4-hour window. Your free messages recharge automatically at{" "}
+                        <strong className="text-neutral-900 dark:text-white font-semibold">
+                          {formatLocalTime(quotaStatus.resets_at) || "soon"}
+                        </strong>{" "}
+                        ({formatCountdown(countdownSeconds)}).
+                      </p>
 
-              {/* Bottom toolbar */}
-              <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-transparent">
-                {/* Left: Hint */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] text-neutral-400 dark:text-neutral-500 select-none">
-                    Shift + ↵ for new line
+                      <div className="flex items-center gap-2 mt-3.5 pt-3 border-t border-neutral-200/60 dark:border-white/5 text-xs text-neutral-500 dark:text-neutral-400">
+                        <Clock size={14} className="text-amber-500 shrink-0" />
+                        <span>Recharges in <strong className="text-amber-600 dark:text-amber-400 font-semibold">{formatCountdown(countdownSeconds)}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleSubmit}
+                  className="relative flex flex-col bg-neutral-50 dark:bg-[#131722]/90 rounded-2xl border border-neutral-200/80 dark:border-white/10 focus-within:border-primary-500/60 focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:bg-white dark:focus-within:bg-[#0E1118] shadow-xs hover:border-neutral-300 dark:hover:border-white/20 transition-all duration-200">
+                  
+                  {/* Multi-line auto-expanding textarea */}
+                  <div className="relative flex items-center w-full px-3.5 pt-3 pb-1">
+                    <textarea
+                      ref={textareaRef}
+                      rows={1}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Ask about your portfolio, stocks, mutual funds..."
+                      className="w-full bg-transparent outline-none text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 resize-none max-h-44 min-h-[44px] leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Bottom toolbar */}
+                  <div className="flex items-center justify-between px-3 pb-2.5 pt-1 border-t border-transparent">
+                    {/* Left: Hint or Warning */}
+                    <div className="flex items-center gap-1.5">
+                      {quotaStatus && quotaStatus.remaining <= 3 ? (
+                        <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <span>⚡</span>
+                          <span>{quotaStatus.remaining} {quotaStatus.remaining === 1 ? 'chat' : 'chats'} left in this 4h window</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400 dark:text-neutral-500 select-none">
+                          Shift + ↵ for new line
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-2">
+                      {isResponding ? (
+                        <button
+                          type="button"
+                          onClick={handleStopResponse}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md shadow-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer animate-pulse"
+                          title="Stop Generating">
+                          <Square size={12} fill="currentColor" />
+                          <span>Stop</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="submit"
+                          disabled={!inputValue.trim() || isLoadingSession}
+                          className={`p-2 rounded-xl text-white transition-all duration-200 flex items-center justify-center active:scale-95 ${
+                            inputValue.trim() && !isLoadingSession
+                              ? "bg-primary-600 hover:bg-primary-500 shadow-md shadow-primary-500/25 cursor-pointer"
+                              : "bg-neutral-200 dark:bg-white/10 text-neutral-400 dark:text-neutral-500 cursor-not-allowed opacity-50"
+                          }`}
+                          title="Send message (Enter)"
+                          aria-label="Send message">
+                          <Send size={14} className={inputValue.trim() ? "translate-x-px -translate-y-px" : ""} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {isResponding && (
+                <div className="mt-2 flex items-center gap-2 justify-center">
+                  <span className="flex gap-1">
+                    <span className="w-1 h-1 rounded-full bg-primary-500 animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1 h-1 rounded-full bg-primary-500 animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1 h-1 rounded-full bg-primary-500 animate-bounce" />
                   </span>
-                </div>
-
-                {/* Right: Actions */}
-                <div className="flex items-center gap-2">
-                  {isResponding ? (
-                    <button
-                      type="button"
-                      onClick={handleStopResponse}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl shadow-md shadow-rose-500/20 text-xs font-semibold transition-all active:scale-95 cursor-pointer animate-pulse"
-                      title="Stop Generating">
-                      <Square size={12} fill="currentColor" />
-                      <span>Stop</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      disabled={!inputValue.trim() || isLoadingSession}
-                      className={`p-2 rounded-xl text-white transition-all duration-200 flex items-center justify-center active:scale-95 ${
-                        inputValue.trim() && !isLoadingSession
-                          ? "bg-primary-600 hover:bg-primary-500 shadow-md shadow-primary-500/25 cursor-pointer"
-                          : "bg-neutral-200 dark:bg-white/10 text-neutral-400 dark:text-neutral-500 cursor-not-allowed opacity-50"
-                      }`}
-                      title="Send message (Enter)"
-                      aria-label="Send message">
-                      <Send size={14} className={inputValue.trim() ? "translate-x-px -translate-y-px" : ""} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </form>
-
-            {isResponding && (
-              <div className="mt-2 flex items-center gap-2 justify-center">
-                <span className="flex gap-1">
-                  <span className="w-1 h-1 rounded-full bg-primary-500 animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1 h-1 rounded-full bg-primary-500 animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1 h-1 rounded-full bg-primary-500 animate-bounce" />
-                </span>
-                <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
-                  AI is thinking
-                </p>
-              </div>
-            )}
-
-            {/* Disclaimer */}
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => setDisclaimerExpanded(!disclaimerExpanded)}
-                className="w-full flex items-center gap-1.5 text-neutral-400 hover:text-neutral-500 dark:hover:text-neutral-300 transition-colors p-1">
-                <span className="text-[10px] truncate flex-1 text-left">
-                  Free plan responses can be a bit slower during busy times.
-                </span>
-                <ChevronDown
-                  size={12}
-                  className={`shrink-0 transition-transform duration-200 ${disclaimerExpanded ? "rotate-180" : ""}`}
-                />
-              </button>
-              {disclaimerExpanded && (
-                <div className="mt-2 p-3 bg-neutral-50 dark:bg-white/5 rounded-lg">
-                  <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                    AI suggestions are for informational purposes only — not
-                    SEBI-registered advice.
-                  </p>
-                  <p className="text-[10px] text-neutral-400 dark:text-neutral-500 leading-relaxed mt-2">
-                    AI-generated content is for informational purposes only and
-                    does not constitute SEBI-registered investment advice. Past
-                    performance is not indicative of future results. Please do
-                    your own research and consult a certified financial advisor
-                    before making any investment decisions.
+                  <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest">
+                    AI is thinking
                   </p>
                 </div>
               )}
+
+              {/* Disclaimer */}
+              <div className="mt-2.5 flex items-center justify-center">
+                <p className="text-[11px] text-center text-neutral-400 dark:text-neutral-500">
+                  Arthavi AI provides analytics &amp; insights. Please verify details for tax &amp; investment decisions.
+                </p>
+              </div>
             </div>
           </div>
         )}

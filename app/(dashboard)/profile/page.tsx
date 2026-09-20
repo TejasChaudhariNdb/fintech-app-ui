@@ -232,7 +232,6 @@ export default function ProfilePage() {
     referral_code: "",
     referral_count: 0,
     ai_chats_used: 0,
-    is_ai_unlocked: false,
     feature_flags: {} as Record<string, boolean>,
     referred_by: "",
     profile_completion_score: 0,
@@ -336,7 +335,6 @@ export default function ProfilePage() {
         referral_count: data.referral_count || 0,
         ai_chats_used: data.ai_chats_used || 0,
         feature_flags: data.feature_flags || {},
-        is_ai_unlocked: data.feature_flags?.ai_unlocked || false,
         referred_by: data.referred_by || "",
         profile_completion_score: data.profile_completion_score || 0,
         kyc_nudges: data.kyc_nudges || [],
@@ -436,7 +434,6 @@ export default function ProfilePage() {
         referral_count: originalProfile.referral_count || 0,
         ai_chats_used: originalProfile.ai_chats_used || 0,
         feature_flags: originalProfile.feature_flags || {},
-        is_ai_unlocked: originalProfile.feature_flags?.ai_unlocked || false,
         referred_by: originalProfile.referred_by || "",
         profile_completion_score: originalProfile.profile_completion_score || 0,
         kyc_nudges: originalProfile.kyc_nudges || [],
@@ -555,7 +552,7 @@ export default function ProfilePage() {
   const WEB_APP_URL = "https://app.arthavi.com";
 
   const getReferralShareMessage = (code: string) => {
-    return `📈 Hey! I track all my Mutual Funds, Stocks, XIRR, and Tax Reports seamlessly on Arthavi.\n\n📲 Android App (Play Store):\n${PLAYSTORE_URL}\n\n🌐 Web & iOS App:\n${WEB_APP_URL}/auth?ref=${code}\n\n🎁 Use my referral code: *${code}* to unlock unlimited AI Portfolio Insights! 🚀`;
+    return `📈 Hey! I track all my Mutual Funds, Stocks, XIRR, and Tax Reports seamlessly on Arthavi.\n\n📲 Android App (Play Store):\n${PLAYSTORE_URL}\n\n🌐 Web & iOS App:\n${WEB_APP_URL}/auth?ref=${code}\n\n🎁 Join using my referral code: *${code}*! 🚀`;
   };
 
   const handleShareWhatsApp = (code: string) => {
@@ -820,7 +817,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-200/50 dark:border-white/5 text-[10px] font-bold text-neutral-600 dark:text-neutral-300">
                 <Sparkles size={10} className="text-amber-500" />
-                {userProfile.is_ai_unlocked ? "Unlimited" : `${freeChatsLeft} Left`}
+                15 Chats / 4h
               </span>
               <button
                 onClick={() => {
@@ -1171,20 +1168,14 @@ export default function ProfilePage() {
                     Invite Friends to Arthavi
                   </h3>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                    Share your code to unlock unlimited AI portfolio insights for both of you.
+                    Share Arthavi with friends and track your mutual funds, stocks, and wealth together.
                   </p>
                 </div>
               </div>
 
-              {userProfile.is_ai_unlocked ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 shrink-0">
-                  <Unlock size={11} /> Premium Active
-                </span>
-              ) : (
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 shrink-0">
-                  {freeChatsLeft} Free Chats Left
-                </span>
-              )}
+              <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 shrink-0">
+                15 Chats / 4h Window
+              </span>
             </div>
 
             {/* Referral Code Box */}
@@ -1243,7 +1234,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Redeem Friend's Code */}
-            {!userProfile.referred_by && !userProfile.is_ai_unlocked && (
+            {!userProfile.referred_by && (
               <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-col gap-1.5">
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                   Have a friend&apos;s referral code?

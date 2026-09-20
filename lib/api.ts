@@ -6,6 +6,15 @@ type AIChatResponse = {
   session_title: string;
 };
 
+export type AIQuotaStatus = {
+  remaining: number;
+  limit: number;
+  resets_at: string | null;
+  resets_in_seconds: number;
+  window_hours: number;
+  show_warning: boolean;
+};
+
 type AIStreamStatus = {
   stage: string;
   title: string;
@@ -690,11 +699,11 @@ export const api = {
     }),
 
   // AI
-  // AI
   getSessions: () => api.fetch("/ai/sessions"),
   createSession: () => api.fetch("/ai/sessions", { method: "POST" }),
   getSessionMessages: (sessionId: number) =>
     api.fetch(`/ai/sessions/${sessionId}/messages`),
+  getAIQuotaStatus: (): Promise<AIQuotaStatus> => api.fetch("/ai/quota-status"),
 
   // Profiles CRUD
   getProfiles: () => api.fetch("/profiles/"),

@@ -827,8 +827,8 @@ export default function HomePage() {
             )}
           </section>
 
-          {/* Growth Banner: Refer & Earn (Only if not premium) */}
-          {userProfile && !userProfile.is_ai_unlocked && (
+          {/* Growth Banner: Refer & Earn */}
+          {userProfile && (
             <div
               className="mb-8 bg-linear-to-r from-indigo-600 to-purple-600 rounded-xl p-4 text-white flex items-center justify-between shadow-lg shadow-indigo-500/20 animate-fade-in relative overflow-hidden group cursor-pointer"
               onClick={() => router.push("/profile")}>
@@ -838,10 +838,10 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className="font-bold text-sm sm:text-base">
-                    Get Unlimited AI Chats
+                    Invite Friends to Arthavi
                   </p>
                   <p className="text-xs sm:text-sm text-indigo-100">
-                    Invite a friend & unlock premium features instantly.
+                    Share your referral code &amp; help friends track their wealth.
                   </p>
                 </div>
               </div>
