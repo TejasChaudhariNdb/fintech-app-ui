@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { api } from "@/lib/api";
 import Modal from "@/components/ui/Modal";
@@ -37,6 +37,8 @@ import {
   Sparkles,
   Lightbulb,
   Share2,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -44,6 +46,13 @@ import useFcmToken from "@/hooks/useFcmToken";
 import { useProfile } from "@/context/ProfileContext";
 import Toast from "@/components/ui/Toast";
 import NotificationSettingsModal from "@/components/NotificationSettingsModal";
+
+const getAvatarUrl = (url?: string | null) => {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  return `${API_URL}${url}`;
+};
 
 function SectionCard({
   title,
@@ -219,6 +228,7 @@ export default function ProfilePage() {
     full_name: "",
     phone_number: "",
     pan_card: "",
+    avatar_url: null as string | null,
     referral_code: "",
     referral_count: 0,
     ai_chats_used: 0,
@@ -228,6 +238,9 @@ export default function ProfilePage() {
     profile_completion_score: 0,
     kyc_nudges: [] as Array<{ key: string; title: string; message: string }>,
   });
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
   const [referralInput, setReferralInput] = useState("");
   const [referralError, setReferralError] = useState("");
   const [isApplyingReferral, setIsApplyingReferral] = useState(false);
@@ -318,6 +331,7 @@ export default function ProfilePage() {
         full_name: data.full_name || "",
         phone_number: data.phone_number || "",
         pan_card: data.pan_card || "",
+        avatar_url: data.avatar_url || null,
         referral_code: data.referral_code || "",
         referral_count: data.referral_count || 0,
         ai_chats_used: data.ai_chats_used || 0,
@@ -330,6 +344,63 @@ export default function ProfilePage() {
       setOriginalProfile(data);
     } catch (err) {
       console.error("Failed to load profile", err);
+    }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("Please select an image file (JPG, PNG, WEBP)", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image size must be under 5MB", "error");
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      showToast("Uploading profile photo...", "loading");
+      const res = await api.uploadAvatar(file);
+      setUserProfile((prev) => ({
+        ...prev,
+        avatar_url: res.avatar_url,
+      }));
+      setOriginalProfile((prev: any) => ({
+        ...prev,
+        avatar_url: res.avatar_url,
+      }));
+      showToast("Profile photo updated successfully!", "success");
+    } catch (err: any) {
+      console.error("Avatar upload error:", err);
+      showToast(err.message || "Failed to upload profile photo", "error");
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    try {
+      setIsUploadingAvatar(true);
+      showToast("Removing profile photo...", "loading");
+      await api.deleteAvatar();
+      setUserProfile((prev) => ({
+        ...prev,
+        avatar_url: null,
+      }));
+      setOriginalProfile((prev: any) => ({
+        ...prev,
+        avatar_url: null,
+      }));
+      showToast("Profile photo removed", "success");
+    } catch (err: any) {
+      console.error("Avatar delete error:", err);
+      showToast(err.message || "Failed to remove profile photo", "error");
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -360,6 +431,7 @@ export default function ProfilePage() {
         full_name: originalProfile.full_name || "",
         phone_number: originalProfile.phone_number || "",
         pan_card: originalProfile.pan_card || "",
+        avatar_url: originalProfile.avatar_url || null,
         referral_code: originalProfile.referral_code || "",
         referral_count: originalProfile.referral_count || 0,
         ai_chats_used: originalProfile.ai_chats_used || 0,
@@ -709,11 +781,30 @@ export default function ProfilePage() {
           {/* Top Row: Avatar + Name/Email + Stats */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              {/* Avatar with premium gradient */}
-              <div className="w-12 h-12 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 dark:from-primary-600 dark:to-indigo-500 flex items-center justify-center text-lg font-bold text-white shadow-xs shrink-0 ring-2 ring-primary-500/10">
-                {userProfile.full_name
-                  ? userProfile.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
-                  : userProfile.email ? userProfile.email.slice(0, 2).toUpperCase() : <User />}
+              {/* Avatar with click to edit / preview */}
+              <div
+                onClick={() => setShowProfileModal(true)}
+                className="relative group cursor-pointer shrink-0"
+                title="Click to change profile photo"
+              >
+                <div className="w-13 h-13 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 dark:from-primary-600 dark:to-indigo-500 flex items-center justify-center text-lg font-bold text-white shadow-xs overflow-hidden ring-2 ring-primary-500/20 group-hover:ring-primary-500/50 transition-all">
+                  {userProfile.avatar_url ? (
+                    <img
+                      src={getAvatarUrl(userProfile.avatar_url) || ""}
+                      alt={userProfile.full_name || "Profile"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : userProfile.full_name ? (
+                    userProfile.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                  ) : userProfile.email ? (
+                    userProfile.email.slice(0, 2).toUpperCase()
+                  ) : (
+                    <User size={22} />
+                  )}
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 p-1 rounded-full bg-neutral-900/80 dark:bg-white/90 text-white dark:text-neutral-900 shadow-xs border border-white/20 dark:border-black/20 group-hover:scale-110 transition-transform">
+                  <Camera size={10} className="stroke-[2.5]" />
+                </div>
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-bold text-neutral-950 dark:text-white tracking-tight truncate">
@@ -1407,13 +1498,75 @@ export default function ProfilePage() {
         onClose={handleCloseProfileModal}
         title="Personal Details">
         <form onSubmit={handleSaveProfile} className="space-y-4">
-          <div className="bg-indigo-50 dark:bg-indigo-500/10 p-4 rounded-xl mb-4 flex items-center gap-3">
-            <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-              <User size={20} />
+          {/* Profile Photo Upload Section */}
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-neutral-200/60 dark:border-white/5 flex items-center gap-4">
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-xl font-bold text-white overflow-hidden shadow-inner ring-2 ring-primary-500/20">
+                {userProfile.avatar_url ? (
+                  <img
+                    src={getAvatarUrl(userProfile.avatar_url) || ""}
+                    alt={userProfile.full_name || "Profile"}
+                    className="w-full h-full object-cover"
+                  />
+                ) : userProfile.full_name ? (
+                  userProfile.full_name.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
+                ) : userProfile.email ? (
+                  userProfile.email.slice(0, 2).toUpperCase()
+                ) : (
+                  <User size={28} />
+                )}
+              </div>
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-white" />
+                </div>
+              )}
             </div>
-            <p className="text-sm text-indigo-800 dark:text-indigo-200">
-              Update your personal information accurately.
-            </p>
+
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                Profile Photo
+              </h4>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2.5">
+                PNG, JPG, or WEBP up to 5MB
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarUpload(file);
+                  }}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isUploadingAvatar}
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="text-xs py-1.5 px-3 flex items-center gap-1.5"
+                >
+                  <Camera size={13} />
+                  {userProfile.avatar_url ? "Change Photo" : "Upload Photo"}
+                </Button>
+                {userProfile.avatar_url && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isUploadingAvatar}
+                    onClick={handleDeleteAvatar}
+                    className="text-xs py-1.5 px-2.5 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-1"
+                  >
+                    <Trash2 size={13} />
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Full Name */}

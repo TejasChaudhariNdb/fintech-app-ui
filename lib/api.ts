@@ -105,6 +105,8 @@ export const api = {
           "/portfolio/xirr",
           "/portfolio/timeseries",
           "/portfolio/mf-journey",
+          "/portfolio/insights",
+          "/portfolio/export/transactions",
           "/goals",
           "/goals/",
           "/cas/upload",
@@ -648,6 +650,40 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  uploadAvatar: async (file: File) => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("access_token")
+        : null;
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${API_URL}/users/me/avatar`, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        handleUnauthorized("/users/me/avatar");
+      }
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || "Failed to upload avatar");
+    }
+
+    api.clearCache(["user-profile"]);
+    return res.json();
+  },
+
+  deleteAvatar: async () => {
+    const res = await api.fetch("/users/me/avatar", { method: "DELETE" });
+    api.clearCache(["user-profile"]);
+    return res;
+  },
+
   applyReferralCode: (code: string) =>
     api.fetch(`/users/referral/apply?code=${code}`, {
       method: "POST",
@@ -723,6 +759,7 @@ export const api = {
       "user-profile",
       "prediction-stats",
       "family-summary",
+      "family-top-holdings",
       "transactions",
     ]);
   },

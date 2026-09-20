@@ -25,6 +25,7 @@ export default function SideNav() {
   const [user, setUser] = useState<{
     full_name?: string;
     email?: string;
+    avatar_url?: string | null;
   } | null>(null);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
 
@@ -172,8 +173,20 @@ export default function SideNav() {
       <div className="px-3 pb-4 border-t border-neutral-100 dark:border-white/5 pt-3 mx-0">
         <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group">
           {/* Avatar */}
-          <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
-            {initials}
+          <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm overflow-hidden">
+            {user?.avatar_url ? (
+              <img
+                src={
+                  user.avatar_url.startsWith("http") || user.avatar_url.startsWith("data:")
+                    ? user.avatar_url
+                    : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}${user.avatar_url}`
+                }
+                alt={displayName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              initials
+            )}
           </div>
           <div className="flex-1 overflow-hidden">
             <p className="text-xs font-semibold text-neutral-900 dark:text-white truncate leading-snug">

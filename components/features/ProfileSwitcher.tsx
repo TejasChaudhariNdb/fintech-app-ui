@@ -60,11 +60,10 @@ export default function ProfileSwitcher() {
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md text-sm font-semibold backdrop-blur-md active:scale-95 duration-100 ${
-          isOpen
+        className={`flex items-center gap-2.5 px-4 py-2 rounded-2xl border transition-all duration-200 shadow-sm hover:shadow-md text-sm font-semibold backdrop-blur-md active:scale-95 duration-100 ${isOpen
             ? "border-primary-500/40 bg-primary-50/20 dark:bg-primary-950/10 text-primary-600 dark:text-primary-400 ring-2 ring-primary-500/15"
             : "border-neutral-200/80 dark:border-white/5 bg-white/70 dark:bg-[#151A23]/70 hover:bg-neutral-50/90 dark:hover:bg-white/10 hover:border-neutral-300 dark:hover:border-white/10 text-neutral-800 dark:text-neutral-200"
-        }`}
+          }`}
       >
         {activeProfileId === "all" ? (
           <>
@@ -72,9 +71,7 @@ export default function ProfileSwitcher() {
               <Users size={11} className="stroke-[2.5]" />
             </div>
             <span>All Family</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-500/10 text-primary-500 font-bold border border-primary-500/25">
-              ⭐
-            </span>
+
           </>
         ) : (
           <>
@@ -99,9 +96,8 @@ export default function ProfileSwitcher() {
         )}
         <ChevronDown
           size={14}
-          className={`text-neutral-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`text-neutral-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
         />
       </button>
 
@@ -119,11 +115,10 @@ export default function ProfileSwitcher() {
             {profiles.length > 1 && (
               <button
                 onClick={() => handleSelect("all")}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 transition-all duration-150 text-sm font-semibold border-l-2 ${
-                  activeProfileId === "all"
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 transition-all duration-150 text-sm font-semibold border-l-2 ${activeProfileId === "all"
                     ? "bg-gradient-to-r from-primary-500/10 to-transparent border-primary-500 text-primary-700 dark:text-primary-300"
                     : "border-transparent text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   <div className="h-6 w-6 rounded-full bg-gradient-to-tr from-yellow-400 via-amber-500 to-primary-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 ring-1 ring-white/10">
@@ -144,11 +139,10 @@ export default function ProfileSwitcher() {
                 <button
                   key={p.id}
                   onClick={() => handleSelect(String(p.id))}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 transition-all duration-150 text-sm font-semibold border-l-2 ${
-                    isSelected
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 transition-all duration-150 text-sm font-semibold border-l-2 ${isSelected
                       ? "bg-gradient-to-r from-primary-500/10 to-transparent border-primary-500 text-primary-700 dark:text-primary-300"
                       : "border-transparent text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <div

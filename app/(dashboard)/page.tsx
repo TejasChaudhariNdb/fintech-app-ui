@@ -70,10 +70,10 @@ export default function HomePage() {
       const utmCampaign = urlParams.get("utm_campaign");
       const utmSource = urlParams.get("utm_source");
       const utmMedium = urlParams.get("utm_medium");
-      
+
       if (
-        utmCampaign === "weekly_summary" || 
-        utmSource === "weekly_summary" || 
+        utmCampaign === "weekly_summary" ||
+        utmSource === "weekly_summary" ||
         urlParams.get("ref") === "weekly_summary"
       ) {
         analytics.track({
@@ -101,13 +101,19 @@ export default function HomePage() {
       const getCache = (key: string) => localStorage.getItem(`${userEmail}:${key}:${activeProfileId}`);
 
       if (activeProfileId === "all") {
-        // 1. Try Cache
+        // 1. Clear individual-only state
+        setNetWorth(null);
+        setInsights([]);
+        setBenchmark(null);
+
+        // 2. Try Cache
         const cachedFam = getCache("family-summary");
         const cachedGoals = getCache("goals");
         const cachedFamSummary = getCache("portfolio-summary");
         const cachedHistory = getCache("portfolio-history");
         const cachedTopHoldings = getCache("family-top-holdings");
 
+        let hadCache = false;
         if (cachedFam) {
           try {
             const parsedFam = JSON.parse(cachedFam);
@@ -117,12 +123,17 @@ export default function HomePage() {
             if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
             if (cachedTopHoldings) setTopHoldings(JSON.parse(cachedTopHoldings).data.holdings || []);
             setLoading(false);
+            hadCache = true;
           } catch (e) {
             console.warn("Invalid cached family summary", e);
           }
         }
 
-        // 2. Fetch Fresh Data
+        if (!hadCache) {
+          setLoading(true);
+        }
+
+        // 3. Fetch Fresh Data
         const [famData, g, up, ps, history, topH] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
@@ -163,9 +174,14 @@ export default function HomePage() {
             signup_source: up.signup_source,
           });
         }
+        setLoading(false);
       } else {
         // --- INDIVIDUAL PROFILE DASHBOARD LOAD ---
-        // 1. Try to load from cache first
+        // 1. Clear family-only state
+        setFamilySummary(null);
+        setTopHoldings([]);
+
+        // 2. Try to load from cache first
         const cachedNw = getCache("net-worth");
         const cachedPs = getCache("portfolio-summary");
         const cachedGoals = getCache("goals");
@@ -173,6 +189,7 @@ export default function HomePage() {
         const cachedXirr = getCache("xirr");
         const cachedInsights = getCache("insights");
 
+        let hadCache = false;
         if (cachedNw && cachedPs) {
           try {
             const parsedNw = JSON.parse(cachedNw);
@@ -189,6 +206,7 @@ export default function HomePage() {
             if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
 
             setLoading(false);
+            hadCache = true;
 
             const cacheTimestamp = parsedNw.timestamp || 0;
             const hoursSinceCache = (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
@@ -200,7 +218,11 @@ export default function HomePage() {
           }
         }
 
-        // 2. Fetch Fresh Data in Background
+        if (!hadCache) {
+          setLoading(true);
+        }
+
+        // 3. Fetch Fresh Data in Background
         const [nw, ps, g, xirrData, history, ins, bm, up] = await Promise.all([
           api.getNetWorth().catch((err) => {
             console.error("Net worth error:", err);
@@ -262,10 +284,11 @@ export default function HomePage() {
             signup_source: up.signup_source,
           });
         }
+        setLoading(false);
       }
     } catch (err: any) {
-      console.error("Error loading data:", err);
-      setError(err.message || "Failed to load data");
+      console.error("Failed to load dashboard data:", err);
+      setError(err?.message || "Failed to load dashboard data");
     } finally {
       setLoading(false);
       setIsBackgroundRefreshing(false);
@@ -340,7 +363,7 @@ export default function HomePage() {
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-xs font-bold px-2 py-0.5 rounded-md uppercase tracking-wider bg-primary-500/10 text-primary-500 border border-primary-500/20">
-                ⭐ All Family Summary
+                All Family Summary
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">
@@ -461,7 +484,7 @@ export default function HomePage() {
                         Math.round(
                           (familySummary.goal_progress.total_current /
                             familySummary.goal_progress.total_target) *
-                            100
+                          100
                         )
                       )}%`,
                     }}
@@ -482,6 +505,11 @@ export default function HomePage() {
               </button>
             </div>
           </section>
+        </section>
+
+        {/* Daily Prediction Card */}
+        <section className="animate-fade-in">
+          <MarketPredictionCard />
         </section>
 
         {/* Family Goals list preview */}

@@ -24,6 +24,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useProfile } from "@/context/ProfileContext";
 
 interface RecordItem {
   buy_tx_id?: number;
@@ -73,6 +74,7 @@ interface SummaryData {
 }
 
 export default function ReportsPage() {
+  const { activeProfileId } = useProfile();
   const [mounted, setMounted] = useState(false);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -153,7 +155,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchSummary();
-  }, [financialYear, assetClass]);
+  }, [financialYear, assetClass, activeProfileId]);
 
   const handleDownload = async (reportType: string) => {
     try {
