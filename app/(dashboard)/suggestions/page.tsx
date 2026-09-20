@@ -8,6 +8,11 @@ import Input from "@/components/ui/Input";
 import Toast from "@/components/ui/Toast";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import {
+  FEEDBACK_STATUSES,
+  getFeedbackStatusMeta,
+  normalizeFeedbackStatus,
+} from "@/lib/feedbackStatus";
+import {
   Lightbulb,
   MessageSquare,
   CheckCircle2,
@@ -35,7 +40,7 @@ import {
 
 export default function SuggestionsPage() {
   const [activeTab, setActiveTab] = useState<"suggestion" | "feedback">("suggestion");
-  const [viewSegment, setViewSegment] = useState<"all" | "mine">("all");
+  const [viewSegment, setViewSegment] = useState<"all" | "mine">("mine");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const LIMIT = 6;
@@ -220,21 +225,6 @@ export default function SuggestionsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "accepted":
-        return { label: "Accepted", cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20", dot: "bg-blue-500" };
-      case "in_progress":
-        return { label: "In Progress", cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20", dot: "bg-amber-500" };
-      case "resolved":
-        return { label: "Action Taken", cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500" };
-      case "not_feasible":
-        return { label: "Shelved", cls: "bg-neutral-500/10 text-neutral-500 dark:text-neutral-400 border-neutral-500/20", dot: "bg-neutral-400" };
-      default:
-        return { label: "Under Review", cls: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20", dot: "bg-violet-500" };
-    }
-  };
-
   const getSubCategoryBadge = (subType: string) => {
     switch (subType) {
       case "appreciation":
@@ -277,7 +267,10 @@ export default function SuggestionsPage() {
   const filteredItems = items
     .filter((item) => {
       if (viewSegment === "mine" && !item.is_mine) return false;
-      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (statusFilter !== "all") {
+        const itemStatus = normalizeFeedbackStatus(item.status);
+        if (itemStatus !== statusFilter) return false;
+      }
       return true;
     })
     .sort((a, b) => {
@@ -450,11 +443,11 @@ export default function SuggestionsPage() {
               className="bg-white dark:bg-surface border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 rounded-xl px-3 py-1.5 font-semibold outline-none text-xs cursor-pointer"
             >
               <option value="all">All Statuses</option>
-              <option value="new">Under Review</option>
-              <option value="accepted">Accepted</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Action Taken</option>
-              <option value="not_feasible">Shelved</option>
+              {FEEDBACK_STATUSES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -468,7 +461,7 @@ export default function SuggestionsPage() {
               {filteredItems.map((item) => {
                 const subCat = getSubCategoryBadge(item.type);
                 const SubIcon = subCat.icon;
-                const statusInfo = getStatusBadge(item.status);
+                const statusInfo = getFeedbackStatusMeta(item.status);
                 const commentsOpen = !!openComments[item.id];
                 const commentsList = item.comments || [];
 
@@ -478,7 +471,7 @@ export default function SuggestionsPage() {
                     className={`bg-white dark:bg-surface rounded-2xl border transition-all hover:shadow-md ${
                       item.is_mine
                         ? "border-primary-400/40 dark:border-primary-500/25 ring-1 ring-primary-500/10"
-                        : "border-neutral-200 dark:border-white/[0.07]"
+                        : "border-neutral-200/80 dark:border-white/5"
                     }`}
                   >
                     <div className="flex">
@@ -493,9 +486,9 @@ export default function SuggestionsPage() {
                               {subCat.label}
                             </span>
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusInfo.cls}`}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusInfo.badgeCls}`}
                             >
-                              <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+                              <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dotCls}`} />
                               {statusInfo.label}
                             </span>
                             {item.is_mine && (
