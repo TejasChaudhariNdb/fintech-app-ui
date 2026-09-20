@@ -62,16 +62,22 @@ export default function CreateGoalModal({
         
         setFormData({
           name: goalToEdit.name,
-          target_amount: goalToEdit.target_amount.toString(),
-          target_year: goalToEdit.target_year.toString(),
+          target_amount:
+            goalToEdit.target_amount !== null && goalToEdit.target_amount !== undefined
+              ? goalToEdit.target_amount.toString()
+              : "",
+          target_year:
+            goalToEdit.target_year !== null && goalToEdit.target_year !== undefined
+              ? goalToEdit.target_year.toString()
+              : "",
           icon: goalToEdit.icon || "target",
-          linked_schemes: goalToEdit.linked_schemes.map((ls: any) => ({
-            scheme_id: ls.scheme_id || ls.id,
-            contribution_amount: ls.contribution.toString(),
+          linked_schemes: (goalToEdit.linked_schemes || []).map((ls: any) => ({
+            scheme_id: Number(ls.scheme_id || ls.id),
+            contribution_amount: (ls.contribution ?? 0).toString(),
           })),
           linked_equities: goalToEdit.linked_equities
             ? goalToEdit.linked_equities.map((le: any) => ({
-                holding_id: le.holding_id,
+                holding_id: Number(le.holding_id),
                 symbol: le.symbol,
               }))
             : [],
@@ -124,27 +130,37 @@ export default function CreateGoalModal({
     const grouped: { [key: string]: typeof availableSchemes } = {};
     if (goalType === "PERSONAL") {
       const pName = profiles.find((p) => String(p.id) === selectedProfileId)?.name || "Self";
-      grouped[pName] = availableSchemes;
+      grouped[pName] = (availableSchemes || []).map((s) => ({
+        ...s,
+        scheme_id: Number(s.scheme_id || s.id),
+        current_value: s.current_value ?? s.current ?? 0,
+      }));
     } else {
       // FAMILY Goal
-      availableSchemes.forEach((s) => {
+      (availableSchemes || []).forEach((s) => {
         if (s.profile_breakdown && s.profile_breakdown.length > 0) {
           s.profile_breakdown.forEach((pb: any) => {
             const pName = pb.profile_name || "Self";
             if (!grouped[pName]) grouped[pName] = [];
-            if (!grouped[pName].find((item) => item.scheme_id === (pb.scheme_id || s.scheme_id))) {
+            const sid = Number(pb.scheme_id || s.scheme_id || s.id);
+            if (!grouped[pName].find((item) => Number(item.scheme_id) === sid)) {
               grouped[pName].push({
                 ...s,
-                scheme_id: pb.scheme_id || s.scheme_id,
-                current_value: pb.current_value,
+                scheme_id: sid,
+                current_value: pb.current_value ?? s.current ?? 0,
               });
             }
           });
         } else {
           const pName = "Self";
           if (!grouped[pName]) grouped[pName] = [];
-          if (!grouped[pName].find((item) => item.scheme_id === s.scheme_id)) {
-            grouped[pName].push(s);
+          const sid = Number(s.scheme_id || s.id);
+          if (!grouped[pName].find((item) => Number(item.scheme_id) === sid)) {
+            grouped[pName].push({
+              ...s,
+              scheme_id: sid,
+              current_value: s.current_value ?? s.current ?? 0,
+            });
           }
         }
       });
@@ -165,18 +181,20 @@ export default function CreateGoalModal({
           s.profile_breakdown.forEach((pb: any) => {
             const pName = pb.profile_name || "Self";
             if (!grouped[pName]) grouped[pName] = [];
-            if (!grouped[pName].find((item) => item.id === (pb.holding_id || s.id))) {
+            const hid = Number(pb.holding_id || s.id);
+            if (!grouped[pName].find((item) => Number(item.id) === hid)) {
               grouped[pName].push({
                 ...s,
-                id: pb.holding_id || s.id,
-                value: pb.value,
+                id: hid,
+                value: pb.value ?? s.value ?? 0,
               });
             }
           });
         } else {
           const pName = "Self";
           if (!grouped[pName]) grouped[pName] = [];
-          if (!grouped[pName].find((item) => item.id === s.id)) {
+          const hid = Number(s.id);
+          if (!grouped[pName].find((item) => Number(item.id) === hid)) {
             grouped[pName].push(s);
           }
         }
@@ -189,14 +207,14 @@ export default function CreateGoalModal({
     const allSchemeItems = Object.values(getGroupedSchemes()).flat();
     if (allSchemeItems.length === 0) return;
     const available = allSchemeItems.filter(
-      (item) => !formData.linked_schemes.find((l) => l.scheme_id === item.scheme_id)
+      (item) => !formData.linked_schemes.find((l) => Number(l.scheme_id) === Number(item.scheme_id))
     );
-    if (available.length === 0) return;
+    const itemToAdd = available.length > 0 ? available[0] : allSchemeItems[0];
     setFormData((prev) => ({
       ...prev,
       linked_schemes: [
         ...prev.linked_schemes,
-        { scheme_id: available[0].scheme_id, contribution_amount: "0" },
+        { scheme_id: Number(itemToAdd.scheme_id), contribution_amount: "0" },
       ],
     }));
   };
@@ -205,14 +223,14 @@ export default function CreateGoalModal({
     const allStockItems = Object.values(getGroupedStocks()).flat();
     if (allStockItems.length === 0) return;
     const available = allStockItems.filter(
-      (item) => !formData.linked_equities.find((l) => l.holding_id === item.id)
+      (item) => !formData.linked_equities.find((l) => Number(l.holding_id) === Number(item.id))
     );
-    if (available.length === 0) return;
+    const itemToAdd = available.length > 0 ? available[0] : allStockItems[0];
     setFormData((prev) => ({
       ...prev,
       linked_equities: [
         ...prev.linked_equities,
-        { holding_id: available[0].id, symbol: available[0].symbol },
+        { holding_id: Number(itemToAdd.id), symbol: itemToAdd.symbol },
       ],
     }));
   };
@@ -234,7 +252,10 @@ export default function CreateGoalModal({
   const updateSchemeLink = (index: number, field: string, value: any) => {
     setFormData((prev) => {
       const newLinks = [...prev.linked_schemes];
-      newLinks[index] = { ...newLinks[index], [field]: value };
+      newLinks[index] = {
+        ...newLinks[index],
+        [field]: field === "scheme_id" ? Number(value) : value,
+      };
       return { ...prev, linked_schemes: newLinks };
     });
   };
@@ -275,8 +296,8 @@ export default function CreateGoalModal({
     try {
       const payload = {
         name: formData.name,
-        target_amount: parseFloat(formData.target_amount),
-        target_year: parseInt(formData.target_year),
+        target_amount: formData.target_amount ? parseFloat(formData.target_amount) : null,
+        target_year: formData.target_year ? parseInt(formData.target_year) : null,
         icon: formData.icon,
         goal_type: goalType,
         profile_id: goalType === "PERSONAL" ? (selectedProfileId ? Number(selectedProfileId) : null) : null,
@@ -296,7 +317,7 @@ export default function CreateGoalModal({
       }
       onSuccess();
       onClose();
-        } catch (err: any) {
+    } catch (err: any) {
       console.error(err);
       if (err.message !== "This action is disabled in demo mode.") {
         alert("Failed to save goal");
@@ -401,33 +422,36 @@ export default function CreateGoalModal({
 
           <Input
             label="Goal Name"
-            placeholder="e.g. Dream House, Sarah's College"
+            placeholder="e.g. Dream House, Sarah's College, Jigna"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Target Amount (₹)"
-              type="number"
-              placeholder="5000000"
-              value={formData.target_amount}
-              onChange={(e) =>
-                setFormData({ ...formData, target_amount: e.target.value })
-              }
-              required
-            />
-            <Input
-              label="Target Year"
-              type="number"
-              placeholder="2035"
-              value={formData.target_year}
-              onChange={(e) =>
-                setFormData({ ...formData, target_year: e.target.value })
-              }
-              required
-            />
+          <div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Target Amount (₹) (Optional)"
+                type="number"
+                placeholder="e.g. 5000000"
+                value={formData.target_amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, target_amount: e.target.value })
+                }
+              />
+              <Input
+                label="Target Year (Optional)"
+                type="number"
+                placeholder="e.g. 2035"
+                value={formData.target_year}
+                onChange={(e) =>
+                  setFormData({ ...formData, target_year: e.target.value })
+                }
+              />
+            </div>
+            <p className="text-[11px] text-neutral-400 mt-1.5 italic">
+              Optional: Leave target & year blank if saving as a flexible bucket with no fixed target.
+            </p>
           </div>
         </div>
 
@@ -472,7 +496,7 @@ export default function CreateGoalModal({
                       <optgroup key={profileName} label={profileName}>
                         {schemes.map((s) => (
                           <option key={s.scheme_id} value={s.scheme_id}>
-                            {s.scheme} - ₹{s.current_value?.toLocaleString()}
+                            {s.scheme} - ₹{(s.current_value ?? s.current ?? 0).toLocaleString("en-IN")}
                           </option>
                         ))}
                       </optgroup>

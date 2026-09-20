@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp, FileSpreadsheet } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -61,6 +61,7 @@ export default function MutualFundsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<
     | "xirr"
+    | "cagr"
     | "gains"
     | "profit"
     | "value"
@@ -71,6 +72,7 @@ export default function MutualFundsPage() {
     | "overallRank"
   >("xirr");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [hideZeroBalance, setHideZeroBalance] = useState(false);
   const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
   const [addTxInitialTab, setAddTxInitialTab] = useState<"MANUAL" | "IMPORT">("MANUAL");
@@ -99,9 +101,13 @@ export default function MutualFundsPage() {
   const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("holdings_view_mode");
-    if (saved === "compact" || saved === "detailed") {
-      setViewMode(saved);
+    const savedMode = localStorage.getItem("holdings_view_mode");
+    if (savedMode === "compact" || savedMode === "detailed") {
+      setViewMode(savedMode);
+    }
+    const savedHideZero = localStorage.getItem("mf_hide_zero_balance");
+    if (savedHideZero !== null) {
+      setHideZeroBalance(savedHideZero === "true");
     }
   }, []);
 
@@ -109,6 +115,12 @@ export default function MutualFundsPage() {
     const nextMode = viewMode === "compact" ? "detailed" : "compact";
     setViewMode(nextMode);
     localStorage.setItem("holdings_view_mode", nextMode);
+  };
+
+  const handleToggleHideZero = () => {
+    const nextVal = !hideZeroBalance;
+    setHideZeroBalance(nextVal);
+    localStorage.setItem("mf_hide_zero_balance", String(nextVal));
   };
 
   const handleDownloadTaxReport = async () => {
@@ -256,13 +268,30 @@ export default function MutualFundsPage() {
         ]
       : topSchemeAllocation;
 
+  const zeroBalanceCount = schemes.filter(
+    (s) => (s.units <= 0 && s.current <= 0) || (s.units < 0.001 && s.current < 1),
+  ).length;
+
   const filteredSchemes = schemes
-    .filter((s) => s.scheme?.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((s) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = (s.scheme || "").toLowerCase().includes(q) || (s.amc || "").toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+      if (hideZeroBalance) {
+        const isZero = (s.units <= 0 && s.current <= 0) || (s.units < 0.001 && s.current < 1);
+        if (isZero) return false;
+      }
+      return true;
+    })
     .sort((a, b) => {
       let comparison = 0;
       if (sortBy === "xirr") {
         const aVal = a.xirr !== null && a.xirr !== undefined ? Number(a.xirr) : -Infinity;
         const bVal = b.xirr !== null && b.xirr !== undefined ? Number(b.xirr) : -Infinity;
+        comparison = bVal - aVal;
+      } else if (sortBy === "cagr") {
+        const aVal = a.cagr !== null && a.cagr !== undefined ? Number(a.cagr) : (a.return_pct ?? -Infinity);
+        const bVal = b.cagr !== null && b.cagr !== undefined ? Number(b.cagr) : (b.return_pct ?? -Infinity);
         comparison = bVal - aVal;
       } else if (sortBy === "gains") {
         comparison = (b.return_pct ?? 0) - (a.return_pct ?? 0);
@@ -601,6 +630,29 @@ export default function MutualFundsPage() {
             ) : null}
           </div>
           <div className="flex gap-2 flex-wrap items-center">
+            {/* One-Click Hide 0 Balance */}
+            <button
+              onClick={handleToggleHideZero}
+              title={hideZeroBalance ? "Showing active funds (click to show all including 0 balance)" : "Click to hide 0 balance folios/funds"}
+              className={`px-3 py-2 border rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm dark:shadow-none ${
+                hideZeroBalance
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+                  : "bg-neutral-100 dark:bg-white/5 border-transparent text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/10"
+              }`}
+            >
+              {hideZeroBalance ? <EyeOff size={14} className="text-amber-500 shrink-0" /> : <Eye size={14} className="shrink-0" />}
+              <span>{hideZeroBalance ? "0 Bal Hidden" : "Hide 0 Bal"}</span>
+              {zeroBalanceCount > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  hideZeroBalance
+                    ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                    : "bg-neutral-200 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"
+                }`}>
+                  {zeroBalanceCount}
+                </span>
+              )}
+            </button>
+
             {/* View Toggle */}
             <button
               onClick={handleToggleViewMode}
@@ -645,6 +697,7 @@ export default function MutualFundsPage() {
                   setSortBy(
                     e.target.value as
                       | "xirr"
+                      | "cagr"
                       | "gains"
                       | "profit"
                       | "value"
@@ -657,6 +710,7 @@ export default function MutualFundsPage() {
                 aria-label="Sort schemes"
                 className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none cursor-pointer">
                 <option value="xirr">Sort: XIRR (%)</option>
+                <option value="cagr">Sort: CAGR (%)</option>
                 <option value="gains">Sort: Overall Return (%)</option>
                 <option value="profit">Sort: Overall Profit (₹)</option>
                 <option value="value">Sort: Current Value</option>
@@ -682,7 +736,7 @@ export default function MutualFundsPage() {
           {filteredSchemes.length > 0 ? (
             viewMode === "compact" ? (
               <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
-                <div className="grid gap-3 min-w-[780px]">
+                <div className="grid gap-3 min-w-[840px]">
                   {filteredSchemes.map((scheme) => {
                     const invested = scheme.current - (scheme.profit || 0);
                     const gain = scheme.profit || 0;
@@ -734,7 +788,7 @@ export default function MutualFundsPage() {
 
                         {/* Row 2 */}
                         <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
-                          <div className="flex gap-6 items-center flex-wrap">
+                          <div className="flex gap-5 items-center flex-wrap">
                             <div>
                               <span className="text-neutral-400 mr-1">NAV:</span>
                               <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{scheme.nav.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
@@ -749,23 +803,29 @@ export default function MutualFundsPage() {
                             </div>
                           </div>
 
-                          <div className="flex gap-6 justify-end items-center text-right shrink-0">
-                            <div className="w-24">
+                          <div className="flex gap-5 justify-end items-center text-right shrink-0">
+                            <div className="w-20">
                               <span className="text-neutral-400 mr-1">Return:</span>
                               <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
                                 {isPositive ? "+" : ""}{scheme.return_pct.toFixed(2)}%
                               </span>
                             </div>
-                            <div className="w-24">
+                            <div className="w-20">
                               <span className="text-neutral-400 mr-1">Today:</span>
                               <span className={`font-bold ${isDayPositive ? "text-emerald-500" : "text-red-500"}`}>
                                 {isDayPositive ? "+" : ""}{scheme.day_change_pct.toFixed(2)}%
                               </span>
                             </div>
-                            <div className="w-28">
+                            <div className="w-20">
                               <span className="text-neutral-400 mr-1">XIRR:</span>
                               <span className={`font-bold ${scheme.xirr !== undefined && scheme.xirr !== null ? (scheme.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
                                 {scheme.xirr !== undefined && scheme.xirr !== null ? `${scheme.xirr.toFixed(2)}%` : "--"}
+                              </span>
+                            </div>
+                            <div className="w-20">
+                              <span className="text-neutral-400 mr-1">CAGR:</span>
+                              <span className={`font-bold ${scheme.cagr !== undefined && scheme.cagr !== null ? (scheme.cagr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                                {scheme.cagr !== undefined && scheme.cagr !== null ? `${scheme.cagr.toFixed(2)}%` : "--"}
                               </span>
                             </div>
                           </div>
@@ -788,6 +848,7 @@ export default function MutualFundsPage() {
                   current={scheme.current}
                   returnPct={scheme.return_pct}
                   xirr={scheme.xirr}
+                  cagr={scheme.cagr}
                   dayChange={scheme.day_change}
                   dayChangePct={scheme.day_change_pct}
                   categoryLabel={scheme.category_label}

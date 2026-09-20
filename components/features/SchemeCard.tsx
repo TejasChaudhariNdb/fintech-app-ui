@@ -22,6 +22,7 @@ interface SchemeCardProps {
   profit?: number;
   returnPct: number;
   xirr?: number | null;
+  cagr?: number | null;
   dayChange?: number;
   dayChangePct?: number;
   categoryLabel?: string;
@@ -54,6 +55,7 @@ export default function SchemeCard({
   profit = 0,
   returnPct,
   xirr,
+  cagr,
   dayChange = 0,
   dayChangePct = 0,
   categoryLabel,
@@ -284,6 +286,13 @@ export default function SchemeCard({
               label="XIRR"
               value={`${xirr.toFixed(2)}%`}
               highlight={xirr >= 0 ? "positive" : "negative"}
+            />
+          )}
+          {cagr !== undefined && cagr !== null && (
+            <MetricItem
+              label="CAGR"
+              value={`${cagr.toFixed(2)}%`}
+              highlight={cagr >= 0 ? "positive" : "negative"}
             />
           )}
           {categoryRank && (

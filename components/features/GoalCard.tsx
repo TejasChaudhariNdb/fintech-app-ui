@@ -22,8 +22,8 @@ interface GoalCardProps {
     id: number;
     name: string;
     icon?: string;
-    target_amount: number;
-    target_year: number;
+    target_amount?: number | null;
+    target_year?: number | null;
     current_value: number;
     monthly_contribution: number;
     projected_value: number;
@@ -34,6 +34,11 @@ interface GoalCardProps {
     linked_schemes: {
       scheme_name: string;
       contribution: number;
+      current_value?: number;
+    }[];
+    linked_equities?: {
+      symbol: string;
+      current_value?: number;
     }[];
   };
   onEdit: () => void;
@@ -58,14 +63,13 @@ const getIcon = (iconName?: string) => {
 };
 
 export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
-  const isShortfall = goal.shortfall > 0;
-  const currentYear = new Date().getFullYear();
+  const hasTarget = goal.target_amount !== null && goal.target_amount !== undefined && goal.target_amount > 0;
+  const hasTargetYear = goal.target_year !== null && goal.target_year !== undefined && goal.target_year > 0;
+  const isShortfall = hasTarget && goal.shortfall > 0;
   const [showMenu, setShowMenu] = useState(false);
 
   return (
     <Card className="p-5 border border-neutral-200 dark:border-white/5 relative group">
-      {/* Header */}
-      {/* Header */}
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -88,11 +92,21 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
               )}
             </div>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Target:{" "}
-              <PrivacyMask>
-                ₹{goal.target_amount.toLocaleString("en-IN")}
-              </PrivacyMask>{" "}
-              by {goal.target_year}
+              {hasTarget && hasTargetYear ? (
+                <>
+                  Target: <PrivacyMask>₹{goal.target_amount!.toLocaleString("en-IN")}</PrivacyMask> by {goal.target_year}
+                </>
+              ) : hasTarget ? (
+                <>
+                  Target: <PrivacyMask>₹{goal.target_amount!.toLocaleString("en-IN")}</PrivacyMask> • Open Timeline
+                </>
+              ) : hasTargetYear ? (
+                <>
+                  Target Year: {goal.target_year} • Open Target
+                </>
+              ) : (
+                "Savings Bucket • Flexible Growth"
+              )}
             </p>
           </div>
         </div>
@@ -101,10 +115,10 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
           {/* Achieved Stats */}
           <div className="text-right pt-1">
             <p className="text-[10px] text-neutral-500 font-medium uppercase tracking-wide">
-              Achieved
+              {hasTarget ? "Achieved" : "Status"}
             </p>
             <p className="font-bold text-xl text-primary-600 dark:text-primary-400 leading-none mt-0.5">
-              {goal.achieved_percentage.toFixed(0)}%
+              {hasTarget ? `${goal.achieved_percentage.toFixed(0)}%` : "Active"}
             </p>
           </div>
 
@@ -154,8 +168,10 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
       {/* Progress Bar */}
       <div className="h-2.5 w-full bg-neutral-100 dark:bg-white/10 rounded-full mb-6 overflow-hidden">
         <div
-          className="h-full bg-primary-500 rounded-full transition-all duration-1000"
-          style={{ width: `${Math.min(100, goal.achieved_percentage)}%` }}
+          className={`h-full rounded-full transition-all duration-1000 ${
+            hasTarget ? "bg-primary-500" : "bg-gradient-to-r from-primary-500 to-emerald-400"
+          }`}
+          style={{ width: hasTarget ? `${Math.min(100, goal.achieved_percentage)}%` : "100%" }}
         />
       </div>
 
@@ -184,7 +200,20 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
       </div>
 
       {/* Insight / Suggestion */}
-      {isShortfall ? (
+      {!hasTarget ? (
+        <div className="mb-5 p-3.5 bg-primary-50/50 dark:bg-primary-500/10 border border-primary-100 dark:border-primary-500/20 rounded-xl flex items-start gap-3">
+          <CheckCircle className="text-primary-500 shrink-0 mt-0.5" size={18} />
+          <div>
+            <p className="text-sm font-semibold text-primary-700 dark:text-primary-300">
+              Savings Bucket Active
+            </p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1">
+              Currently holding <strong>₹{goal.current_value.toLocaleString("en-IN")}</strong>
+              {goal.monthly_contribution > 0 ? ` with ₹${goal.monthly_contribution.toLocaleString("en-IN")}/month allocated SIP.` : "."}
+            </p>
+          </div>
+        </div>
+      ) : isShortfall ? (
         <div className="mb-5 p-3.5 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl flex items-start gap-3">
           <AlertTriangle className="text-red-500 shrink-0 mt-0.5" size={18} />
           <div>
@@ -219,24 +248,41 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
         </div>
       )}
 
-      {/* Linked Schemes */}
-      {goal.linked_schemes.length > 0 && (
+      {/* Linked Assets */}
+      {(goal.linked_schemes.length > 0 || (goal.linked_equities && goal.linked_equities.length > 0)) && (
         <div className="pt-4 border-t border-neutral-100 dark:border-white/5">
           <div className="flex items-center gap-2 mb-2">
             <Briefcase size={14} className="text-neutral-400" />
             <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
-              Funded By
+              Funded By ({goal.linked_schemes.length + (goal.linked_equities?.length || 0)} Assets)
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {goal.linked_schemes.map((s, i) => (
               <span
-                key={i}
+                key={`scheme-${i}`}
                 className="inline-flex items-center px-2 py-1 rounded-md bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-600 dark:text-neutral-300">
-                {s.scheme_name.split(" - ")[0]}
+                <span className="font-medium text-neutral-800 dark:text-neutral-200">{s.scheme_name.split(" - ")[0]}</span>
+                {s.current_value !== undefined && s.current_value !== null && (
+                  <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                    • ₹{Math.round(s.current_value).toLocaleString("en-IN")}
+                  </span>
+                )}
                 {s.contribution > 0 && (
                   <span className="ml-1 text-neutral-400">
                     • ₹{s.contribution}/m
+                  </span>
+                )}
+              </span>
+            ))}
+            {goal.linked_equities?.map((e, i) => (
+              <span
+                key={`eq-${i}`}
+                className="inline-flex items-center px-2 py-1 rounded-md bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-600 dark:text-neutral-300">
+                <span className="font-medium text-neutral-800 dark:text-neutral-200">{e.symbol}</span>
+                {e.current_value !== undefined && e.current_value !== null && (
+                  <span className="ml-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                    • ₹{Math.round(e.current_value).toLocaleString("en-IN")}
                   </span>
                 )}
               </span>

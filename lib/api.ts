@@ -105,6 +105,7 @@ export const api = {
           "/portfolio/xirr",
           "/portfolio/timeseries",
           "/portfolio/mf-journey",
+          "/goals",
           "/goals/",
           "/cas/upload",
           "/cas/upload-json",
