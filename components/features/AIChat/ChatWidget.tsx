@@ -422,10 +422,10 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Main Full-Screen / Centered Chat Modal */}
+      {/* Main Full-Screen Chat Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-0 sm:p-4 lg:p-6 animate-in fade-in duration-200 font-sans">
-          <div className="w-full h-full sm:h-[90vh] sm:max-h-[820px] max-w-5xl flex flex-col bg-white dark:bg-[#0B0E14] sm:rounded-3xl sm:border sm:border-neutral-200/80 dark:sm:border-white/10 shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-[#0B0E14] animate-in fade-in duration-200 font-sans">
+          <div className="w-full h-full flex flex-col overflow-hidden">
             {/* Modern Header */}
             <div className="px-4 py-3 border-b border-neutral-200/80 dark:border-white/10 bg-white/90 dark:bg-[#0E1118]/90 backdrop-blur-md pt-safe-top shrink-0">
               {showHistory ? (
@@ -782,7 +782,7 @@ export default function ChatWidget() {
 
         {/* Input or Rate-Limited Screen */}
         {!showHistory && (
-          <div className="p-3 sm:p-4 border-t border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0B0E14] sm:rounded-b-3xl pb-safe-bottom">
+          <div className="p-3 sm:p-4 border-t border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0B0E14] pb-safe-bottom">
             <div className="max-w-4xl mx-auto w-full">
               {quotaStatus && quotaStatus.remaining === 0 ? (
                 <div className="p-4 rounded-2xl bg-gradient-to-b from-neutral-50 to-white dark:from-[#131722] dark:to-[#0B0E14] border border-amber-500/30 dark:border-amber-500/20 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-300">
