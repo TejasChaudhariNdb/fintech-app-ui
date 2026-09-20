@@ -30,6 +30,11 @@ import {
   ChevronRight,
   Grid,
   List,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -115,6 +120,23 @@ export default function StocksPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [broker, setBroker] = useState("ZERODHA");
+  const [importResult, setImportResult] = useState<{
+    status: "success" | "partial" | "error";
+    total_rows: number;
+    added: number;
+    failed: number;
+    errors: { row: number; symbol: string; reason: string }[];
+    warnings?: string[];
+  } | null>(null);
+  const [showImportResultModal, setShowImportResultModal] = useState(false);
+  const [importErrorModalData, setImportErrorModalData] = useState<{
+    title: string;
+    message: string;
+    missing?: string[];
+    detected?: string[];
+    hint?: string;
+  } | null>(null);
+  const [showImportErrorModal, setShowImportErrorModal] = useState(false);
 
   // Search State
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -382,7 +404,7 @@ export default function StocksPage() {
   const handleImportStocks = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!importFile) {
-      showToast("Please select a file", "error");
+      showToast("Please select a CSV file", "error");
       return;
     }
     if (!targetProfileId) {
@@ -404,11 +426,37 @@ export default function StocksPage() {
         });
       }
 
-      showToast(`Imported ${res.added} holdings successfully.`, "success");
       await loadData();
       closeStockModal();
-    } catch (err) {
-      showToast("Failed to import trades", "error");
+
+      setImportResult(res);
+      if (res.failed > 0 || (res.errors && res.errors.length > 0)) {
+        setShowImportResultModal(true);
+      } else {
+        showToast(`Successfully imported ${res.added} stock holding${res.added !== 1 ? "s" : ""}!`, "success");
+      }
+    } catch (err: any) {
+      closeStockModal();
+      const errData = err.data;
+      if (errData && errData.type === "HEADER_MISMATCH") {
+        setImportErrorModalData({
+          title: "CSV Column Headers Mismatch",
+          message: errData.message || "We could not match the required columns in your file.",
+          missing: errData.missing || [],
+          detected: errData.detected || [],
+          hint: errData.hint || "Please make sure your CSV contains columns for Stock/Instrument Name, Quantity, and Average Buy Price."
+        });
+        setShowImportErrorModal(true);
+      } else {
+        setImportErrorModalData({
+          title: "CSV Upload Error",
+          message: err.message || "Failed to process the uploaded CSV file.",
+          missing: [],
+          detected: [],
+          hint: "Please check your CSV format or download our reference template."
+        });
+        setShowImportErrorModal(true);
+      }
     } finally {
       setIsImporting(false);
     }
@@ -1200,19 +1248,21 @@ export default function StocksPage() {
           </form>
         ) : (
           <form onSubmit={handleImportStocks} className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-500/10 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200 leading-relaxed flex justify-between items-center">
+            <div className="bg-blue-50/80 dark:bg-blue-500/10 p-3.5 rounded-xl text-blue-900 dark:text-blue-100 flex flex-col sm:flex-row justify-between sm:items-center gap-3 border border-blue-200/50 dark:border-blue-500/20">
               <div>
-                <p className="font-semibold mb-1">Upload Instructions:</p>
-                <p>
-                  Supports <b>holdings</b> (Current Snapshot) CSV from
-                  Zerodha/Kite.
+                <p className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-blue-950 dark:text-blue-100">
+                  <Sparkles size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                  Upload Broker CSV or Excel
+                </p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                  Supports <b>Zerodha, Groww, AngelOne</b>, or custom sheets (needs <b>Instrument, Qty, Avg Cost</b>).
                 </p>
               </div>
               <a
                 href="/assets/stock_upload_sheet.csv"
                 download="stock_upload_sheet.csv"
-                className="flex items-center gap-1 text-xs font-semibold bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-500/30 px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors shrink-0">
-                <Download size={14} />
+                className="flex items-center justify-center gap-1.5 text-xs font-semibold bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-500/30 px-3 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/20 transition-colors shrink-0 shadow-xs">
+                <Download size={13} />
                 Sample CSV
               </a>
             </div>
@@ -1251,13 +1301,216 @@ export default function StocksPage() {
               {isImporting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Importing...
+                  Importing & Validating...
                 </>
               ) : (
                 "Import Stocks"
               )}
             </Button>
           </form>
+        )}
+      </Modal>
+
+      {/* Import Result Feedback Modal */}
+      <Modal
+        isOpen={showImportResultModal}
+        onClose={() => setShowImportResultModal(false)}
+        title="CSV Import Summary">
+        {importResult && (
+          <div className="space-y-5">
+            {/* Status Header */}
+            <div
+              className={`p-4 rounded-xl flex items-start gap-3 border ${
+                importResult.status === "success"
+                  ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-900 dark:text-emerald-200"
+                  : importResult.status === "partial"
+                  ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200"
+                  : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-900 dark:text-red-200"
+              }`}>
+              {importResult.status === "success" ? (
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              ) : importResult.status === "partial" ? (
+                <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              )}
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm sm:text-base">
+                  {importResult.status === "success"
+                    ? "All Stocks Imported Successfully!"
+                    : importResult.status === "partial"
+                    ? `Imported ${importResult.added} stocks with ${importResult.failed} issue${
+                        importResult.failed !== 1 ? "s" : ""
+                      }`
+                    : "Failed to Import CSV Rows"}
+                </h4>
+                <p className="text-xs sm:text-sm mt-0.5 opacity-90">
+                  {importResult.status === "success"
+                    ? `All ${importResult.added} holdings have been added/synced to your portfolio.`
+                    : `${importResult.added} out of ${importResult.total_rows} rows were imported. Please review the skipped rows below.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Metrics Pills */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 text-center">
+              <div className="p-3 bg-neutral-50 dark:bg-white/5 rounded-xl border border-neutral-200/60 dark:border-white/10">
+                <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Total Rows</div>
+                <div className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-white mt-0.5">
+                  {importResult.total_rows}
+                </div>
+              </div>
+              <div className="p-3 bg-emerald-50/60 dark:bg-emerald-500/10 rounded-xl border border-emerald-200/60 dark:border-emerald-500/20">
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Imported</div>
+                <div className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">
+                  {importResult.added}
+                </div>
+              </div>
+              <div className="p-3 bg-red-50/60 dark:bg-red-500/10 rounded-xl border border-red-200/60 dark:border-red-500/20">
+                <div className="text-xs text-red-600 dark:text-red-400 font-medium">Skipped</div>
+                <div className="text-lg sm:text-xl font-bold text-red-700 dark:text-red-300 mt-0.5">
+                  {importResult.failed}
+                </div>
+              </div>
+            </div>
+
+            {/* Error Breakdown List */}
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                  <span>Issues Breakdown ({importResult.errors.length})</span>
+                  <span className="text-neutral-500">Row & Details</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 rounded-xl border border-neutral-200 dark:border-white/10 p-2.5 bg-neutral-50/50 dark:bg-white/[0.02]">
+                  {importResult.errors.map((err, i) => (
+                    <div
+                      key={i}
+                      className="bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-white/10 rounded-lg p-2.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 rounded font-mono font-bold text-[11px]">
+                          Row {err.row}
+                        </span>
+                        <span className="font-semibold text-neutral-900 dark:text-white">
+                          {err.symbol || "Unknown Stock"}
+                        </span>
+                      </div>
+                      <div className="text-neutral-600 dark:text-neutral-400 text-[11px] sm:text-xs">
+                        {err.reason}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <a
+                href="/assets/stock_upload_sheet.csv"
+                download="stock_upload_sheet.csv"
+                className="flex items-center justify-center gap-1.5 text-xs font-semibold border border-neutral-200 dark:border-white/10 px-4 py-2.5 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors text-neutral-700 dark:text-neutral-300">
+                <Download size={14} />
+                Download Reference Template
+              </a>
+              <Button
+                onClick={() => setShowImportResultModal(false)}
+                className="w-full sm:flex-1">
+                Done
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Import Error / Header Mismatch Modal */}
+      <Modal
+        isOpen={showImportErrorModal}
+        onClose={() => setShowImportErrorModal(false)}
+        title={importErrorModalData?.title || "CSV Upload Error"}>
+        {importErrorModalData && (
+          <div className="space-y-5">
+            {/* Error Banner */}
+            <div className="p-4 rounded-xl flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-900 dark:text-red-200">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm sm:text-base">
+                  {importErrorModalData.title}
+                </h4>
+                <p className="text-xs sm:text-sm mt-0.5 opacity-90 leading-relaxed">
+                  {importErrorModalData.message}
+                </p>
+              </div>
+            </div>
+
+            {/* Missing Columns Section */}
+            {importErrorModalData.missing && importErrorModalData.missing.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-red-700 dark:text-red-400 flex items-center gap-1.5">
+                  <XCircle size={14} />
+                  <span>Missing Required Columns ({importErrorModalData.missing.length}):</span>
+                </div>
+                <div className="space-y-1.5">
+                  {importErrorModalData.missing.map((col, i) => (
+                    <div
+                      key={i}
+                      className="px-3 py-2 bg-red-50/70 dark:bg-red-500/10 border border-red-200/60 dark:border-red-500/20 rounded-lg text-xs font-medium text-red-800 dark:text-red-300 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                      <span>{col}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Detected Headers in Uploaded File */}
+            {importErrorModalData.detected && importErrorModalData.detected.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center justify-between">
+                  <span>Columns Detected in Your File ({importErrorModalData.detected.length}):</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 p-3 rounded-xl bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+                  {importErrorModalData.detected.map((h, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-md border border-neutral-200 dark:border-neutral-700 font-mono text-xs shadow-xs">
+                      {h}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Helpful Hint */}
+            <div className="p-3 bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-500/20 rounded-xl text-xs text-blue-800 dark:text-blue-300 leading-relaxed flex items-start gap-2">
+              <Sparkles size={15} className="text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold mb-0.5">Quick Solution:</p>
+                <p>
+                  Ensure your column header names match standard formats (e.g. <b>Instrument</b>, <b>Qty</b>, <b>Avg. cost</b>), or download our sample template below and paste your values into it.
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <a
+                href="/assets/stock_upload_sheet.csv"
+                download="stock_upload_sheet.csv"
+                className="flex items-center justify-center gap-1.5 text-xs font-semibold bg-blue-50 dark:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 px-4 py-2.5 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/30 transition-colors text-blue-700 dark:text-blue-200">
+                <Download size={14} />
+                Download Sample Template
+              </a>
+              <Button
+                onClick={() => {
+                  setShowImportErrorModal(false);
+                  setShowStockModal(true);
+                  setStockModalTab("IMPORT");
+                }}
+                className="w-full sm:flex-1">
+                Upload Corrected File
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
 

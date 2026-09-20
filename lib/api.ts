@@ -594,7 +594,11 @@ export const api = {
 
     if (!r.ok) {
       const err = await r.json().catch(() => ({ detail: "Import failed" }));
-      throw new Error(err.detail || "Import failed");
+      const detail = err.detail || err.message || "Import failed";
+      const errorMsg = typeof detail === "string" ? detail : (detail.message || "Import failed");
+      const errorObj = new Error(errorMsg);
+      (errorObj as any).data = typeof detail === "object" ? detail : null;
+      throw errorObj;
     }
     api.clearPortfolioCache();
     return r.json();
