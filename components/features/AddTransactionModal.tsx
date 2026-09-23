@@ -5,6 +5,7 @@ import Modal from "../ui/Modal";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { api } from "@/lib/api";
+import { analytics } from "@/lib/analytics";
 import { Check, TrendingUp, TrendingDown, Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 
@@ -174,6 +175,16 @@ export default function AddTransactionModal({
       }
 
       await api.addManualTransaction(payload, targetProfileId);
+      
+      analytics.track({
+        name: "portfolio_created",
+        properties: { source: "manual", asset_count: 1 },
+      });
+      analytics.track({
+        name: "activation_completed",
+        properties: { activation_type: "mf", source: "manual" },
+      });
+
       const actionMsg = formData.type === "REDEMPTION" ? "Redemption transaction recorded successfully!" : "Purchase transaction added successfully!";
       onSuccess(actionMsg);
       onClose();
@@ -201,8 +212,27 @@ export default function AddTransactionModal({
     setImportError(null);
     setImportSuccess(null);
 
+    analytics.track({
+      name: "cas_upload_started",
+      properties: { format: "CSV", file_size: csvFile.size },
+    });
+
     try {
       const res = await api.importMFTransactionsCSV(csvFile, targetProfileId);
+      
+      analytics.track({
+        name: "cas_upload_succeeded",
+        properties: { format: "CSV", schemes_count: res.schemes_affected },
+      });
+      analytics.track({
+        name: "portfolio_created",
+        properties: { source: "csv", asset_count: res.imported_count },
+      });
+      analytics.track({
+        name: "activation_completed",
+        properties: { activation_type: "mf", source: "csv" },
+      });
+
       const msg = `Successfully imported ${res.imported_count} transaction${res.imported_count === 1 ? "" : "s"} across ${res.schemes_affected} scheme${res.schemes_affected === 1 ? "" : "s"}!${res.skipped_count ? ` (${res.skipped_count} duplicate${res.skipped_count === 1 ? "" : "s"} skipped)` : ""}`;
       setImportSuccess(msg);
       setTimeout(() => {
@@ -210,7 +240,12 @@ export default function AddTransactionModal({
         onClose();
       }, 800);
     } catch (err: any) {
-      setImportError(err.message || "Failed to import CSV. Please verify column headers.");
+      const errMsg = err.message || "Failed to import CSV. Please verify column headers.";
+      analytics.track({
+        name: "cas_upload_failed",
+        properties: { format: "CSV", reason: errMsg },
+      });
+      setImportError(errMsg);
     } finally {
       setImporting(false);
     }

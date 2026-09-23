@@ -18,6 +18,10 @@ function GoogleCallbackHandler() {
     const errorParam = searchParams.get("error");
 
     if (errorParam) {
+      analytics.track({
+        name: "auth_login_failed",
+        properties: { method: "google", reason: errorParam },
+      });
       setError(`Google Authentication Error: ${errorParam}`);
       setTimeout(() => {
         router.push(`/login?error=${encodeURIComponent(errorParam)}`);
@@ -26,6 +30,10 @@ function GoogleCallbackHandler() {
     }
 
     if (!code) {
+      analytics.track({
+        name: "auth_login_failed",
+        properties: { method: "google", reason: "no_code" },
+      });
       setError("No authorization code found in URL.");
       setTimeout(() => {
         router.push("/login?error=no_code");
@@ -41,17 +49,33 @@ function GoogleCallbackHandler() {
         
         localStorage.setItem("access_token", data.access_token);
         
-        // Track signup/login event
-        analytics.track({
-          name: "signup_completed",
-          properties: {
-            signup_source: "google",
-          },
-        });
+        if (data.is_new_user) {
+          analytics.track({
+            name: "auth_register_success",
+            properties: { method: "google" },
+          });
+          analytics.track({
+            name: "signup_completed",
+            properties: {
+              signup_source: "google",
+            },
+          });
+        } else {
+          analytics.track({
+            name: "auth_login_success",
+            properties: { method: "google" },
+          });
+        }
 
         window.location.href = "/";
       } catch (err: any) {
         console.error("Code exchange failed:", err);
+        const reason = err.message || "exchange_failed";
+        analytics.track({
+          name: "auth_login_failed",
+          properties: { method: "google", reason },
+        });
+
         if (err.message === "Account is deactivated") {
           setIsDeactivated(true);
           if (err.reactivationToken) {
@@ -60,7 +84,7 @@ function GoogleCallbackHandler() {
         } else {
           setError(err.message || "Failed to complete Google authentication.");
           setTimeout(() => {
-            router.push(`/login?error=${encodeURIComponent(err.message || "exchange_failed")}`);
+            router.push(`/login?error=${encodeURIComponent(reason)}`);
           }, 3500);
         }
       }
@@ -84,10 +108,8 @@ function GoogleCallbackHandler() {
       localStorage.removeItem("reactivation_token");
       
       analytics.track({
-        name: "signup_completed",
-        properties: {
-          signup_source: "google",
-        },
+        name: "auth_reactivation_success",
+        properties: { method: "google" },
       });
  
       router.push("/");

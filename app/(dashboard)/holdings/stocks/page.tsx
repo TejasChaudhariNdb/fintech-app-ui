@@ -373,6 +373,21 @@ export default function StocksPage() {
             asset_class: "Equity",
           },
         });
+        analytics.track({
+          name: "portfolio_created",
+          properties: {
+            source: "manual",
+            asset_count: 1,
+          },
+        });
+        analytics.track({
+          name: "activation_completed",
+          properties: {
+            activation_type: "stock",
+            source: "manual",
+            asset_count: 1,
+          },
+        });
       }
 
       showToast("Transaction added successfully", "success");
@@ -422,6 +437,21 @@ export default function StocksPage() {
           properties: {
             symbol: "CSV_IMPORT",
             asset_class: "Equity",
+          },
+        });
+        analytics.track({
+          name: "portfolio_created",
+          properties: {
+            source: "csv",
+            asset_count: res.added,
+          },
+        });
+        analytics.track({
+          name: "activation_completed",
+          properties: {
+            activation_type: "stock",
+            source: "csv",
+            asset_count: res.added,
           },
         });
       }

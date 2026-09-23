@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { UploadCloud, PlusCircle, TrendingUp, FileText, FileSpreadsheet } from "lucide-react";
+import { analytics } from "@/lib/analytics";
 
 interface MutualFundsZeroStateProps {
   onImportClick: () => void;
@@ -12,6 +13,12 @@ export default function MutualFundsZeroState({
   onImportCsvClick,
   onManualClick,
 }: MutualFundsZeroStateProps) {
+  useEffect(() => {
+    analytics.track({
+      name: "import_screen_viewed",
+      properties: { source: "holdings_mf_zero_state" },
+    });
+  }, []);
   return (
     <div className="flex flex-col items-center justify-center p-6 py-12 text-center bg-white dark:bg-[#151A23] rounded-2xl border border-neutral-200 dark:border-white/5 shadow-sm max-w-lg mx-auto mt-8">
       <div className="w-16 h-16 bg-primary-50 dark:bg-primary-500/10 rounded-full flex items-center justify-center mb-6">

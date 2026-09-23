@@ -5,11 +5,20 @@ export type AnalyticsEvent =
   | { name: 'landing_page_view'; properties?: { signup_source?: string; referral_code?: string } }
   | { name: 'signup_started'; properties?: { signup_source?: string; referral_code?: string } }
   | { name: 'signup_completed'; properties: { email?: string; signup_source?: string; referral_code?: string } }
-  | { name: 'portfolio_created'; properties: { source: 'plaid' | 'manual' | 'demo' | 'cams' | 'csv'; asset_count: number } }
+  | { name: 'portfolio_created'; properties: { source: 'plaid' | 'manual' | 'demo' | 'cams' | 'csv' | 'stocks'; asset_count: number } }
   | { name: 'first_stock_added'; properties: { symbol: string; asset_class: string } }
   | { name: 'ai_insight_viewed'; properties: { insight_id: string; insight_type: string } }
   | { name: 'weekly_summary_clicked'; properties: { medium: 'email' | 'push'; cohort_week: string } }
   | { name: 'returned_next_day'; properties?: Record<string, any> }
+  // ── Onboarding & Activation funnel events ──────────────────────────────────
+  | { name: 'onboarding_step_shown'; properties: { step: number; step_name: string } }
+  | { name: 'onboarding_step_skipped'; properties?: { from_step?: number } }
+  | { name: 'onboarding_step_completed'; properties: { step: number; method: 'cams' | 'manual' | 'csv' | 'stocks' | 'demo' } }
+  | { name: 'import_screen_viewed'; properties: { source: string } }
+  | { name: 'cas_upload_started'; properties: { format: 'CAS' | 'CSV'; file_size?: number } }
+  | { name: 'cas_upload_failed'; properties: { format: 'CAS' | 'CSV'; reason: string; error_code?: string } }
+  | { name: 'cas_upload_succeeded'; properties: { format: 'CAS' | 'CSV'; schemes_count?: number } }
+  | { name: 'activation_completed'; properties: { activation_type: 'mf' | 'stock' | 'demo'; source: 'cams' | 'manual' | 'csv' | 'demo'; asset_count?: number } }
   // ── Auth page events ───────────────────────────────────────────────────────
   /** User landed on /auth */
   | { name: 'auth_page_viewed'; properties?: { referrer?: string } }
@@ -22,15 +31,15 @@ export type AnalyticsEvent =
   /** Email check failed (network / API error) */
   | { name: 'auth_email_check_failed'; properties: { reason: string } }
   /** User successfully signed in */
-  | { name: 'auth_login_success'; properties: { method: 'email' } }
+  | { name: 'auth_login_success'; properties: { method: 'email' | 'google' } }
   /** Login attempt failed */
-  | { name: 'auth_login_failed'; properties: { method: 'email'; reason: string } }
+  | { name: 'auth_login_failed'; properties: { method: 'email' | 'google'; reason: string } }
   /** User successfully reactivated their account */
-  | { name: 'auth_reactivation_success'; properties: { method: 'email' } }
+  | { name: 'auth_reactivation_success'; properties: { method: 'email' | 'google' } }
   /** User successfully created a new account */
-  | { name: 'auth_register_success'; properties: { method: 'email' } }
+  | { name: 'auth_register_success'; properties: { method: 'email' | 'google' } }
   /** Registration attempt failed */
-  | { name: 'auth_register_failed'; properties: { method: 'email'; reason: string } }
+  | { name: 'auth_register_failed'; properties: { method: 'email' | 'google'; reason: string } }
   /** User clicked "Continue with Google" */
   | { name: 'auth_google_clicked'; properties?: { step?: 'email' } }
   /** User clicked "Use a different email or Google" — went back to Step 1 */
