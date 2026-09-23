@@ -72,20 +72,25 @@ export default function MutualFundsZeroState({
           </button>
         )}
 
-        {/* Tertiary Option: Manual */}
+        {/* Manual Fast Add */}
         <button
           onClick={onManualClick}
-          className="group w-full flex items-center justify-between p-4 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:border-primary-500/50 dark:hover:border-primary-500/50 rounded-xl transition-all active:scale-[0.98]">
+          className="group w-full flex items-center justify-between p-4 bg-white dark:bg-white/5 border border-primary-500/30 hover:border-primary-500 dark:border-primary-500/30 rounded-xl transition-all active:scale-[0.98]">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-neutral-100 dark:bg-white/10 rounded-lg group-hover:bg-primary-50 dark:group-hover:bg-primary-500/20 transition-colors">
-              <PlusCircle className="w-6 h-6 text-neutral-600 dark:text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" />
+            <div className="p-2 bg-primary-50 dark:bg-primary-500/20 rounded-lg group-hover:bg-primary-100 dark:group-hover:bg-primary-500/30 transition-colors">
+              <PlusCircle className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div className="text-left">
-              <div className="font-semibold text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm sm:text-base">
-                Add Funds Manually
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-neutral-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm sm:text-base">
+                  Add Holding Manually
+                </span>
+                <span className="text-[10px] font-bold text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-500/20 px-2 py-0.5 rounded-full">
+                  ⚡ 15s • No files needed
+                </span>
               </div>
               <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                Search & add transactions one by one
+                Search any mutual fund by name and add in seconds
               </div>
             </div>
           </div>
