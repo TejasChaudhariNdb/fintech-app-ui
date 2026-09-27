@@ -311,7 +311,11 @@ export default function HomePage() {
       await api.refreshNAVs();
 
       // 3. Start Polling for completion
+      let attempts = 0;
+      const maxAttempts = 15; // 30 seconds max (15 * 2s)
+
       const pollInterval = setInterval(async () => {
+        attempts++;
         try {
           const latestNetWorth = await api.getNetWorth();
           const newLastUpdated = latestNetWorth.last_updated
@@ -324,22 +328,19 @@ export default function HomePage() {
             await loadData(); // Reload full dashboard
             setRefreshing(false);
             showToast("Portfolio updated successfully", "success");
+            return;
           }
         } catch (e) {
           console.error("Polling error", e);
         }
-      }, 2000); // Check every 2 seconds
 
-      // 4. Safety Timeout (Stop polling after 30 seconds)
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        if (refreshing) {
+        // Safety Timeout (Stop polling after 30 seconds)
+        if (attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          await loadData();
           setRefreshing(false);
-          // Don't show success, just stop spinning. It might still be running or failed silently.
-          // Or reload distinct data just in case.
-          loadData();
         }
-      }, 30000);
+      }, 2000); // Check every 2 seconds
     } catch (err: any) {
       console.error("Failed to refresh NAVs:", err);
       showToast("Failed to trigger update", "error");
@@ -385,7 +386,7 @@ export default function HomePage() {
           onRefresh={handleRefreshNAVs}
           isRefreshing={refreshing}
           dayChangePct={summary?.day_change_pct || 0}
-          lastUpdated={new Date().toISOString()}
+          lastUpdated={netWorth?.last_updated}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
         />
