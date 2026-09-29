@@ -35,6 +35,7 @@ export default function BottomNav() {
 
   return (
     <nav
+      id="tour-bottom-nav"
       aria-label="Mobile Navigation"
       className="fixed bottom-0 left-0 right-0 z-40 select-none pointer-events-auto"
     >

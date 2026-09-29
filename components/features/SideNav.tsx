@@ -76,7 +76,7 @@ export default function SideNav() {
   const displayName = user?.full_name || user?.email?.split("@")[0] || "User";
 
   return (
-    <aside className="hidden lg:flex w-60 flex-col bg-white dark:bg-[#0F1219] border-r border-neutral-200 dark:border-white/5 h-screen sticky top-0">
+    <aside id="tour-side-nav" className="hidden lg:flex w-60 flex-col bg-white dark:bg-[#0F1219] border-r border-neutral-200 dark:border-white/5 h-screen sticky top-0">
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-5 mb-2">
         <div className="h-8 w-8 rounded-lg bg-primary-600 flex items-center justify-center shadow-sm shadow-primary-500/30">

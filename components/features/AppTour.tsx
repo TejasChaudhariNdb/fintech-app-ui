@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Users, ShieldCheck, TrendingUp, Sparkles, X, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
+import { Users, ShieldCheck, TrendingUp, Compass, Sparkles, X, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
 import { useIsDemo } from "@/lib/hooks/useIsDemo";
 
 interface TourStep {
@@ -34,6 +34,13 @@ const TOUR_STEPS: TourStep[] = [
     description: "Track verified XIRR performance, AMC diversification, and individual family member contributions.",
     icon: TrendingUp,
     badge: "Analytics",
+  },
+  {
+    targetId: "tour-navigation",
+    title: "Holdings, Tax Reports & Goals",
+    description: "Explore detailed scheme holdings, generate ITR-ready Capital Gains tax statements, or track family goals.",
+    icon: Compass,
+    badge: "Navigation",
   },
   {
     targetId: "tour-ai-chat",
@@ -119,14 +126,20 @@ export default function AppTour() {
     const step = TOUR_STEPS[currentStep];
     if (!step) return;
 
-    const el = document.getElementById(step.targetId);
+    let targetElementId = step.targetId;
+    if (step.targetId === "tour-navigation") {
+      const isMobile = typeof window !== "undefined" ? window.innerWidth < 1024 : false;
+      targetElementId = isMobile ? "tour-bottom-nav" : "tour-side-nav";
+    }
+
+    const el = document.getElementById(targetElementId);
     if (!el) {
       setHighlightRect(null);
       return;
     }
 
-    // Scroll element into view (except fixed elements like the floating AI button)
-    if (step.targetId !== "tour-ai-chat") {
+    // Scroll element into view (except fixed elements like the floating AI button or nav bars)
+    if (step.targetId !== "tour-ai-chat" && step.targetId !== "tour-navigation") {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
 
