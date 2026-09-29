@@ -337,7 +337,7 @@ export default function HomePage() {
 
         {/* Family Portfolio Summary — per-profile breakdown */}
         {summary && summary.invested > 0 && (
-          <section>
+          <section id="tour-portfolio-summary">
             <FamilyPortfolioSummary
               invested={summary.invested || 0}
               current={summary.current || 0}
@@ -654,7 +654,7 @@ export default function HomePage() {
           </section>
           {/* Portfolio Summary */}
           {summary && (
-            <section>
+            <section id="tour-portfolio-summary">
               <PortfolioSummary
                 invested={summary.invested || 0}
                 current={summary.current || 0}

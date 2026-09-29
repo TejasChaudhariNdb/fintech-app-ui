@@ -5,6 +5,7 @@ interface CardProps {
   className?: string;
   onClick?: () => void;
   variant?: "default" | "glass" | "outlined";
+  id?: string;
 }
 
 export default function Card({
@@ -12,6 +13,7 @@ export default function Card({
   className = "",
   onClick,
   variant = "default",
+  id,
 }: CardProps) {
   const baseClasses = "rounded-2xl transition-all duration-200";
 
@@ -23,6 +25,7 @@ export default function Card({
 
   return (
     <div
+      id={id}
       className={`${baseClasses} ${variants[variant]} ${className} ${
         onClick
           ? "cursor-pointer hover:border-primary-500/30 hover:shadow-2xl hover:-translate-y-1"

@@ -39,6 +39,7 @@ import {
   Share2,
   Camera,
   Loader2,
+  Compass,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -1304,6 +1305,29 @@ export default function ProfilePage() {
                 )}
                 <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
               </div>
+            </button>
+
+            <button
+              onClick={() => {
+                router.push("/");
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("start-app-tour"));
+                }, 600);
+              }}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400">
+                  <Compass size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">Take Interactive Tour</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Replay the quick walkthrough of key features
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
             </button>
 
             {(deferredPrompt || (isIos && !isStandalone)) && (

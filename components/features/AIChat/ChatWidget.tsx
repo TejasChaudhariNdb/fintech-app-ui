@@ -907,6 +907,7 @@ export default function ChatWidget() {
       {/* Floating Trigger Button (Positioned comfortably above mobile bottom nav with safe-area spacing) */}
       {!isOpen && (
         <button
+          id="tour-ai-chat"
           onClick={() => setIsOpen(true)}
           className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] lg:bottom-8 right-4 sm:right-6 z-40 group h-11 sm:h-12 shadow-[0_8px_25px_rgba(99,102,241,0.35)] dark:shadow-[0_8px_30px_rgba(99,102,241,0.45)] flex items-center gap-2 transition-all duration-200 border border-white/25 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 hover:shadow-indigo-500/40 text-white rounded-full px-4 sm:px-5 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl font-sans"
           aria-label="Open Arthavi AI Assistant"

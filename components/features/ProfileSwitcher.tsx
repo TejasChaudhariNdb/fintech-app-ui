@@ -56,7 +56,7 @@ export default function ProfileSwitcher() {
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative" ref={containerRef} id="tour-profile-switcher">
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

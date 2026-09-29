@@ -20,6 +20,7 @@ import FcmManager from "@/components/FcmManager";
 import FeedbackButton from "@/components/features/FeedbackButton";
 import WhatsNewModal from "@/components/features/WhatsNewModal";
 import DemoRestrictionModal from "@/components/ui/DemoRestrictionModal";
+import AppTour from "@/components/features/AppTour";
 
 export default function DashboardLayout({
   children,
@@ -221,6 +222,7 @@ export default function DashboardLayout({
       <FeedbackButton />
       <WhatsNewModal />
       <DemoRestrictionModal />
+      <AppTour />
     </PrivacyProvider>
   );
 }
