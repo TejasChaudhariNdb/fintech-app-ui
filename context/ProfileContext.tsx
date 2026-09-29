@@ -92,8 +92,6 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
     setActiveProfileId(id);
     localStorage.setItem("active_profile_id", id);
-    // Clear API cache so that calls retrieve correct profile scope
-    api.clearPortfolioCache();
 
     // Smoothly transition toast to success checked state after 800ms
     setTimeout(() => {

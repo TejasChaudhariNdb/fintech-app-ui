@@ -94,11 +94,11 @@ export default function HomePage() {
 
   const loadData = async () => {
     try {
-      console.log("Loading dashboard data...", activeProfileId);
+      console.log("Loading dashboard data directly via API...", activeProfileId);
       setError("");
+      setLoading(true);
 
-      const userEmail = localStorage.getItem("user_email") || "anonymous";
-      const getCache = (key: string) => localStorage.getItem(`${userEmail}:${key}:${activeProfileId}`);
+      const userEmail = typeof window !== "undefined" ? localStorage.getItem("user_email") || "anonymous" : "anonymous";
 
       if (activeProfileId === "all") {
         // 1. Clear individual-only state
@@ -106,34 +106,7 @@ export default function HomePage() {
         setInsights([]);
         setBenchmark(null);
 
-        // 2. Try Cache
-        const cachedFam = getCache("family-summary");
-        const cachedGoals = getCache("goals");
-        const cachedFamSummary = getCache("portfolio-summary");
-        const cachedHistory = getCache("portfolio-history");
-        const cachedTopHoldings = getCache("family-top-holdings");
-
-        let hadCache = false;
-        if (cachedFam) {
-          try {
-            const parsedFam = JSON.parse(cachedFam);
-            setFamilySummary(parsedFam.data);
-            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data);
-            if (cachedFamSummary) setSummary(JSON.parse(cachedFamSummary).data);
-            if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
-            if (cachedTopHoldings) setTopHoldings(JSON.parse(cachedTopHoldings).data.holdings || []);
-            setLoading(false);
-            hadCache = true;
-          } catch (e) {
-            console.warn("Invalid cached family summary", e);
-          }
-        }
-
-        if (!hadCache) {
-          setLoading(true);
-        }
-
-        // 3. Fetch Fresh Data
+        // 2. Fetch Fresh Family Data directly from API
         const [famData, g, up, ps, history, topH] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
@@ -162,7 +135,7 @@ export default function HomePage() {
         ]);
 
         if (famData) setFamilySummary(famData);
-        setGoals(g);
+        setGoals(g || []);
         if (ps) setSummary(ps);
         if (history) setPerfData(history);
         if (topH) setTopHoldings(topH.holdings || []);
@@ -174,55 +147,13 @@ export default function HomePage() {
             signup_source: up.signup_source,
           });
         }
-        setLoading(false);
       } else {
         // --- INDIVIDUAL PROFILE DASHBOARD LOAD ---
         // 1. Clear family-only state
         setFamilySummary(null);
         setTopHoldings([]);
 
-        // 2. Try to load from cache first
-        const cachedNw = getCache("net-worth");
-        const cachedPs = getCache("portfolio-summary");
-        const cachedGoals = getCache("goals");
-        const cachedHistory = getCache("portfolio-history");
-        const cachedXirr = getCache("xirr");
-        const cachedInsights = getCache("insights");
-
-        let hadCache = false;
-        if (cachedNw && cachedPs) {
-          try {
-            const parsedNw = JSON.parse(cachedNw);
-            const parsedXirr = cachedXirr ? JSON.parse(cachedXirr).data : null;
-            setNetWorth(parsedNw.data);
-            setSummary({
-              ...JSON.parse(cachedPs).data,
-              xirr: parsedXirr?.xirr || 0,
-              mf_xirr: parsedXirr?.mf_xirr || 0,
-              stock_xirr: parsedXirr?.stock_xirr || 0,
-            });
-            if (cachedGoals) setGoals(JSON.parse(cachedGoals).data);
-            if (cachedHistory) setPerfData(JSON.parse(cachedHistory).data);
-            if (cachedInsights) setInsights(JSON.parse(cachedInsights).data);
-
-            setLoading(false);
-            hadCache = true;
-
-            const cacheTimestamp = parsedNw.timestamp || 0;
-            const hoursSinceCache = (Date.now() - cacheTimestamp) / (1000 * 60 * 60);
-            if (hoursSinceCache > 6) {
-              setIsBackgroundRefreshing(true);
-            }
-          } catch (e) {
-            console.warn("Invalid cache data", e);
-          }
-        }
-
-        if (!hadCache) {
-          setLoading(true);
-        }
-
-        // 3. Fetch Fresh Data in Background
+        // 2. Fetch Fresh Data directly from API
         const [nw, ps, g, xirrData, history, ins, bm, up] = await Promise.all([
           api.getNetWorth().catch((err) => {
             console.error("Net worth error:", err);
@@ -272,9 +203,9 @@ export default function HomePage() {
           mf_xirr: xirrData?.mf_xirr || 0,
           stock_xirr: xirrData?.stock_xirr || 0,
         });
-        setGoals(g);
-        setPerfData(history);
-        setInsights(ins);
+        setGoals(g || []);
+        setPerfData(history || []);
+        setInsights(ins || []);
         setBenchmark(bm);
         if (up) {
           setUserProfile(up);
@@ -284,7 +215,6 @@ export default function HomePage() {
             signup_source: up.signup_source,
           });
         }
-        setLoading(false);
       }
     } catch (err: any) {
       console.error("Failed to load dashboard data:", err);
@@ -618,11 +548,23 @@ export default function HomePage() {
     return <AppSkeleton />;
   }
 
-  // ✅ UX: Onboarding for New Users (Empty State)
-  const isNewUserIndividual = summary && summary.invested === 0;
-  const isNewUserFamily = familySummary && familySummary.net_worth === 0 && profiles.length <= 1;
+  // ✅ UX: Onboarding / Empty State
+  // If an individual profile genuinely has 0 assets after loading finishes, show OnboardingWizard to prompt them to import
+  const isProfileEmpty =
+    activeProfileId !== "all" &&
+    netWorth !== null &&
+    netWorth.net_worth === 0 &&
+    summary !== null &&
+    summary.invested === 0 &&
+    summary.current === 0;
 
-  if (isNewUserIndividual || isNewUserFamily) {
+  // If Family view has 0 assets overall across all profiles
+  const isFamilyEmpty =
+    activeProfileId === "all" &&
+    familySummary !== null &&
+    familySummary.net_worth === 0;
+
+  if (isProfileEmpty || isFamilyEmpty) {
     return <OnboardingWizard userProfile={userProfile} />;
   }
 
