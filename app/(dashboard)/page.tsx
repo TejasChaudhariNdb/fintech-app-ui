@@ -302,9 +302,15 @@ export default function HomePage() {
       setRefreshing(true);
       showToast("Updating portfolio values...", "loading");
 
+      const isFamilyView = activeProfileId === "all";
+
       // 1. Capture current "last updated" time (to compare against)
-      const initialLastUpdated = netWorth?.last_updated
-        ? new Date(netWorth.last_updated).getTime()
+      const currentTimestamp = isFamilyView
+        ? familySummary?.last_updated
+        : netWorth?.last_updated;
+
+      const initialLastUpdated = currentTimestamp
+        ? new Date(currentTimestamp).getTime()
         : 0;
 
       // 2. Trigger Background Task
@@ -317,10 +323,18 @@ export default function HomePage() {
       const pollInterval = setInterval(async () => {
         attempts++;
         try {
-          const latestNetWorth = await api.getNetWorth();
-          const newLastUpdated = latestNetWorth.last_updated
-            ? new Date(latestNetWorth.last_updated).getTime()
-            : 0;
+          let newLastUpdated = 0;
+          if (isFamilyView) {
+            const latestFam = await api.getFamilySummary();
+            newLastUpdated = latestFam?.last_updated
+              ? new Date(latestFam.last_updated).getTime()
+              : 0;
+          } else {
+            const latestNetWorth = await api.getNetWorth();
+            newLastUpdated = latestNetWorth?.last_updated
+              ? new Date(latestNetWorth.last_updated).getTime()
+              : 0;
+          }
 
           // If timestamp is NEWER than what we started with, it's done!
           if (newLastUpdated > initialLastUpdated) {
@@ -386,7 +400,7 @@ export default function HomePage() {
           onRefresh={handleRefreshNAVs}
           isRefreshing={refreshing}
           dayChangePct={summary?.day_change_pct || 0}
-          lastUpdated={netWorth?.last_updated}
+          lastUpdated={familySummary?.last_updated || netWorth?.last_updated}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
         />
