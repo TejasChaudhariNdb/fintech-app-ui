@@ -45,7 +45,7 @@ export default function MutualFundsZeroState({
             <div className="text-left">
               <div className="font-semibold text-sm sm:text-base">Import CAS Statement</div>
               <div className="text-xs text-primary-100 opacity-90">
-                Full history from CAMS / KFintech PDF
+                Full history from CAMS / KFintech PDF (supports multiple statements &amp; emails)
               </div>
             </div>
           </div>

@@ -16,8 +16,9 @@ export type AnalyticsEvent =
   | { name: 'onboarding_step_completed'; properties: { step: number; method: 'cams' | 'manual' | 'csv' | 'stocks' | 'demo' } }
   | { name: 'import_screen_viewed'; properties: { source: string } }
   | { name: 'cas_upload_started'; properties: { format: 'CAS' | 'CSV'; file_size?: number } }
-  | { name: 'cas_upload_failed'; properties: { format: 'CAS' | 'CSV'; reason: string; error_code?: string } }
-  | { name: 'cas_upload_succeeded'; properties: { format: 'CAS' | 'CSV'; schemes_count?: number } }
+  | { name: 'cas_upload_failed'; properties: { format: 'CAS' | 'CSV'; reason: string; error_code?: string; status_code?: number } }
+  | { name: 'cas_upload_duplicate'; properties: { format: 'CAS' | 'CSV'; profile_id?: string } }
+  | { name: 'cas_upload_succeeded'; properties: { format: 'CAS' | 'CSV'; schemes_count?: number; new_transactions?: number; pan_established?: boolean } }
   | { name: 'activation_completed'; properties: { activation_type: 'mf' | 'stock' | 'demo'; source: 'cams' | 'manual' | 'csv' | 'demo'; asset_count?: number } }
   // ── Auth page events ───────────────────────────────────────────────────────
   /** User landed on /auth */

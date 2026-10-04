@@ -563,7 +563,10 @@ export const api = {
 
     if (!r.ok) {
       const err = await r.json().catch(() => ({ detail: "Upload failed" }));
-      throw new Error(err.detail || "Upload failed");
+      const error: any = new Error(err.detail || "Upload failed");
+      error.status = r.status;
+      error.detail = err.detail;
+      throw error;
     }
     api.clearPortfolioCache();
     return r.json();

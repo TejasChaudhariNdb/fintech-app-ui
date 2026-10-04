@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   Zap,
   Sparkles,
+  Info,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -50,10 +51,37 @@ export default function OnboardingWizard({
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [instructionTab, setInstructionTab] = useState<"CAMS" | "KFINTECH">("CAMS");
+  const [importResult, setImportResult] = useState<{
+    status: "success" | "already_imported";
+    message?: string;
+    new_transactions?: number;
+    schemes_count?: number;
+    folios_count?: number;
+    pan_established?: boolean;
+  } | null>(null);
   const [signupSource, setSignupSource] = useState("other");
   const [userEmail, setUserEmail] = useState("");
   const [copied, setCopied] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
+
+  const resetUploadForm = () => {
+    setSuccess(false);
+    setFile(null);
+    setPassword("");
+    setImportResult(null);
+    setError("");
+    setErrorStatus(null);
+  };
+
+  const handleFinishAndRedirect = () => {
+    if (onClose) {
+      onClose();
+    }
+    router.replace("/holdings/mutual-funds");
+    router.refresh();
+  };
 
   // Track step shown
   useEffect(() => {
@@ -133,6 +161,7 @@ export default function OnboardingWizard({
 
     setUploading(true);
     setError("");
+    setErrorStatus(null);
 
     analytics.track({
       name: "cas_upload_started",
@@ -144,31 +173,69 @@ export default function OnboardingWizard({
 
     try {
       if (uploadFormat === "CAS") {
-        await api.uploadCAS(file, password, selectedProfileId);
+        const res = await api.uploadCAS(file, password, selectedProfileId);
+        setImportResult(res);
+
+        if (res?.status === "already_imported") {
+          analytics.track({
+            name: "cas_upload_duplicate",
+            properties: {
+              format: uploadFormat,
+              profile_id: selectedProfileId,
+            },
+          });
+        } else {
+          analytics.track({
+            name: "cas_upload_succeeded",
+            properties: {
+              format: uploadFormat,
+              new_transactions: res?.new_transactions ?? 0,
+              schemes_count: res?.schemes_count ?? 0,
+              pan_established: res?.pan_established ?? false,
+            },
+          });
+
+          analytics.track({
+            name: "portfolio_created",
+            properties: {
+              source: "cams",
+              asset_count: res?.schemes_count || 1,
+            },
+          });
+
+          analytics.track({
+            name: "activation_completed",
+            properties: {
+              activation_type: "mf",
+              source: "cams",
+            },
+          });
+        }
       } else {
         await api.importMFTransactionsCSV(file, selectedProfileId);
+        setImportResult({ status: "success", message: "CSV imported successfully" });
+
+        analytics.track({
+          name: "cas_upload_succeeded",
+          properties: { format: "CSV" },
+        });
+
+        analytics.track({
+          name: "portfolio_created",
+          properties: {
+            source: "csv",
+            asset_count: 1,
+          },
+        });
+
+        analytics.track({
+          name: "activation_completed",
+          properties: {
+            activation_type: "mf",
+            source: "csv",
+          },
+        });
       }
-
-      analytics.track({
-        name: "cas_upload_succeeded",
-        properties: { format: uploadFormat },
-      });
-
-      analytics.track({
-        name: "portfolio_created",
-        properties: {
-          source: uploadFormat === "CAS" ? "cams" : "csv",
-          asset_count: 1,
-        },
-      });
-
-      analytics.track({
-        name: "activation_completed",
-        properties: {
-          activation_type: "mf",
-          source: uploadFormat === "CAS" ? "cams" : "csv",
-        },
-      });
 
       analytics.track({
         name: "onboarding_step_completed",
@@ -180,15 +247,10 @@ export default function OnboardingWizard({
 
       setUploading(false);
       setSuccess(true);
-      setTimeout(() => {
-        if (onClose) {
-          onClose();
-        }
-        router.replace("/holdings/mutual-funds");
-        router.refresh();
-      }, 2000);
     } catch (err: any) {
+      setErrorStatus(err.status || null);
       const errorMsg =
+        err.detail ||
         err.message ||
         (uploadFormat === "CAS"
           ? "Upload failed. Check your password."
@@ -199,6 +261,7 @@ export default function OnboardingWizard({
         properties: {
           format: uploadFormat,
           reason: errorMsg,
+          status_code: err.status,
         },
       });
       setUploading(false);
@@ -293,7 +356,7 @@ export default function OnboardingWizard({
                 Import CAS Statement
               </h3>
               <p className="text-neutral-500 dark:text-neutral-400 text-xs sm:text-sm mb-6 grow leading-relaxed">
-                Upload your CAMS / KFintech PDF to sync all your mutual funds from day one.
+                Upload your CAMS or KFintech PDF to sync all your mutual funds from day one (supports multiple emails &amp; statements).
               </p>
               <div className="w-full flex items-center justify-between font-bold text-blue-600 dark:text-blue-400 text-sm pt-2 border-t border-neutral-100 dark:border-white/5">
                 <span>Upload CAS PDF</span>
@@ -386,19 +449,132 @@ export default function OnboardingWizard({
     );
   }
 
-  // SUCCESS STATE
+  // SUCCESS STATE: Already Imported (Duplicate File)
+  if (success && importResult?.status === "already_imported") {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 animate-fade-in text-center max-w-lg mx-auto">
+        <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-5 text-blue-600 dark:text-blue-400">
+          <CheckCircle className="h-9 w-9" />
+        </div>
+        <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
+          Statement Already Imported
+        </h2>
+        <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed mb-6">
+          This statement has already been imported for this profile. Your portfolio is up to date and zero duplicates were added.
+        </p>
+
+        <div className="w-full bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-4 mb-6 text-left space-y-2">
+          <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+            <span>Duplicate check:</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">Verified (Zero duplicates)</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+            <span>New transactions added:</span>
+            <span className="font-semibold text-neutral-900 dark:text-white">0</span>
+          </div>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-200/60 dark:border-white/5">
+            💡 If you have another statement from a different email address or from KFintech, you can upload it now.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <Button
+            type="button"
+            onClick={resetUploadForm}
+            variant="outline"
+            className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2">
+            <Plus size={16} />
+            Upload Another CAS
+          </Button>
+          <Button
+            type="button"
+            onClick={handleFinishAndRedirect}
+            variant="primary"
+            className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20">
+            <span>View Portfolio</span>
+            <ArrowRight size={16} />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // SUCCESS STATE: New import or merged transactions
   if (success) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 animate-fade-in text-center">
-        <div className="h-20 w-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6 animate-bounce">
-          <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 animate-fade-in text-center max-w-lg mx-auto">
+        <div className="h-16 w-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-5 text-emerald-600 dark:text-emerald-400 animate-bounce">
+          <CheckCircle className="h-9 w-9" />
         </div>
         <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
           Import Successful! 🚀
         </h2>
-        <p className="text-neutral-500 dark:text-neutral-400 max-w-sm">
-          We have calculated your portfolio values and analytics. Redirecting to your dashboard...
+        <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed mb-6">
+          We have reconciled your statement and updated your portfolio values and analytics.
         </p>
+
+        {uploadFormat === "CAS" && importResult && (
+          <div className="w-full bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-2xl p-4 mb-6 space-y-3 text-left">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2.5 rounded-xl bg-white dark:bg-[#151A23] border border-neutral-100 dark:border-white/5">
+                <p className="text-lg font-bold text-primary-600 dark:text-primary-400">
+                  {importResult.new_transactions ?? 0}
+                </p>
+                <p className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                  Transactions
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-[#151A23] border border-neutral-100 dark:border-white/5">
+                <p className="text-lg font-bold text-neutral-900 dark:text-white">
+                  {importResult.schemes_count ?? 0}
+                </p>
+                <p className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                  Mutual Funds
+                </p>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white dark:bg-[#151A23] border border-neutral-100 dark:border-white/5">
+                <p className="text-lg font-bold text-neutral-900 dark:text-white">
+                  {importResult.folios_count ?? 0}
+                </p>
+                <p className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                  Folios
+                </p>
+              </div>
+            </div>
+
+            {importResult.pan_established && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
+                <Check size={14} className="shrink-0" />
+                <span>Investor PAN registered and linked to this profile</span>
+              </div>
+            )}
+
+            <div className="text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-200/60 dark:border-white/5">
+              💡 <strong>Multiple statements?</strong> You can upload another CAS from a different email address or from KFintech — statements sharing your PAN will merge into this single portfolio.
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          {uploadFormat === "CAS" && (
+            <Button
+              type="button"
+              onClick={resetUploadForm}
+              variant="outline"
+              className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2">
+              <Plus size={16} />
+              Upload Another CAS
+            </Button>
+          )}
+          <Button
+            type="button"
+            onClick={handleFinishAndRedirect}
+            variant="primary"
+            className="flex-1 py-3 text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20">
+            <span>View Portfolio</span>
+            <ArrowRight size={16} />
+          </Button>
+        </div>
       </div>
     );
   }
@@ -445,11 +621,19 @@ export default function OnboardingWizard({
             <div className="flex items-center justify-between text-left font-bold text-blue-900 dark:text-blue-200 mb-3">
               <span className="flex items-center gap-2">
                 <ExternalLink size={18} className="text-blue-600 dark:text-blue-400" />
-                How to get your free CAMS Statement:
+                How to get your free CAS Statement:
               </span>
               <span className="text-xs bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full">
                 Takes 60 seconds
               </span>
+            </div>
+
+            {/* Multi-statement / Multi-email banner */}
+            <div className="mb-4 p-3 bg-blue-100/60 dark:bg-blue-900/30 rounded-xl border border-blue-200/60 dark:border-blue-800/40 text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>Multiple investments or email accounts?</strong> You can upload another CAS from a different email address or another registrar (CAMS and KFintech). All statements sharing your PAN will merge into this single portfolio without creating duplicates.
+              </div>
             </div>
 
             <div className="space-y-4 text-sm text-neutral-700 dark:text-neutral-300">
@@ -480,35 +664,91 @@ export default function OnboardingWizard({
                 </div>
               )}
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="bg-white/80 dark:bg-black/20 p-3.5 rounded-xl border border-blue-100 dark:border-white/5 space-y-2">
-                  <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
-                    Step 1: Open CAMS Online
-                  </p>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-300">
-                    Click below to open the official CAMS statement generator page.
-                  </p>
-                  <a
-                    href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 font-bold text-xs text-white rounded-lg transition-all text-center cursor-pointer shadow-sm">
-                    Open CAMS Online <ExternalLink size={12} />
-                  </a>
-                </div>
-
-                <div className="bg-white/80 dark:bg-black/20 p-3.5 rounded-xl border border-blue-100 dark:border-white/5 space-y-2">
-                  <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
-                    Step 2: Select Statement Options
-                  </p>
-                  <ul className="text-xs space-y-1 text-neutral-600 dark:text-neutral-300">
-                    <li>• Select <strong>&quot;Detailed&quot;</strong> (do not select Summary)</li>
-                    <li>• Period: <strong>&quot;Specific Period&quot;</strong> (Jan 2000 to Today)</li>
-                    <li>• Paste your email and set any password of your choice</li>
-                    <li>• Download the PDF from your inbox within 5 mins</li>
-                  </ul>
-                </div>
+              {/* Registrar Tabs */}
+              <div className="flex items-center gap-2 border-b border-blue-200/60 dark:border-blue-900/40 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setInstructionTab("CAMS")}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    instructionTab === "CAMS"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-white/5"
+                  }`}>
+                  CAMS Online (HDFC, ICICI, SBI...)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInstructionTab("KFINTECH")}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    instructionTab === "KFINTECH"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-white/5"
+                  }`}>
+                  KFintech (Axis, Nippon, UTI, Mirae...)
+                </button>
               </div>
+
+              {instructionTab === "CAMS" ? (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="bg-white/80 dark:bg-black/20 p-3.5 rounded-xl border border-blue-100 dark:border-white/5 space-y-2">
+                    <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
+                      Step 1: Open CAMS Online
+                    </p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                      Click below to open the official CAMS statement generator page.
+                    </p>
+                    <a
+                      href="https://www.camsonline.com/Investors/Statements/Consolidated-Account-Statement"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 font-bold text-xs text-white rounded-lg transition-all text-center cursor-pointer shadow-sm">
+                      Open CAMS Online <ExternalLink size={12} />
+                    </a>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-black/20 p-3.5 rounded-xl border border-blue-100 dark:border-white/5 space-y-2">
+                    <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
+                      Step 2: Select Statement Options
+                    </p>
+                    <ul className="text-xs space-y-1 text-neutral-600 dark:text-neutral-300">
+                      <li>• Select <strong>&quot;Detailed&quot;</strong> (do not select Summary)</li>
+                      <li>• Period: <strong>&quot;Specific Period&quot;</strong> (Jan 2000 to Today)</li>
+                      <li>• Paste your email and set any password of your choice</li>
+                      <li>• Download the PDF from your inbox within 5 mins</li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="bg-white/80 dark:bg-black/20 p-3.5 rounded-xl border border-blue-100 dark:border-white/5 space-y-2">
+                    <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
+                      Step 1: Open KFintech Portal
+                    </p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-300">
+                      Click below to open the official KFintech investor portal.
+                    </p>
+                    <a
+                      href="https://mfs.kfintech.com/investor/General/CASBalances"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 font-bold text-xs text-white rounded-lg transition-all text-center cursor-pointer shadow-sm">
+                      Open KFintech Portal <ExternalLink size={12} />
+                    </a>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-black/20 p-3.5 rounded-xl border border-blue-100 dark:border-white/5 space-y-2">
+                    <p className="text-xs font-bold text-blue-800 dark:text-blue-300 uppercase">
+                      Step 2: Select Statement Options
+                    </p>
+                    <ul className="text-xs space-y-1 text-neutral-600 dark:text-neutral-300">
+                      <li>• Select <strong>&quot;Detailed&quot;</strong> Statement</li>
+                      <li>• Period: Select entire period up to Today</li>
+                      <li>• Enter your registered email and choose password</li>
+                      <li>• Download the PDF from your inbox within 5 mins</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -557,7 +797,7 @@ export default function OnboardingWizard({
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
                   {uploadFormat === "CAS"
-                    ? "Upload your password-protected CAS statement from CAMS / KFintech"
+                    ? "Upload your password-protected CAS statement from CAMS or KFintech"
                     : "Upload mutual fund transactions from spreadsheet or broker export"}
                 </p>
               </div>
@@ -576,16 +816,66 @@ export default function OnboardingWizard({
               )}
 
               {error && (
-                <div className="p-3.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs rounded-xl space-y-1">
-                  <div className="flex items-center gap-2 font-bold">
-                    <AlertCircle size={16} />
-                    <span>Upload issue:</span>
-                  </div>
-                  <p className="pl-6">{error}</p>
-                  {uploadFormat === "CAS" && (
-                    <p className="pl-6 text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-                      💡 Tip: CAMS PDF password is the custom password you entered when requesting the statement, or your PAN in UPPERCASE.
-                    </p>
+                <div className="space-y-2">
+                  {errorStatus === 409 || error.toLowerCase().includes("legacy") ? (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs rounded-xl space-y-2">
+                      <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>Action Required: Legacy Statement Review</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        This profile has legacy statements that require manual review. Please contact support so our team can safely verify your portfolio history before importing new statements.
+                      </p>
+                      <div className="pt-1 flex items-center gap-3">
+                        <a
+                          href="https://wa.me/919158110065"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors">
+                          Contact WhatsApp Support
+                        </a>
+                        <a
+                          href="mailto:arthaviapp@gmail.com"
+                          className="underline hover:text-amber-950 dark:hover:text-white font-medium">
+                          Email Support
+                        </a>
+                      </div>
+                    </div>
+                  ) : error.toLowerCase().includes("does not match profile pan") ? (
+                    <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 text-xs rounded-xl space-y-1.5">
+                      <div className="flex items-center gap-2 font-bold text-red-800 dark:text-red-300">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>PAN Mismatch</span>
+                      </div>
+                      <p className="leading-relaxed">{error}</p>
+                      <p className="text-[11px] text-neutral-600 dark:text-neutral-400">
+                        All CAS statements imported into a single profile must belong to the same investor PAN. If this statement is for a family member, please select or create their profile.
+                      </p>
+                    </div>
+                  ) : error.toLowerCase().includes("another profile owned by this user already uses it") ? (
+                    <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 text-xs rounded-xl space-y-1.5">
+                      <div className="flex items-center gap-2 font-bold text-red-800 dark:text-red-300">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>PAN Belongs to Another Profile</span>
+                      </div>
+                      <p className="leading-relaxed">{error}</p>
+                      <p className="text-[11px] text-neutral-600 dark:text-neutral-400">
+                        Please select that profile from the &quot;Import Into Profile&quot; dropdown above to upload this statement.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs rounded-xl space-y-1">
+                      <div className="flex items-center gap-2 font-bold">
+                        <AlertCircle size={16} className="shrink-0" />
+                        <span>Upload issue:</span>
+                      </div>
+                      <p className="pl-6">{error}</p>
+                      {uploadFormat === "CAS" && (
+                        <p className="pl-6 text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                          💡 Tip: CAMS PDF password is the custom password you set when requesting the statement, or your PAN in UPPERCASE. For KFintech, the default password is often your PAN in UPPERCASE.
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
