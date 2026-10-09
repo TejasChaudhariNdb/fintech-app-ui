@@ -777,6 +777,28 @@ export default function StocksPage() {
                         <p className="text-xs text-neutral-400 mt-0.5 truncate">
                           {stock.company_name !== stock.symbol ? stock.company_name : "Equity Share"}
                         </p>
+                        {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
+                          <div className="mt-1.5 flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                            {stock.profile_breakdown.map((pb: any) => {
+                              const relation = getRelationForProfile(pb.profile_id);
+                              const formattedValue = pb.value >= 100000 
+                                ? `₹${(pb.value / 100000).toFixed(2)}L`
+                                : `₹${pb.value.toLocaleString("en-IN")}`;
+                              return (
+                                <span
+                                  key={pb.profile_id}
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${getProfileBadgeColor(
+                                    relation
+                                  )}`}
+                                >
+                                  <span className="truncate max-w-[70px]">{pb.profile_name}</span>
+                                  <span className="opacity-60">•</span>
+                                  <span>{formattedValue}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-6 justify-end items-center text-right shrink-0">
                         <div className="w-24">

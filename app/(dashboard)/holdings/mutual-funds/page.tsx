@@ -28,7 +28,22 @@ export default function MutualFundsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
-  const { activeProfileId } = useProfile();
+  const { activeProfileId, profiles } = useProfile();
+
+  const getRelationForProfile = (profileId: number) => {
+    const found = profiles.find((p) => p.id === profileId);
+    return found ? found.relation : "other";
+  };
+
+  const getProfileBadgeColor = (relation: string) => {
+    const rel = relation.toUpperCase();
+    if (rel === "SELF") return "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+    if (rel === "MOTHER") return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
+    if (rel === "FATHER") return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
+    if (rel === "SPOUSE") return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+    if (rel === "CHILD") return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20";
+    return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
+  };
 
   // Toast State
   const [toast, setToast] = useState({
@@ -763,6 +778,28 @@ export default function MutualFundsPage() {
                               )}
                             </div>
                             <p className="text-xs text-neutral-400 mt-0.5 truncate">{scheme.amc}</p>
+                            {scheme.profile_breakdown && scheme.profile_breakdown.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                                {scheme.profile_breakdown.map((pb: any) => {
+                                  const relation = getRelationForProfile(pb.profile_id);
+                                  const formattedValue = pb.current_value >= 100000 
+                                    ? `₹${(pb.current_value / 100000).toFixed(2)}L`
+                                    : `₹${pb.current_value.toLocaleString("en-IN")}`;
+                                  return (
+                                    <span
+                                      key={pb.profile_id}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${getProfileBadgeColor(
+                                        relation
+                                      )}`}
+                                    >
+                                      <span className="truncate max-w-[70px]">{pb.profile_name}</span>
+                                      <span className="opacity-60">•</span>
+                                      <span>{formattedValue}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-6 justify-end items-center text-right shrink-0">
                             <div className="w-24">

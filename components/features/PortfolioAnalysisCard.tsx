@@ -5,6 +5,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import Card from "../ui/Card";
 import { api } from "@/lib/api";
 
+import { useProfile } from "@/context/ProfileContext";
+
 type DataType = "stocks" | "sectors" | "market_cap";
 
 // Custom Tooltip moved outside
@@ -22,7 +24,13 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export default function PortfolioAnalysisCard() {
+interface PortfolioAnalysisCardProps {
+  profileId?: string;
+}
+
+export default function PortfolioAnalysisCard({ profileId }: PortfolioAnalysisCardProps = {}) {
+  const { activeProfileId } = useProfile();
+  const effectiveProfileId = profileId !== undefined ? profileId : activeProfileId;
   const [activeTab, setActiveTab] = useState<DataType>("stocks");
   const [data, setData] = useState<any>(null);
   const [totalStocks, setTotalStocks] = useState(0);
@@ -30,7 +38,7 @@ export default function PortfolioAnalysisCard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await api.getEquityAllocation();
+        const res = await api.getEquityAllocation(effectiveProfileId);
         setData(res);
         if (res.stocks) {
           setTotalStocks(res.total_stock_count || res.stocks.length);
@@ -40,7 +48,7 @@ export default function PortfolioAnalysisCard() {
       }
     };
     fetchData();
-  }, []);
+  }, [effectiveProfileId]);
 
   const currentData = data ? data[activeTab] || [] : [];
 

@@ -104,6 +104,7 @@ export const api = {
           "/equity/net-worth",
           "/equity/summary",
           "/equity/journey",
+          "/equity/allocation",
           "/equity/transactions",
           "/equity/transaction",
           "/portfolio/summary",
@@ -353,7 +354,12 @@ export const api = {
   deleteStockTransaction: (id: number) =>
     api.fetch(`/equity/transaction/${id}`, { method: "DELETE" }),
 
-  getEquityAllocation: () => api.fetch("/equity/allocation"),
+  getEquityAllocation: (profileId?: string) => {
+    const endpoint = profileId
+      ? `/equity/allocation?profile_id=${profileId}`
+      : "/equity/allocation";
+    return api.fetch(endpoint);
+  },
 
   // Portfolio
   getPortfolioSummary: () =>
