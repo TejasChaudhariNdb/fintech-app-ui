@@ -113,66 +113,80 @@ export default function SchemeCard({
       />
 
       {/* Main Content */}
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         {/* Header Section */}
-        <div className="flex items-start justify-between gap-4">
-          {/* Left: Scheme Info */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          {/* Left / Main Info */}
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              {categoryLabel && (
-                <span className="inline-flex items-center rounded-md bg-primary-50 dark:bg-primary-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">
-                  {categoryLabel}
-                </span>
-              )}
-              {isSif && (
-                <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
-                  SIF
-                </span>
-              )}
-              {overallRank && (
-                <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                  #{overallRank}
-                  {totalHoldings ? `/${totalHoldings}` : ""}
-                </span>
-              )}
+            {/* Top row: Badges on left, Current Value on right for mobile */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                {categoryLabel && (
+                  <span className="inline-flex items-center rounded-md bg-primary-50 dark:bg-primary-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">
+                    {categoryLabel}
+                  </span>
+                )}
+                {isSif && (
+                  <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
+                    SIF
+                  </span>
+                )}
+                {overallRank && (
+                  <span className="inline-flex items-center rounded-md bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                    #{overallRank}
+                    {totalHoldings ? `/${totalHoldings}` : ""}
+                  </span>
+                )}
+              </div>
+
+              {/* Mobile Only: Value in top right header */}
+              <div className="sm:hidden text-right shrink-0">
+                <p className="text-base font-bold text-neutral-900 dark:text-white tabular-nums">
+                  <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
+                </p>
+              </div>
             </div>
-            <h4 className="mt-2 text-[15px] font-semibold leading-snug text-neutral-900 dark:text-white line-clamp-2 tracking-tight">
+
+            {/* Scheme Title (Full width on mobile!) */}
+            <h4 className="mt-2 text-sm sm:text-[15px] font-semibold leading-snug text-neutral-900 dark:text-white line-clamp-2 tracking-tight">
               {scheme}
             </h4>
-            <p className="mt-1 text-[13px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
-              {amc}
-            </p>
-            {profileBreakdown && profileBreakdown.length > 0 && (
-              <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-                {profileBreakdown.map((pb) => {
-                  const relation = getRelationForProfile(pb.profile_id);
-                  const formattedValue = pb.current_value >= 100000
-                    ? `₹${(pb.current_value / 100000).toFixed(2)}L`
-                    : `₹${pb.current_value.toLocaleString("en-IN")}`;
-                  return (
-                    <span
-                      key={pb.profile_id}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
-                        relation
-                      )}`}
-                    >
-                      <span className="truncate max-w-[80px]">{pb.profile_name}</span>
-                      <span className="opacity-60">•</span>
-                      <span>{formattedValue}</span>
-                    </span>
-                  );
-                })}
-              </div>
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <p className="text-xs sm:text-[13px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
+                {amc}
+              </p>
+              {profileBreakdown && profileBreakdown.length > 0 && (
+                <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  {profileBreakdown.map((pb) => {
+                    const relation = getRelationForProfile(pb.profile_id);
+                    const formattedValue = pb.current_value >= 100000
+                      ? `₹${(pb.current_value / 100000).toFixed(2)}L`
+                      : `₹${pb.current_value.toLocaleString("en-IN")}`;
+                    return (
+                      <span
+                        key={pb.profile_id}
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold border ${getProfileBadgeColor(
+                          relation
+                        )}`}
+                      >
+                        <span className="truncate max-w-[80px]">{pb.profile_name}</span>
+                        <span className="opacity-60">•</span>
+                        <span>{formattedValue}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right: Value & Returns */}
-          <div className="shrink-0 text-right">
+          {/* Desktop Right: Value & Returns */}
+          <div className="hidden sm:block shrink-0 text-right">
             <p className="text-lg font-bold text-neutral-900 dark:text-white tabular-nums">
               <PrivacyMask>₹{current.toLocaleString("en-IN")}</PrivacyMask>
             </p>
 
-            {/* Two Return Indicators - Overall & Day */}
+            {/* Desktop Two Return Indicators - Overall & Day */}
             <div className="mt-2 flex items-stretch justify-end gap-2">
               {/* Overall Return */}
               <div className="flex flex-col items-end min-w-[80px]">
@@ -266,8 +280,61 @@ export default function SchemeCard({
           </div>
         </div>
 
+        {/* Mobile Returns Cards (Clean, balanced 2-column grid on mobile) */}
+        <div className="sm:hidden mt-3 grid grid-cols-2 gap-2">
+          {/* Mobile Overall Return */}
+          <div
+            className={`flex flex-col rounded-xl px-2.5 py-1.5 border ${
+              isPositive
+                ? "bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-500/20"
+                : "bg-red-50/70 dark:bg-red-500/10 border-red-500/20"
+            }`}>
+            <span className="text-[9px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Overall
+            </span>
+            <span
+              className={`mt-0.5 text-[13px] font-bold tabular-nums leading-tight ${
+                isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+              }`}>
+              {isPositive ? "+" : ""}₹{Math.abs(profit).toLocaleString("en-IN")}
+            </span>
+            <span
+              className={`mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${
+                isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+              }`}>
+              {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {isPositive ? "+" : ""}{returnPct.toFixed(2)}%
+            </span>
+          </div>
+
+          {/* Mobile Today's Return */}
+          <div
+            className={`flex flex-col rounded-xl px-2.5 py-1.5 border ${
+              isDayPositive
+                ? "bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-500/20"
+                : "bg-red-50/70 dark:bg-red-500/10 border-red-500/20"
+            }`}>
+            <span className="text-[9px] font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+              Today
+            </span>
+            <span
+              className={`mt-0.5 text-[13px] font-bold tabular-nums leading-tight ${
+                isDayPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+              }`}>
+              {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")}
+            </span>
+            <span
+              className={`mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${
+                isDayPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+              }`}>
+              {isDayPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {isDayPositive ? "+" : ""}{dayChangePct.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+
         {/* Metrics Grid */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           <MetricItem
             label="NAV"
             value={`₹${nav.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`}

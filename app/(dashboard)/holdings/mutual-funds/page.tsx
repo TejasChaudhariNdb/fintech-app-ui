@@ -765,10 +765,10 @@ export default function MutualFundsPage() {
                         className="flex flex-col p-4 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/[0.06] rounded-2xl gap-3 hover:border-primary-500/20 hover:shadow-md cursor-pointer transition-all duration-300"
                       >
                         {/* Row 1 */}
-                        <div className="flex justify-between items-center gap-4 text-sm font-semibold">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2.5 sm:gap-4 text-sm font-semibold">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-neutral-900 dark:text-white font-bold text-[15px] truncate max-w-[280px]">
+                              <span className="text-neutral-900 dark:text-white font-bold text-sm sm:text-[15px] truncate max-w-full sm:max-w-[280px]">
                                 {scheme.scheme}
                               </span>
                               {scheme.category_label && (
@@ -801,22 +801,22 @@ export default function MutualFundsPage() {
                               </div>
                             )}
                           </div>
-                          <div className="flex gap-6 justify-end items-center text-right shrink-0">
-                            <div className="w-24">
+                          <div className="flex justify-between sm:justify-end items-center text-right shrink-0 gap-3 sm:gap-6 pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-100 dark:border-white/5">
+                            <div className="flex-1 sm:flex-initial sm:w-24 text-left sm:text-right">
                               <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Invested</p>
                               <p className="text-neutral-700 dark:text-neutral-300 font-semibold text-xs sm:text-sm">
                                 <PrivacyMask>₹{invested.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
                               </p>
                             </div>
-                            <div className="w-24">
+                            <div className="flex-1 sm:flex-initial sm:w-24 text-center sm:text-right">
                               <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Gain</p>
                               <p className={`font-bold text-xs sm:text-sm ${gain >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                                 <PrivacyMask>{gain >= 0 ? "+" : ""}₹{Math.abs(gain).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
                               </p>
                             </div>
-                            <div className="w-28">
+                            <div className="flex-1 sm:flex-initial sm:w-28 text-right">
                               <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Current</p>
-                              <p className="text-neutral-900 dark:text-white text-sm sm:text-base font-bold">
+                              <p className="text-neutral-900 dark:text-white text-xs sm:text-base font-bold">
                                 <PrivacyMask>₹{scheme.current.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
                               </p>
                             </div>
@@ -824,8 +824,8 @@ export default function MutualFundsPage() {
                         </div>
 
                         {/* Row 2 */}
-                        <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
-                          <div className="flex gap-5 items-center flex-wrap">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
+                          <div className="flex gap-4 sm:gap-5 items-center flex-wrap">
                             <div>
                               <span className="text-neutral-400 mr-1">NAV:</span>
                               <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{scheme.nav.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
@@ -840,26 +840,26 @@ export default function MutualFundsPage() {
                             </div>
                           </div>
 
-                          <div className="flex gap-5 justify-end items-center text-right shrink-0">
-                            <div className="w-20">
+                          <div className="flex gap-4 sm:gap-5 justify-between sm:justify-end items-center text-right w-full sm:w-auto">
+                            <div>
                               <span className="text-neutral-400 mr-1">Return:</span>
                               <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
                                 {isPositive ? "+" : ""}{scheme.return_pct.toFixed(2)}%
                               </span>
                             </div>
-                            <div className="w-20">
+                            <div>
                               <span className="text-neutral-400 mr-1">Today:</span>
                               <span className={`font-bold ${isDayPositive ? "text-emerald-500" : "text-red-500"}`}>
                                 {isDayPositive ? "+" : ""}{scheme.day_change_pct.toFixed(2)}%
                               </span>
                             </div>
-                            <div className="w-20">
+                            <div>
                               <span className="text-neutral-400 mr-1">XIRR:</span>
                               <span className={`font-bold ${scheme.xirr !== undefined && scheme.xirr !== null ? (scheme.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
                                 {scheme.xirr !== undefined && scheme.xirr !== null ? `${scheme.xirr.toFixed(2)}%` : "--"}
                               </span>
                             </div>
-                            <div className="w-20">
+                            <div>
                               <span className="text-neutral-400 mr-1">CAGR:</span>
                               <span className={`font-bold ${scheme.cagr !== undefined && scheme.cagr !== null ? (scheme.cagr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
                                 {scheme.cagr !== undefined && scheme.cagr !== null ? `${scheme.cagr.toFixed(2)}%` : "--"}
