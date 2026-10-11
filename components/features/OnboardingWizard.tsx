@@ -109,15 +109,21 @@ export default function OnboardingWizard({
     }
   }, [step]);
 
+  const [loadedUserProfile, setLoadedUserProfile] = useState<any>(userProfile || null);
+  const [internalProfiles, setInternalProfiles] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const profile = userProfile || (await api.getUserProfile());
-        if (profile?.signup_source) {
-          setSignupSource(profile.signup_source);
-        }
-        if (profile?.email) {
-          setUserEmail(profile.email);
+        if (profile) {
+          setLoadedUserProfile(profile);
+          if (profile?.signup_source) {
+            setSignupSource(profile.signup_source);
+          }
+          if (profile?.email) {
+            setUserEmail(profile.email);
+          }
         }
       } catch (e) {
         console.error("Failed to load user profile in wizard", e);
@@ -144,27 +150,57 @@ export default function OnboardingWizard({
   };
 
   const { profiles, activeProfileId, refreshProfiles } = useProfile();
+
+  // If profiles in context is empty (e.g. after tab navigation), fetch them directly
+  useEffect(() => {
+    if (profiles.length === 0) {
+      api.getProfiles().then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setInternalProfiles(data);
+        }
+      }).catch((err) => console.error("Failed to fetch fallback profiles", err));
+    }
+  }, [profiles]);
+
+  const effectiveProfiles = profiles.length > 0 ? profiles : internalProfiles;
+
   const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
     if (activeProfileId && activeProfileId !== "all") return activeProfileId;
-    return profiles[0]?.id ? String(profiles[0].id) : "";
+    return effectiveProfiles[0]?.id ? String(effectiveProfiles[0].id) : "";
   });
 
-  const currentProfile = profiles.find((p) => String(p.id) === String(selectedProfileId));
-  const targetProfileName = currentProfile?.name || "Selected Profile";
-  const availableProfilePan =
-    currentProfile?.pan?.trim()?.toUpperCase() ||
-    (currentProfile?.is_default && userProfile?.pan_card?.trim()?.toUpperCase()) ||
-    null;
-
+  // Ensure valid profile is always selected even after cross-tab navigation
   useEffect(() => {
-    if (profiles.length > 0) {
-      if (activeProfileId && activeProfileId !== "all") {
-        setSelectedProfileId(activeProfileId);
-      } else if (!selectedProfileId) {
-        setSelectedProfileId(String(profiles[0].id));
+    if (effectiveProfiles.length > 0) {
+      const match = effectiveProfiles.find((p) => String(p.id) === String(selectedProfileId));
+      if (!selectedProfileId || !match) {
+        if (activeProfileId && activeProfileId !== "all" && effectiveProfiles.some((p) => String(p.id) === activeProfileId)) {
+          setSelectedProfileId(activeProfileId);
+        } else {
+          const withPan = effectiveProfiles.find((p) => p.pan?.trim());
+          const defaultProf = effectiveProfiles.find((p) => p.is_default);
+          const target = defaultProf || withPan || effectiveProfiles[0];
+          if (target) {
+            setSelectedProfileId(String(target.id));
+          }
+        }
       }
     }
-  }, [profiles, activeProfileId]);
+  }, [effectiveProfiles, activeProfileId, selectedProfileId]);
+
+  const currentProfile = effectiveProfiles.find((p) => String(p.id) === String(selectedProfileId));
+  const defaultProfile = effectiveProfiles.find((p) => p.is_default) || effectiveProfiles[0];
+  const profileWithPan = effectiveProfiles.find((p) => p.pan?.trim());
+
+  const targetProfileName = currentProfile?.name || defaultProfile?.name || "Selected Profile";
+  const availableProfilePan =
+    currentProfile?.pan?.trim()?.toUpperCase() ||
+    (currentProfile?.is_default && (loadedUserProfile?.pan_card?.trim()?.toUpperCase() || userProfile?.pan_card?.trim()?.toUpperCase())) ||
+    defaultProfile?.pan?.trim()?.toUpperCase() ||
+    loadedUserProfile?.pan_card?.trim()?.toUpperCase() ||
+    userProfile?.pan_card?.trim()?.toUpperCase() ||
+    profileWithPan?.pan?.trim()?.toUpperCase() ||
+    null;
 
   const handleApplyPan = async (panValue: string) => {
     const cleanPan = panValue.trim().toUpperCase();
@@ -1132,9 +1168,9 @@ export default function OnboardingWizard({
                   <option value="" disabled>
                     Select Target Profile
                   </option>
-                  {profiles.map((p) => (
+                  {effectiveProfiles.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.relation})
+                      {p.name} ({p.relation}){p.pan ? ` • ${p.pan}` : ""}
                     </option>
                   ))}
                 </select>
