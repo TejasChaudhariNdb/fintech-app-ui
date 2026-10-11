@@ -19,6 +19,9 @@ import {
   Zap,
   Sparkles,
   Info,
+  CreditCard,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -65,11 +68,17 @@ export default function OnboardingWizard({
   const [userEmail, setUserEmail] = useState("");
   const [copied, setCopied] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
+  const [manualPan, setManualPan] = useState("");
+  const [showManualPanInput, setShowManualPanInput] = useState(false);
+  const [panError, setPanError] = useState("");
 
   const resetUploadForm = () => {
     setSuccess(false);
     setFile(null);
     setPassword("");
+    setManualPan("");
+    setShowManualPanInput(false);
+    setPanError("");
     setImportResult(null);
     setError("");
     setErrorStatus(null);
@@ -134,11 +143,18 @@ export default function OnboardingWizard({
     }
   };
 
-  const { profiles, activeProfileId } = useProfile();
+  const { profiles, activeProfileId, refreshProfiles } = useProfile();
   const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
     if (activeProfileId && activeProfileId !== "all") return activeProfileId;
     return profiles[0]?.id ? String(profiles[0].id) : "";
   });
+
+  const currentProfile = profiles.find((p) => String(p.id) === String(selectedProfileId));
+  const targetProfileName = currentProfile?.name || "Selected Profile";
+  const availableProfilePan =
+    currentProfile?.pan?.trim()?.toUpperCase() ||
+    (currentProfile?.is_default && userProfile?.pan_card?.trim()?.toUpperCase()) ||
+    null;
 
   useEffect(() => {
     if (profiles.length > 0) {
@@ -149,6 +165,112 @@ export default function OnboardingWizard({
       }
     }
   }, [profiles, activeProfileId]);
+
+  const handleApplyPan = async (panValue: string) => {
+    const cleanPan = panValue.trim().toUpperCase();
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan)) {
+      setPanError("Invalid PAN format. Must be 10 characters (e.g. ABCDE1234F).");
+      return;
+    }
+    setPanError("");
+    setManualPan(cleanPan);
+    if (!file) {
+      setError("Please select your statement file again.");
+      return;
+    }
+    if (uploadFormat === "CAS" && !password) {
+      setError("Please re-enter your PDF password.");
+      return;
+    }
+    if (!selectedProfileId) {
+      setError("Please select a specific profile to import data into.");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+    setErrorStatus(null);
+
+    analytics.track({
+      name: "cas_upload_started",
+      properties: {
+        format: uploadFormat,
+        file_size: file.size,
+      },
+    });
+
+    try {
+      const res = await api.uploadCAS(file, password, selectedProfileId, cleanPan);
+      setImportResult(res);
+
+      if (res?.status === "already_imported") {
+        analytics.track({
+          name: "cas_upload_duplicate",
+          properties: {
+            format: uploadFormat,
+            profile_id: selectedProfileId,
+          },
+        });
+      } else {
+        analytics.track({
+          name: "cas_upload_succeeded",
+          properties: {
+            format: uploadFormat,
+            new_transactions: res?.new_transactions ?? 0,
+            schemes_count: res?.schemes_count ?? 0,
+            pan_established: res?.pan_established ?? false,
+          },
+        });
+
+        analytics.track({
+          name: "portfolio_created",
+          properties: {
+            source: "cams",
+            asset_count: res?.schemes_count || 1,
+          },
+        });
+
+        analytics.track({
+          name: "activation_completed",
+          properties: {
+            activation_type: "mf",
+            source: "cams",
+          },
+        });
+      }
+
+      if (res?.pan_established && refreshProfiles) {
+        await refreshProfiles();
+      }
+
+      analytics.track({
+        name: "onboarding_step_completed",
+        properties: {
+          step: 2,
+          method: "cams",
+        },
+      });
+
+      setUploading(false);
+      setSuccess(true);
+    } catch (err: any) {
+      setErrorStatus(err.status || null);
+      const errorMsg =
+        err.detail ||
+        err.message ||
+        "Upload failed. Check your password.";
+      setError(errorMsg);
+      analytics.track({
+        name: "cas_upload_failed",
+        properties: {
+          format: uploadFormat,
+          reason: errorMsg,
+          status_code: err.status,
+        },
+      });
+      setUploading(false);
+    }
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,7 +295,8 @@ export default function OnboardingWizard({
 
     try {
       if (uploadFormat === "CAS") {
-        const res = await api.uploadCAS(file, password, selectedProfileId);
+        const panToPass = manualPan ? manualPan.trim().toUpperCase() : undefined;
+        const res = await api.uploadCAS(file, password, selectedProfileId, panToPass);
         setImportResult(res);
 
         if (res?.status === "already_imported") {
@@ -862,6 +985,122 @@ export default function OnboardingWizard({
                       <p className="text-[11px] text-neutral-600 dark:text-neutral-400">
                         Please select that profile from the &quot;Import Into Profile&quot; dropdown above to upload this statement.
                       </p>
+                    </div>
+                  ) : error.toLowerCase().includes("no pan found") ? (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs rounded-2xl space-y-3 shadow-sm animate-fade-in">
+                      <div className="flex items-start gap-2.5">
+                        <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5">
+                          <CreditCard size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-amber-900 dark:text-amber-200 text-sm">
+                            No PAN Found in CAS Statement
+                          </h4>
+                          <p className="text-neutral-600 dark:text-neutral-300 mt-1 leading-relaxed text-xs">
+                            This statement from CAMS/KFintech does not have an investor PAN embedded. To link and organize your portfolio correctly in{" "}
+                            <strong>{targetProfileName}</strong>, please provide your 10-character PAN.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Option 1: Profile has an existing PAN */}
+                      {availableProfilePan && !showManualPanInput ? (
+                        <div className="p-3 bg-white/90 dark:bg-black/30 rounded-xl border border-amber-200/80 dark:border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium shrink-0">
+                              Registered PAN:
+                            </span>
+                            <span className="font-mono font-bold text-xs sm:text-sm tracking-wider px-2.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 border border-amber-300/60 dark:border-amber-700/50">
+                              {availableProfilePan}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              type="button"
+                              disabled={uploading}
+                              onClick={() => handleApplyPan(availableProfilePan)}
+                              variant="primary"
+                              className="px-3.5 py-1.5 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+                              {uploading ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <CheckCircle2 size={13} />
+                              )}
+                              <span>Use this PAN</span>
+                            </Button>
+                            <button
+                              type="button"
+                              disabled={uploading}
+                              onClick={() => {
+                                setManualPan("");
+                                setPanError("");
+                                setShowManualPanInput(true);
+                              }}
+                              className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white underline cursor-pointer px-1 py-1">
+                              Enter manually
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Option 2: Enter PAN manually */
+                        <div className="p-3 bg-white/90 dark:bg-black/30 rounded-xl border border-amber-200/80 dark:border-amber-500/20 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                              Enter Investor PAN
+                            </label>
+                            {availableProfilePan && (
+                              <button
+                                type="button"
+                                disabled={uploading}
+                                onClick={() => {
+                                  setShowManualPanInput(false);
+                                  setPanError("");
+                                }}
+                                className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:underline cursor-pointer">
+                                ← Use profile PAN ({availableProfilePan})
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={manualPan}
+                                onChange={(e) => {
+                                  setManualPan(e.target.value.toUpperCase());
+                                  if (panError) setPanError("");
+                                }}
+                                placeholder="e.g. ABCDE1234F"
+                                maxLength={10}
+                                disabled={uploading}
+                                className="w-full uppercase font-mono font-bold tracking-widest bg-white dark:bg-black/40 border border-neutral-300 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-neutral-900 dark:text-white placeholder:font-sans placeholder:tracking-normal placeholder:font-normal placeholder:text-neutral-400 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              disabled={uploading || manualPan.trim().length !== 10}
+                              onClick={() => handleApplyPan(manualPan)}
+                              variant="primary"
+                              className="py-2 px-4 text-xs font-semibold flex items-center justify-center gap-1.5 shrink-0 shadow-sm">
+                              {uploading ? (
+                                <Loader2 size={13} className="animate-spin" />
+                              ) : (
+                                <CheckCircle2 size={13} />
+                              )}
+                              <span>Import with PAN</span>
+                            </Button>
+                          </div>
+                          {panError && (
+                            <p className="text-[11px] font-semibold text-red-600 dark:text-red-400">
+                              {panError}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                            Must be 10 characters (5 letters, 4 numbers, 1 letter, e.g. ABCDE1234F).
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="p-3.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 text-xs rounded-xl space-y-1">

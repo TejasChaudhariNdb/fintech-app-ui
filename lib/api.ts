@@ -550,11 +550,14 @@ export const api = {
     }),
 
   // CAS Upload
-  uploadCAS: async (file: File, password: string, profileId?: string) => {
+  uploadCAS: async (file: File, password: string, profileId?: string, pan?: string) => {
     checkDemoRestriction();
     const formData = new FormData();
     formData.append("file", file);
     formData.append("password", password);
+    if (pan && pan.trim()) {
+      formData.append("pan", pan.trim().toUpperCase());
+    }
     const token = localStorage.getItem("access_token");
     const url = profileId 
       ? `${API_URL}/cas/upload?profile_id=${profileId}` 
