@@ -157,14 +157,14 @@ export default function SchemeCard({
               </p>
               {profileBreakdown && profileBreakdown.length > 0 && (
                 <div className="flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  {profileBreakdown.map((pb) => {
+                  {profileBreakdown.map((pb, idx) => {
                     const relation = getRelationForProfile(pb.profile_id);
                     const formattedValue = pb.current_value >= 100000
                       ? `₹${(pb.current_value / 100000).toFixed(2)}L`
                       : `₹${pb.current_value.toLocaleString("en-IN")}`;
                     return (
                       <span
-                        key={pb.profile_id}
+                        key={`pb-${pb.profile_id}-${idx}`}
                         className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold border ${getProfileBadgeColor(
                           relation
                         )}`}

@@ -780,14 +780,14 @@ export default function MutualFundsPage() {
                             <p className="text-xs text-neutral-400 mt-0.5 truncate">{scheme.amc}</p>
                             {scheme.profile_breakdown && scheme.profile_breakdown.length > 0 && (
                               <div className="mt-1.5 flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
-                                {scheme.profile_breakdown.map((pb: any) => {
+                                {scheme.profile_breakdown.map((pb: any, idx: number) => {
                                   const relation = getRelationForProfile(pb.profile_id);
                                   const formattedValue = pb.current_value >= 100000 
                                     ? `₹${(pb.current_value / 100000).toFixed(2)}L`
                                     : `₹${pb.current_value.toLocaleString("en-IN")}`;
                                   return (
                                     <span
-                                      key={pb.profile_id}
+                                      key={`mf-pb-${pb.profile_id}-${idx}`}
                                       className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${getProfileBadgeColor(
                                         relation
                                       )}`}
