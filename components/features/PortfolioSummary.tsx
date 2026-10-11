@@ -12,6 +12,10 @@ interface PortfolioSummaryProps {
   returnPct: number;
   dayChange?: number;
   dayChangePct?: number;
+  mfDayChange?: number;
+  mfDayChangePct?: number;
+  stockDayChange?: number;
+  stockDayChangePct?: number;
   xirr?: number;
   mfXirr?: number;
   stockXirr?: number;
@@ -28,6 +32,10 @@ export default function PortfolioSummary({
   returnPct,
   dayChange = 0,
   dayChangePct = 0,
+  mfDayChange,
+  mfDayChangePct,
+  stockDayChange,
+  stockDayChangePct,
   xirr,
   mfXirr = 0,
   stockXirr = 0,
@@ -39,6 +47,7 @@ export default function PortfolioSummary({
   const isPositive = profit >= 0;
   const isDayPositive = dayChange >= 0;
   const [isInvestedExpanded, setIsInvestedExpanded] = useState(false);
+  const [isDayChangeExpanded, setIsDayChangeExpanded] = useState(false);
   const [isXirrExpanded, setIsXirrExpanded] = useState(false);
 
   return (
@@ -108,31 +117,109 @@ export default function PortfolioSummary({
           </span>
         </div>
 
-        <div className="flex justify-between items-center group">
-          <span className="text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-300 transition-colors">
-            Day&apos;s Change
-          </span>
-          <div className="text-right">
-            <PrivacyMask>
-              <span
-                className={`font-semibold ${
-                  isDayPositive
-                    ? "text-emerald-500 dark:text-emerald-400"
-                    : "text-red-500 dark:text-red-400"
-                }`}>
-                {isDayPositive ? "+" : ""}₹
-                {Math.abs(dayChange).toLocaleString("en-IN")}
-              </span>
-            </PrivacyMask>
-            <span
-              className={`text-xs ml-1.5 ${
-                isDayPositive
-                  ? "text-emerald-600/80 dark:text-emerald-500/80"
-                  : "text-red-600/80 dark:text-red-500/80"
-              }`}>
-              ({dayChangePct.toFixed(2)}%)
+        {/* Day's Change Section - Expandable */}
+        <div className="flex flex-col">
+          <div
+            className="flex justify-between items-center group cursor-pointer select-none"
+            onClick={() => setIsDayChangeExpanded(!isDayChangeExpanded)}>
+            <span className="text-neutral-500 dark:text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
+              Day&apos;s Change
+              <div
+                className={`p-0.5 rounded-full bg-neutral-100 dark:bg-white/5 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 transition-colors duration-200`}>
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 ${
+                    isDayChangeExpanded
+                      ? "rotate-180 text-primary-600 dark:text-primary-400"
+                      : ""
+                  }`}
+                />
+              </div>
             </span>
+            <div className="text-right">
+              <PrivacyMask>
+                <span
+                  className={`font-semibold ${
+                    isDayPositive
+                      ? "text-emerald-500 dark:text-emerald-400"
+                      : "text-red-500 dark:text-red-400"
+                  }`}>
+                  {isDayPositive ? "+" : ""}₹
+                  {Math.abs(dayChange).toLocaleString("en-IN")}
+                </span>
+              </PrivacyMask>
+              <span
+                className={`text-xs ml-1.5 ${
+                  isDayPositive
+                    ? "text-emerald-600/80 dark:text-emerald-500/80"
+                    : "text-red-600/80 dark:text-red-500/80"
+                }`}>
+                ({isDayPositive ? "+" : ""}{dayChangePct.toFixed(2)}%)
+              </span>
+            </div>
           </div>
+
+          {/* Expanded Breakdown */}
+          {isDayChangeExpanded && (
+            <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-neutral-400 dark:text-neutral-500">
+                  Mutual Funds
+                </span>
+                <div className="text-right">
+                  <PrivacyMask>
+                    <span
+                      className={`font-medium ${
+                        (mfDayChange ?? 0) >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(mfDayChange ?? 0) >= 0 ? "+" : ""}₹
+                      {Math.abs(mfDayChange ?? 0).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  {mfDayChangePct !== undefined && (
+                    <span
+                      className={`text-xs ml-1.5 ${
+                        (mfDayChangePct ?? 0) >= 0
+                          ? "text-emerald-600/80 dark:text-emerald-500/80"
+                          : "text-red-600/80 dark:text-red-500/80"
+                      }`}>
+                      ({(mfDayChangePct ?? 0) >= 0 ? "+" : ""}{(mfDayChangePct ?? 0).toFixed(2)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-neutral-400 dark:text-neutral-500">
+                  Stocks
+                </span>
+                <div className="text-right">
+                  <PrivacyMask>
+                    <span
+                      className={`font-medium ${
+                        (stockDayChange ?? 0) >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(stockDayChange ?? 0) >= 0 ? "+" : ""}₹
+                      {Math.abs(stockDayChange ?? 0).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  {stockDayChangePct !== undefined && (
+                    <span
+                      className={`text-xs ml-1.5 ${
+                        (stockDayChangePct ?? 0) >= 0
+                          ? "text-emerald-600/80 dark:text-emerald-500/80"
+                          : "text-red-600/80 dark:text-red-500/80"
+                      }`}>
+                      ({(stockDayChangePct ?? 0) >= 0 ? "+" : ""}{(stockDayChangePct ?? 0).toFixed(2)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {xirr !== undefined && xirr !== null && (

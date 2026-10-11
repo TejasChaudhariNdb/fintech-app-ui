@@ -330,6 +330,10 @@ export default function HomePage() {
           onRefresh={handleRefreshNAVs}
           isRefreshing={refreshing}
           dayChangePct={summary?.day_change_pct || 0}
+          mfDayChange={summary?.mf_day_change}
+          mfDayChangePct={summary?.mf_day_change_pct}
+          stockDayChange={summary?.stock_day_change}
+          stockDayChangePct={summary?.stock_day_change_pct}
           lastUpdated={familySummary?.last_updated || netWorth?.last_updated}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
@@ -345,6 +349,10 @@ export default function HomePage() {
               returnPct={summary.return_pct || 0}
               dayChange={summary.day_change || 0}
               dayChangePct={summary.day_change_pct || 0}
+              mfDayChange={summary.mf_day_change}
+              mfDayChangePct={summary.mf_day_change_pct}
+              stockDayChange={summary.stock_day_change}
+              stockDayChangePct={summary.stock_day_change_pct}
               mfProfit={summary.mf_profit || 0}
               stockProfit={summary.stock_profit || 0}
               mfInvested={summary.mf_invested || 0}
@@ -647,6 +655,10 @@ export default function HomePage() {
               onRefresh={handleRefreshNAVs}
               isRefreshing={refreshing}
               dayChangePct={summary?.day_change_pct || 0}
+              mfDayChange={summary?.mf_day_change}
+              mfDayChangePct={summary?.mf_day_change_pct}
+              stockDayChange={summary?.stock_day_change}
+              stockDayChangePct={summary?.stock_day_change_pct}
               lastUpdated={netWorth?.last_updated}
               onAddMF={() => router.push("/holdings/mutual-funds")}
               onAddStock={() => router.push("/holdings/stocks")}
@@ -662,6 +674,10 @@ export default function HomePage() {
                 returnPct={summary.return_pct || 0}
                 dayChange={summary.day_change || 0}
                 dayChangePct={summary.day_change_pct || 0}
+                mfDayChange={summary.mf_day_change}
+                mfDayChangePct={summary.mf_day_change_pct}
+                stockDayChange={summary.stock_day_change}
+                stockDayChangePct={summary.stock_day_change_pct}
                 xirr={summary.xirr}
                 mfXirr={summary.mf_xirr || 0}
                 stockXirr={summary.stock_xirr || 0}

@@ -12,6 +12,10 @@ interface NetWorthCardProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
   dayChangePct?: number;
+  mfDayChange?: number;
+  mfDayChangePct?: number;
+  stockDayChange?: number;
+  stockDayChangePct?: number;
   lastUpdated?: string;
   onAddMF?: () => void;
   onAddStock?: () => void;
@@ -24,6 +28,10 @@ export default function NetWorthCard({
   onRefresh,
   isRefreshing = false,
   dayChangePct = 0,
+  mfDayChange,
+  mfDayChangePct,
+  stockDayChange,
+  stockDayChangePct,
   lastUpdated,
   onAddMF,
   onAddStock,
@@ -168,6 +176,14 @@ export default function NetWorthCard({
               className={`text-base sm:text-lg font-semibold tracking-wide truncate ${mfValue === 0 ? "opacity-50" : ""}`}>
               <PrivacyMask>₹{mfValue.toLocaleString("en-IN")}</PrivacyMask>
             </p>
+            {mfDayChange !== undefined && (
+              <p className="text-[11px] font-medium mt-1 flex items-center gap-1">
+                <span className={mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}>
+                  {mfDayChange >= 0 ? "▲" : "▼"} {mfDayChange >= 0 ? "+" : ""}₹{Math.abs(mfDayChange).toLocaleString("en-IN")}
+                  {mfDayChangePct !== undefined && ` (${mfDayChangePct >= 0 ? "+" : ""}${mfDayChangePct.toFixed(2)}%)`}
+                </span>
+              </p>
+            )}
           </div>
           <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/5 relative overflow-hidden">
             <div className="flex justify-between items-center mb-1">
@@ -184,6 +200,14 @@ export default function NetWorthCard({
               className={`text-base sm:text-lg font-semibold tracking-wide truncate ${stockValue === 0 ? "opacity-50" : ""}`}>
               <PrivacyMask>₹{stockValue.toLocaleString("en-IN")}</PrivacyMask>
             </p>
+            {stockDayChange !== undefined && (
+              <p className="text-[11px] font-medium mt-1 flex items-center gap-1">
+                <span className={stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}>
+                  {stockDayChange >= 0 ? "▲" : "▼"} {stockDayChange >= 0 ? "+" : ""}₹{Math.abs(stockDayChange).toLocaleString("en-IN")}
+                  {stockDayChangePct !== undefined && ` (${stockDayChangePct >= 0 ? "+" : ""}${stockDayChangePct.toFixed(2)}%)`}
+                </span>
+              </p>
+            )}
           </div>
         </div>
       </div>

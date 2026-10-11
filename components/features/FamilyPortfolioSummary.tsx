@@ -30,6 +30,10 @@ interface FamilyPortfolioSummaryProps {
   returnPct: number;
   dayChange?: number;
   dayChangePct?: number;
+  mfDayChange?: number;
+  mfDayChangePct?: number;
+  stockDayChange?: number;
+  stockDayChangePct?: number;
   mfProfit?: number;
   stockProfit?: number;
   mfInvested?: number;
@@ -276,9 +280,14 @@ export default function FamilyPortfolioSummary({
   stockProfit = 0,
   mfInvested = 0,
   stockInvested = 0,
+  mfDayChange,
+  mfDayChangePct,
+  stockDayChange,
+  stockDayChangePct,
   profileBreakdown = [],
 }: FamilyPortfolioSummaryProps) {
   const [investedExpanded, setInvestedExpanded] = useState(false);
+  const [dayChangeExpanded, setDayChangeExpanded] = useState(false);
   const isGain    = profit >= 0;
   const isDayGain = dayChange >= 0;
 
@@ -349,19 +358,74 @@ export default function FamilyPortfolioSummary({
           </PrivacyMask>
         </div>
 
-        {/* Day's Change */}
-        <div className="flex justify-between items-center">
-          <span className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400">Day&apos;s Change</span>
-          <div className="flex items-baseline gap-1.5">
-            <PrivacyMask>
-              <span className={`text-sm sm:text-base font-semibold ${isDayGain ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
-                {isDayGain ? "+" : ""}₹{fmt(Math.abs(dayChange))}
-              </span>
-            </PrivacyMask>
-            <span className={`text-xs sm:text-sm ${isDayGain ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
-              ({isDayGain ? "+" : ""}{fmtPct(dayChangePct)}%)
+        {/* Day's Change - Expandable */}
+        <div className="flex flex-col">
+          <div
+            className="flex justify-between items-center cursor-pointer select-none group"
+            onClick={() => setDayChangeExpanded(!dayChangeExpanded)}
+          >
+            <span className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
+              Day&apos;s Change
+              <div className="p-0.5 rounded-full bg-neutral-100 dark:bg-white/5 group-hover:bg-primary-50 dark:group-hover:bg-primary-500/10 transition-colors">
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 ${dayChangeExpanded ? "rotate-180 text-primary-600 dark:text-primary-400" : ""}`}
+                />
+              </div>
             </span>
+            <div className="flex items-baseline gap-1.5">
+              <PrivacyMask>
+                <span className={`text-sm sm:text-base font-semibold ${isDayGain ? "text-emerald-500 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                  {isDayGain ? "+" : ""}₹{fmt(Math.abs(dayChange))}
+                </span>
+              </PrivacyMask>
+              <span className={`text-xs sm:text-sm ${isDayGain ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                ({isDayGain ? "+" : ""}{fmtPct(dayChangePct)}%)
+              </span>
+            </div>
           </div>
+
+          {/* Expanded Breakdown */}
+          {dayChangeExpanded && (
+            <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Mutual Funds
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask>
+                    <span className={`font-medium ${(mfDayChange ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {(mfDayChange ?? 0) >= 0 ? "+" : ""}₹{fmt(Math.abs(mfDayChange ?? 0))}
+                    </span>
+                  </PrivacyMask>
+                  {mfDayChangePct !== undefined && (
+                    <span className={`text-xs ${(mfDayChangePct ?? 0) >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                      ({(mfDayChangePct ?? 0) >= 0 ? "+" : ""}{fmtPct(mfDayChangePct)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  Stocks
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask>
+                    <span className={`font-medium ${(stockDayChange ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {(stockDayChange ?? 0) >= 0 ? "+" : ""}₹{fmt(Math.abs(stockDayChange ?? 0))}
+                    </span>
+                  </PrivacyMask>
+                  {stockDayChangePct !== undefined && (
+                    <span className={`text-xs ${(stockDayChangePct ?? 0) >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                      ({(stockDayChangePct ?? 0) >= 0 ? "+" : ""}{fmtPct(stockDayChangePct)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Divider */}
