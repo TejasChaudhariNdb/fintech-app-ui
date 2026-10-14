@@ -1307,7 +1307,7 @@ export default function StocksPage() {
                   Upload Broker CSV or Excel
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                  Supports <b>Zerodha, Groww, AngelOne</b>, or custom sheets (needs <b>Instrument, Qty, Avg Cost</b>).
+                  Supports <b>Zerodha, Groww, AngelOne</b>, or custom sheets (needs <b>Instrument, Qty, Avg Cost</b>; optional <b>Purchase Date, Exchange</b>).
                 </p>
               </div>
               <a
@@ -1538,7 +1538,7 @@ export default function StocksPage() {
               <div>
                 <p className="font-semibold mb-0.5">Quick Solution:</p>
                 <p>
-                  Ensure your column header names match standard formats (e.g. <b>Instrument</b>, <b>Qty</b>, <b>Avg. cost</b>), or download our sample template below and paste your values into it.
+                  Ensure your column header names match standard formats (e.g. <b>Instrument</b>, <b>Qty</b>, <b>Avg. cost</b>; optional <b>Purchase Date, Exchange</b>), or download our sample template below and paste your values into it.
                 </p>
               </div>
             </div>
