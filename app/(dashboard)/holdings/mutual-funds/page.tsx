@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff, BarChart2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -111,11 +111,16 @@ export default function MutualFundsPage() {
   const [isJourneyRefetching, setIsJourneyRefetching] = useState(false);
 
   // View Mode & Tax Report State
+  const [holdingViewTab, setHoldingViewTab] = useState<"holdings" | "analytics">("holdings");
   const [viewMode, setViewMode] = useState<"compact" | "detailed">("detailed");
   const [selectedFy, setSelectedFy] = useState("2025-26");
   const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
   useEffect(() => {
+    const savedTab = localStorage.getItem("mf_holding_view_tab");
+    if (savedTab === "holdings" || savedTab === "analytics") {
+      setHoldingViewTab(savedTab);
+    }
     const savedMode = localStorage.getItem("holdings_view_mode");
     if (savedMode === "compact" || savedMode === "detailed") {
       setViewMode(savedMode);
@@ -403,23 +408,57 @@ export default function MutualFundsPage() {
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
 
-      <MutualFundJourneyChart
-        data={journeyHistory || undefined}
-        coverageStart={journeyMeta?.coverage_start || null}
-        coveredSchemes={journeyMeta?.covered_schemes || 0}
-        onRangeChange={handleRangeChange}
-        selectedRange={journeyRange}
-        isRefetching={isJourneyRefetching}
-      />
+      {/* Sub-navigation: Holdings vs Visual Analytics */}
+      <div className="flex items-center justify-between pb-1">
+        <div className="inline-flex p-1 bg-neutral-100 dark:bg-white/5 rounded-2xl border border-neutral-200/60 dark:border-white/5">
+          <button
+            onClick={() => {
+              setHoldingViewTab("holdings");
+              localStorage.setItem("mf_holding_view_tab", "holdings");
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              holdingViewTab === "holdings"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            }`}>
+            <List size={16} />
+            <span>Holdings ({schemes.length})</span>
+          </button>
+          <button
+            onClick={() => {
+              setHoldingViewTab("analytics");
+              localStorage.setItem("mf_holding_view_tab", "analytics");
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              holdingViewTab === "analytics"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            }`}>
+            <BarChart2 size={16} />
+            <span>Visual Analytics</span>
+          </button>
+        </div>
+      </div>
 
-      <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
-                  Mutual Fund Allocation
-                </h3>
+      {holdingViewTab === "analytics" && (
+        <>
+          <MutualFundJourneyChart
+            data={journeyHistory || undefined}
+            coverageStart={journeyMeta?.coverage_start || null}
+            coveredSchemes={journeyMeta?.covered_schemes || 0}
+            onRangeChange={handleRangeChange}
+            selectedRange={journeyRange}
+            isRefetching={isJourneyRefetching}
+          />
+
+          <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white leading-tight">
+                      Mutual Fund Allocation
+                    </h3>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {lastUpdated && (
                     <span className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
@@ -573,6 +612,8 @@ export default function MutualFundsPage() {
           </div>
         </div>
       </Card>
+      </>
+      )}
 
       {/* Schemes List */}
       <div className="space-y-4">

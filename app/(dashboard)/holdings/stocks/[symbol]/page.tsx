@@ -16,11 +16,13 @@ import {
   MapPin,
   Pencil,
   Phone,
+  Plus,
   Trash2,
   TrendingDown,
   TrendingUp,
   Users,
 } from "lucide-react";
+import { useProfile } from "@/context/ProfileContext";
 
 type StockHolding = {
   id: number;
@@ -105,12 +107,20 @@ export default function StockDetailPage() {
     ? decodeURIComponent(params.symbol as string)
     : "";
   const router = useRouter();
+  const { activeProfileId } = useProfile();
   const [data, setData] = useState<StockFundamentals | null>(null);
   const [holding, setHolding] = useState<StockHolding | null>(null);
   const [transactions, setTransactions] = useState<StockTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingTx, setEditingTx] = useState<EditableTransaction | null>(null);
+  const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [newTxForm, setNewTxForm] = useState({
+    transaction_type: "BUY" as "BUY" | "SELL",
+    quantity: "",
+    price: "",
+    date: new Date().toISOString().split("T")[0],
+  });
   const [toast, setToast] = useState({
     message: "",
     type: "info" as "success" | "error" | "loading" | "info",
@@ -180,6 +190,38 @@ export default function StockDetailPage() {
   const formatPercent = (num: number | null | undefined) => {
     if (num === null || num === undefined) return "N/A";
     return `${(num * 100).toFixed(2)}%`;
+  };
+
+  const handleAddTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTxForm.quantity || !newTxForm.price || !newTxForm.date) {
+      showToast("Please fill all required fields", "error");
+      return;
+    }
+    try {
+      showToast("Adding transaction...", "loading");
+      await api.addStockTransaction(
+        {
+          symbol,
+          quantity: Number(newTxForm.quantity),
+          price: Number(newTxForm.price),
+          date: newTxForm.date,
+          transaction_type: newTxForm.transaction_type,
+        },
+        activeProfileId ? String(activeProfileId) : undefined
+      );
+      setIsAddTxOpen(false);
+      setNewTxForm({
+        transaction_type: "BUY",
+        quantity: "",
+        price: holding?.current_price ? String(holding.current_price) : "",
+        date: new Date().toISOString().split("T")[0],
+      });
+      await loadPageData();
+      showToast("Transaction added successfully", "success");
+    } catch {
+      showToast("Failed to add transaction", "error");
+    }
   };
 
   const handleTransactionSave = async (e: React.FormEvent) => {
@@ -314,7 +356,7 @@ export default function StockDetailPage() {
       ) : null}
 
       <Card className="p-5 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
               Transaction Ledger
@@ -323,9 +365,26 @@ export default function StockDetailPage() {
               Edit or delete individual stock entries.
             </p>
           </div>
-          <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-300">
-            {transactions.length} entries
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-600 dark:bg-white/10 dark:text-neutral-300">
+              {transactions.length} entries
+            </span>
+            <Button
+              size="sm"
+              onClick={() => {
+                setNewTxForm({
+                  transaction_type: "BUY",
+                  quantity: "",
+                  price: holding?.current_price ? String(holding.current_price) : "",
+                  date: new Date().toISOString().split("T")[0],
+                });
+                setIsAddTxOpen(true);
+              }}
+              className="flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3">
+              <Plus size={14} />
+              <span>Buy / Sell</span>
+            </Button>
+          </div>
         </div>
 
         {transactions.length > 0 ? (
@@ -803,6 +862,77 @@ export default function StockDetailPage() {
             </Button>
           </form>
         ) : null}
+      </Modal>
+
+      <Modal
+        isOpen={isAddTxOpen}
+        onClose={() => setIsAddTxOpen(false)}
+        title={`Add Transaction — ${symbol}`}>
+        <form onSubmit={handleAddTransaction} className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 bg-neutral-100 dark:bg-white/5 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() =>
+                setNewTxForm({ ...newTxForm, transaction_type: "BUY" })
+              }
+              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                newTxForm.transaction_type === "BUY"
+                  ? "bg-white dark:bg-surface text-emerald-600 dark:text-emerald-400 shadow-sm"
+                  : "text-neutral-600 dark:text-neutral-300"
+              }`}>
+              Buy
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setNewTxForm({ ...newTxForm, transaction_type: "SELL" })
+              }
+              className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                newTxForm.transaction_type === "SELL"
+                  ? "bg-white dark:bg-surface text-red-600 dark:text-red-400 shadow-sm"
+                  : "text-neutral-600 dark:text-neutral-300"
+              }`}>
+              Sell
+            </button>
+          </div>
+
+          <Input
+            label="Quantity"
+            type="number"
+            placeholder="e.g. 10"
+            value={newTxForm.quantity}
+            onChange={(e) =>
+              setNewTxForm({ ...newTxForm, quantity: e.target.value })
+            }
+            required
+          />
+          <Input
+            label="Price per share (₹)"
+            type="number"
+            step="any"
+            placeholder={
+              holding?.current_price ? String(holding.current_price) : "0.00"
+            }
+            value={newTxForm.price}
+            onChange={(e) =>
+              setNewTxForm({ ...newTxForm, price: e.target.value })
+            }
+            required
+          />
+          <Input
+            label="Transaction Date"
+            type="date"
+            value={newTxForm.date}
+            onChange={(e) =>
+              setNewTxForm({ ...newTxForm, date: e.target.value })
+            }
+            required
+          />
+
+          <Button type="submit" className="w-full">
+            Add {newTxForm.transaction_type} Entry
+          </Button>
+        </form>
       </Modal>
     </div>
   );

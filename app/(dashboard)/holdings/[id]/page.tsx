@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import TransactionItem from "@/components/features/TransactionItem";
 import AppSkeleton from "@/components/ui/AppSkeleton";
-import { ArrowLeft, AlertCircle, Share2 } from "lucide-react";
+import { ArrowLeft, AlertCircle, Share2, Plus } from "lucide-react";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import Button from "@/components/ui/Button";
 import ShareStockModal from "@/components/features/ShareStockModal";
+import AddTransactionModal from "@/components/features/AddTransactionModal";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
@@ -27,8 +28,9 @@ export default function SchemeDetailPage({
   const [showShareModal, setShowShareModal] = useState(false);
   const { light } = useHaptic();
 
-  // Edit State
+  // Edit & Add State
   const [editingTx, setEditingTx] = useState<any>(null);
+  const [showAddTx, setShowAddTx] = useState(false);
 
   // Toast State
   const [toast, setToast] = useState<{
@@ -317,12 +319,21 @@ export default function SchemeDetailPage({
 
         {/* Transactions Section */}
         <div>
-          <h3 className="text-lg font-bold mb-4 px-1 flex items-center gap-2">
-            history
-            <span className="text-xs font-normal text-neutral-500 bg-neutral-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
-              {scheme.transactions?.length || 0} Transactions
-            </span>
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4 px-1">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              Transaction History
+              <span className="text-xs font-normal text-neutral-500 bg-neutral-100 dark:bg-white/5 px-2 py-0.5 rounded-full">
+                {scheme.transactions?.length || 0} Transactions
+              </span>
+            </h3>
+            <Button
+              size="sm"
+              onClick={() => setShowAddTx(true)}
+              className="flex items-center gap-1.5 shadow-sm text-xs py-1.5 px-3">
+              <Plus size={14} />
+              <span>Buy / Sell MF</span>
+            </Button>
+          </div>
 
           <div className="space-y-3">
             {scheme.transactions && scheme.transactions.length > 0 ? (
@@ -466,6 +477,18 @@ export default function SchemeDetailPage({
             </form>
         )}
       </Modal>
+
+      <AddTransactionModal
+        isOpen={showAddTx}
+        initialSchemeId={Number(id)}
+        initialTransactionType="PURCHASE"
+        onClose={() => setShowAddTx(false)}
+        onSuccess={async (customMsg?: string) => {
+          showToast(customMsg || "Transaction saved! Updating scheme...", "success");
+          clearSchemeCache();
+          await loadScheme();
+        }}
+      />
     </div>
   );
 }

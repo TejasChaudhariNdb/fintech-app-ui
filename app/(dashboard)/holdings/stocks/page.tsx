@@ -35,6 +35,7 @@ import {
   XCircle,
   AlertCircle,
   Sparkles,
+  BarChart2,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -101,6 +102,14 @@ export default function StocksPage() {
     "value",
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [holdingViewTab, setHoldingViewTab] = useState<"holdings" | "analytics">("holdings");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("stock_holding_view_tab");
+    if (saved === "holdings" || saved === "analytics") {
+      setHoldingViewTab(saved);
+    }
+  }, []);
 
   // Stock Modal State (Add/Import)
   const [showStockModal, setShowStockModal] = useState(false);
@@ -536,15 +545,50 @@ export default function StocksPage() {
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
 
-      {manualStocks.length > 0 && (
-        <StockJourneyChart
-          data={journeyHistory || undefined}
-          coverageStart={journeyMeta?.coverage_start || null}
-          coveredStocks={journeyMeta?.covered_stocks || 0}
-          onRangeChange={handleJourneyRangeChange}
-          selectedRange={journeyRange}
-          isRefetching={isJourneyLoading}
-        />
+      {/* Sub-navigation: Holdings vs Visual Analytics */}
+      <div className="flex items-center justify-between pb-1">
+        <div className="inline-flex p-1 bg-neutral-100 dark:bg-white/5 rounded-2xl border border-neutral-200/60 dark:border-white/5">
+          <button
+            onClick={() => {
+              setHoldingViewTab("holdings");
+              localStorage.setItem("stock_holding_view_tab", "holdings");
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              holdingViewTab === "holdings"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            }`}>
+            <List size={16} />
+            <span>Holdings ({manualStocks.length})</span>
+          </button>
+          <button
+            onClick={() => {
+              setHoldingViewTab("analytics");
+              localStorage.setItem("stock_holding_view_tab", "analytics");
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+              holdingViewTab === "analytics"
+                ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
+                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+            }`}>
+            <BarChart2 size={16} />
+            <span>Visual Analytics</span>
+          </button>
+        </div>
+      </div>
+
+      {holdingViewTab === "analytics" && manualStocks.length > 0 && (
+        <div className="space-y-6">
+          <StockJourneyChart
+            data={journeyHistory || undefined}
+            coverageStart={journeyMeta?.coverage_start || null}
+            coveredStocks={journeyMeta?.covered_stocks || 0}
+            onRangeChange={handleJourneyRangeChange}
+            selectedRange={journeyRange}
+            isRefetching={isJourneyLoading}
+          />
+          <PortfolioAnalysisCard />
+        </div>
       )}
 
       {/* Manual Stocks Header */}
@@ -599,8 +643,6 @@ export default function StocksPage() {
 
       {manualStocks.length > 0 && (
         <div className="space-y-6 mb-8">
-          {/* New Portfolio Analysis */}
-          <PortfolioAnalysisCard />
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

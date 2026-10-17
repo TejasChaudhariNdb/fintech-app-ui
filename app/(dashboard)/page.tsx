@@ -107,7 +107,7 @@ export default function HomePage() {
         setBenchmark(null);
 
         // 2. Fetch Fresh Family Data directly from API
-        const [famData, g, up, ps, history, topH] = await Promise.all([
+        const [famData, g, up, ps, history, topH, xirrData] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
             return null;
@@ -132,11 +132,22 @@ export default function HomePage() {
             console.error("Top holdings error:", err);
             return { holdings: [] };
           }),
+          api.getXIRR().catch((err) => {
+            console.error("Family XIRR error:", err);
+            return { xirr: 0, mf_xirr: 0, stock_xirr: 0 };
+          }),
         ]);
 
         if (famData) setFamilySummary(famData);
         setGoals(g || []);
-        if (ps) setSummary(ps);
+        if (ps) {
+          setSummary({
+            ...ps,
+            xirr: xirrData?.xirr ?? ps.xirr,
+            mf_xirr: xirrData?.mf_xirr ?? ps.mf_xirr,
+            stock_xirr: xirrData?.stock_xirr ?? ps.stock_xirr,
+          });
+        }
         if (history) setPerfData(history);
         if (topH) setTopHoldings(topH.holdings || []);
         if (up) {
@@ -335,6 +346,9 @@ export default function HomePage() {
           stockDayChange={summary?.stock_day_change}
           stockDayChangePct={summary?.stock_day_change_pct}
           lastUpdated={familySummary?.last_updated || netWorth?.last_updated}
+          xirr={summary?.xirr}
+          mfXirr={summary?.mf_xirr}
+          stockXirr={summary?.stock_xirr}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
         />
@@ -357,6 +371,8 @@ export default function HomePage() {
               stockProfit={summary.stock_profit || 0}
               mfInvested={summary.mf_invested || 0}
               stockInvested={summary.stock_invested || 0}
+              mfCurrent={(summary.mf_invested || 0) + (summary.mf_profit || 0)}
+              stockCurrent={(summary.stock_invested || 0) + (summary.stock_profit || 0)}
               profileBreakdown={familySummary?.profile_breakdown || []}
             />
           </section>
@@ -660,6 +676,9 @@ export default function HomePage() {
               stockDayChange={summary?.stock_day_change}
               stockDayChangePct={summary?.stock_day_change_pct}
               lastUpdated={netWorth?.last_updated}
+              xirr={summary?.xirr}
+              mfXirr={summary?.mf_xirr}
+              stockXirr={summary?.stock_xirr}
               onAddMF={() => router.push("/holdings/mutual-funds")}
               onAddStock={() => router.push("/holdings/stocks")}
             />
