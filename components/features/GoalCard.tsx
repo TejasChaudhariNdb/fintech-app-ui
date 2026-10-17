@@ -176,14 +176,14 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
         <div className="p-3 bg-neutral-50 dark:bg-white/5 rounded-xl border border-neutral-100 dark:border-white/5">
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
             Current Corpus
           </p>
-          <p className="font-semibold text-neutral-900 dark:text-white">
+          <p className="font-bold text-neutral-900 dark:text-white tabular-nums">
             <PrivacyMask>
-              ₹{goal.current_value.toLocaleString("en-IN")}
+              ₹{Math.round(goal.current_value).toLocaleString("en-IN")}
             </PrivacyMask>
           </p>
         </div>
@@ -191,9 +191,24 @@ export default function GoalCard({ goal, onEdit, onDelete }: GoalCardProps) {
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
             Monthly SIP
           </p>
-          <p className="font-semibold text-neutral-900 dark:text-white">
+          <p className="font-bold text-neutral-900 dark:text-white tabular-nums">
             <PrivacyMask>
-              ₹{goal.monthly_contribution.toLocaleString("en-IN")}
+              ₹{Math.round(goal.monthly_contribution).toLocaleString("en-IN")}
+            </PrivacyMask>
+          </p>
+        </div>
+        <div className="p-3 bg-primary-50/50 dark:bg-primary-500/10 rounded-xl border border-primary-200/50 dark:border-primary-500/20 col-span-2 sm:col-span-1 flex flex-col justify-between">
+          <p className="text-xs text-primary-700 dark:text-primary-300 font-semibold mb-1 flex items-center justify-between">
+            <span>Predicted Corpus</span>
+            {hasTargetYear && (
+              <span className="text-[10px] text-primary-500 font-bold bg-primary-100/60 dark:bg-primary-500/20 px-1.5 py-0.2 rounded">
+                by {goal.target_year}
+              </span>
+            )}
+          </p>
+          <p className="font-extrabold text-primary-700 dark:text-primary-300 tabular-nums text-base">
+            <PrivacyMask>
+              ₹{Math.round(goal.projected_value || goal.current_value).toLocaleString("en-IN")}
             </PrivacyMask>
           </p>
         </div>
