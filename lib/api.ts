@@ -123,7 +123,14 @@ export const api = {
           "/cas/upload-json",
           "/equity/import",
           "/equity/holding",
-          "/reports/capital-gains"
+          "/reports/capital-gains",
+          "/portfolio/market-cap-allocation",
+          "/insurance/policies",
+          "/insurance",
+          "/fixed-income/holdings",
+          "/fixed-income",
+          "/gold/holdings",
+          "/gold"
         ];
         
         const pathPart = endpoint.split("?")[0];
@@ -553,7 +560,11 @@ export const api = {
 
   // Gold & Commodities
   getGoldRates: () => api.fetch("/gold/rates"),
-  getGoldHoldings: () => api.fetch("/gold/holdings", { cacheKey: "gold-holdings" }),
+  getGoldHoldings: (profileId?: string) => {
+    const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const query = activeProf ? `?profile_id=${activeProf}` : "";
+    return api.fetch(`/gold/holdings${query}`, { cacheKey: "gold-holdings" });
+  },
   addGoldHolding: async (data: Record<string, unknown>) => {
     const res = await api.fetch("/gold/holdings", {
       method: "POST",
@@ -579,8 +590,11 @@ export const api = {
   },
 
   // Fixed Income & Deposits
-  getFixedIncomeHoldings: () =>
-    api.fetch("/fixed-income/holdings", { cacheKey: "fixed-income-holdings" }),
+  getFixedIncomeHoldings: (profileId?: string) => {
+    const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const query = activeProf ? `?profile_id=${activeProf}` : "";
+    return api.fetch(`/fixed-income/holdings${query}`, { cacheKey: "fixed-income-holdings" });
+  },
   addFixedIncomeHolding: async (data: Record<string, unknown>) => {
     const res = await api.fetch("/fixed-income/holdings", {
       method: "POST",
@@ -606,8 +620,11 @@ export const api = {
   },
 
   // Insurance & Policy Vault
-  getInsurancePolicies: () =>
-    api.fetch("/insurance/policies", { cacheKey: "insurance-policies" }),
+  getInsurancePolicies: (profileId?: string) => {
+    const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const query = activeProf ? `?profile_id=${activeProf}` : "";
+    return api.fetch(`/insurance/policies${query}`, { cacheKey: "insurance-policies" });
+  },
   addInsurancePolicy: async (data: Record<string, unknown>) => {
     const res = await api.fetch("/insurance/policies", {
       method: "POST",
