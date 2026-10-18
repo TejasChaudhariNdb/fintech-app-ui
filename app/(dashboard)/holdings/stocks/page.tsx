@@ -40,6 +40,7 @@ import {
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 import StockJourneyChart from "@/components/features/StockJourneyChart";
+import TradebookImportModal from "@/components/features/TradebookImportModal";
 
 export default function StocksPage() {
   const { profiles, activeProfileId } = useProfile();
@@ -166,6 +167,7 @@ export default function StocksPage() {
     "MANUAL",
   );
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  const [showTradebookModal, setShowTradebookModal] = useState(false);
 
   // Import State
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -301,9 +303,9 @@ export default function StocksPage() {
   const formatPercent = (value?: number | null, digits = 2) =>
     `${(value || 0).toFixed(digits)}%`;
 
-  const loadData = async () => {
+  const loadData = async (showSkeleton = true) => {
     try {
-      setIsLoading(true);
+      if (showSkeleton) setIsLoading(true);
       const stocksRes = await api.getEquitySummary();
       // stocksRes is { total_value: ..., holdings: [...] }
       setManualStocks(stocksRes.holdings || []);
@@ -312,7 +314,7 @@ export default function StocksPage() {
       console.error(err);
       showToast("Failed to load stocks", "error");
     } finally {
-      setIsLoading(false);
+      if (showSkeleton) setIsLoading(false);
     }
   };
 
@@ -662,23 +664,20 @@ export default function StocksPage() {
             <Loader2 size={20} className={isLoading ? "animate-spin" : ""} />
           </button>
           <button
-            onClick={() => {
-              setShowStockModal(true);
-              setStockModalTab("IMPORT");
-            }}
-            className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-1"
-            title="Import Stocks">
-            <FileUp size={16} />
-            Import CSV
+            onClick={() => setShowTradebookModal(true)}
+            className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-primary-500/20 flex items-center justify-center gap-1.5 active:scale-95"
+            title="Upload Broker Tradebook (Zerodha, Groww, AngelOne CSV)">
+            <FileSpreadsheet size={15} />
+            <span>Upload Tradebook</span>
           </button>
           <button
             onClick={() => {
               setShowStockModal(true);
               setStockModalTab("MANUAL");
             }}
-            className="flex-1 sm:flex-none px-3 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-sm font-medium flex items-center justify-center gap-1 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+            className="flex-1 sm:flex-none px-3.5 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
             <Plus size={16} />
-            <span>Buy / Sell Stock</span>
+            <span>+ Buy / Sell</span>
           </button>
         </div>
       </div>
@@ -1167,25 +1166,33 @@ export default function StocksPage() {
           ))
         )}
         {manualStocks.length === 0 && !isLoading && (
-          <div className="text-center py-10 text-neutral-500 space-y-4">
-            <p>No stocks added yet.</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="text-center py-12 text-neutral-500 space-y-4 max-w-md mx-auto">
+            <div className="w-14 h-14 rounded-3xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto shadow-xs">
+              <FileSpreadsheet size={28} />
+            </div>
+            <div>
+              <p className="font-extrabold text-base text-neutral-900 dark:text-white">
+                No stocks in your portfolio yet
+              </p>
+              <p className="text-xs text-neutral-400 mt-1">
+                Upload your Zerodha, Groww, or AngelOne tradebook statement to automatically import your entire stock transaction history in seconds.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
               <Button
-                onClick={() => {
-                  setShowStockModal(true);
-                  setStockModalTab("MANUAL");
-                }}>
-                <Plus className="w-4 h-4 mr-2" />
-                Buy / Sell Stock
+                onClick={() => setShowTradebookModal(true)}
+                className="flex items-center justify-center gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                Upload Broker Tradebook
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => {
                   setShowStockModal(true);
-                  setStockModalTab("IMPORT");
+                  setStockModalTab("MANUAL");
                 }}>
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Import Holdings CSV
+                <Plus className="w-4 h-4 mr-1.5" />
+                Manual Buy / Sell
               </Button>
             </div>
           </div>
@@ -1234,13 +1241,14 @@ export default function StocksPage() {
             Enter Manually
           </button>
           <button
-            onClick={() => setStockModalTab("IMPORT")}
-            className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${
-              stockModalTab === "IMPORT"
-                ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-            }`}>
-            Import File
+            type="button"
+            onClick={() => {
+              setShowStockModal(false);
+              setShowTradebookModal(true);
+            }}
+            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center justify-center gap-1.5">
+            <FileSpreadsheet size={15} />
+            <span>Upload Tradebook</span>
           </button>
         </div>
 
@@ -1404,7 +1412,7 @@ export default function StocksPage() {
               <div>
                 <p className="font-semibold text-xs sm:text-sm flex items-center gap-1.5 text-blue-950 dark:text-blue-100">
                   <Sparkles size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
-                  Upload Broker CSV or Excel
+                  Upload Broker Tradebook CSV
                 </p>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
                   Supports <b>Zerodha, Groww, AngelOne</b>, or custom sheets (needs <b>Instrument, Qty, Avg Cost</b>; optional <b>Purchase Date, Exchange</b>).
@@ -1721,6 +1729,15 @@ export default function StocksPage() {
         isOpen={!!selectedShareStock}
         onClose={() => setSelectedShareStock(null)}
         stock={selectedShareStock}
+      />
+
+      <TradebookImportModal
+        isOpen={showTradebookModal}
+        onClose={() => setShowTradebookModal(false)}
+        onSuccess={() => {
+          loadData(false);
+          showToast("Broker tradebook imported successfully!", "success");
+        }}
       />
     </div>
   );

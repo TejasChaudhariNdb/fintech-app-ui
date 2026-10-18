@@ -732,6 +732,58 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  previewTradebook: async (file: File, profileId?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("access_token");
+    const url = profileId
+      ? `${API_URL}/equity/import-preview?profile_id=${profileId}`
+      : `${API_URL}/equity/import-preview`;
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Preview failed" }));
+      const detail = err.detail || err.message || "Failed to parse tradebook";
+      const errorMsg = typeof detail === "string" ? detail : (detail.message || "Failed to parse tradebook");
+      const errorObj = new Error(errorMsg);
+      (errorObj as any).data = typeof detail === "object" ? detail : null;
+      throw errorObj;
+    }
+    return r.json();
+  },
+
+  commitTradebook: async (trades: any[], broker: string = "BROKER_IMPORT", profileId?: string) => {
+    const token = localStorage.getItem("access_token");
+    const url = profileId
+      ? `${API_URL}/equity/import-commit?profile_id=${profileId}`
+      : `${API_URL}/equity/import-commit`;
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify({ trades, broker }),
+    });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Commit failed" }));
+      const detail = err.detail || err.message || "Failed to commit trades";
+      const errorMsg = typeof detail === "string" ? detail : (detail.message || "Failed to commit trades");
+      const errorObj = new Error(errorMsg);
+      (errorObj as any).data = typeof detail === "object" ? detail : null;
+      throw errorObj;
+    }
+    api.clearPortfolioCache();
+    return r.json();
+  },
+
   importTrades: async (file: File, broker: string, profileId?: string) => {
     const formData = new FormData();
     formData.append("file", file);
