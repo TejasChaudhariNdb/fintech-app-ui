@@ -603,9 +603,12 @@ export default function TradebookImportModal({
               </div>
 
               {/* Trades List Table */}
-              <div className="border border-neutral-200 dark:border-white/10 rounded-2xl overflow-hidden max-h-64 sm:max-h-72 overflow-y-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-50 dark:bg-white/5 border-b border-neutral-200 dark:border-white/10 text-neutral-500 font-semibold sticky top-0 z-10">
+              <div className="flex items-center justify-end text-[10px] text-neutral-400 px-1 sm:hidden">
+                <span>← Swipe table to view Price &amp; Total →</span>
+              </div>
+              <div className="border border-neutral-200 dark:border-white/10 rounded-2xl overflow-x-auto overflow-y-auto max-h-64 sm:max-h-72 scrollbar-thin touch-pan-x">
+                <table className="w-full min-w-[540px] text-left text-xs">
+                  <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-white/10 text-neutral-500 font-semibold sticky top-0 z-10">
                     <tr>
                       <th className="py-2.5 pl-3 pr-2 w-8"></th>
                       <th className="py-2.5 px-2">Stock</th>

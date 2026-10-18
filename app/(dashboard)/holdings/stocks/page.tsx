@@ -36,6 +36,9 @@ import {
   AlertCircle,
   Sparkles,
   BarChart2,
+  ShieldCheck,
+  ArrowRight,
+  Zap,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -581,7 +584,7 @@ export default function StocksPage() {
   }
 
   return (
-    <div className="px-4 pt-6 space-y-6">
+    <div className="px-4 pt-6 pb-24 sm:pb-8 space-y-6">
       <Toast
         message={toast.message}
         type={toast.type}
@@ -642,44 +645,52 @@ export default function StocksPage() {
             My Stocks
           </h3>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Total Value:{" "}
-            <PrivacyMask>₹{stockStats.current.toLocaleString()}</PrivacyMask>
+            {manualStocks.length > 0 ? (
+              <>
+                Total Value:{" "}
+                <PrivacyMask>₹{stockStats.current.toLocaleString()}</PrivacyMask>
+              </>
+            ) : (
+              "Track your equity portfolio with live NSE/BSE quotes, automated XIRR, and capital gains reports."
+            )}
           </p>
         </div>
-        <div className="flex w-full sm:w-auto gap-2">
-          <button
-            onClick={async () => {
-              showToast("Refreshing prices...", "loading");
-              try {
-                await api.refreshStockPrices();
-                await new Promise((r) => setTimeout(r, 2000)); // Wait for background task
-                await loadData();
-                showToast("Prices refreshed", "success");
-              } catch (e) {
-                showToast("Refresh failed", "error");
-              }
-            }}
-            className="p-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors aspect-square flex items-center justify-center"
-            title="Refresh Prices">
-            <Loader2 size={20} className={isLoading ? "animate-spin" : ""} />
-          </button>
-          <button
-            onClick={() => setShowTradebookModal(true)}
-            className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-primary-500/20 flex items-center justify-center gap-1.5 active:scale-95"
-            title="Upload Broker Tradebook (Zerodha, Groww, AngelOne CSV)">
-            <FileSpreadsheet size={15} />
-            <span>Upload Tradebook</span>
-          </button>
-          <button
-            onClick={() => {
-              setShowStockModal(true);
-              setStockModalTab("MANUAL");
-            }}
-            className="flex-1 sm:flex-none px-3.5 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-            <Plus size={16} />
-            <span>+ Buy / Sell</span>
-          </button>
-        </div>
+        {manualStocks.length > 0 && (
+          <div className="flex w-full sm:w-auto gap-2">
+            <button
+              onClick={async () => {
+                showToast("Refreshing prices...", "loading");
+                try {
+                  await api.refreshStockPrices();
+                  await new Promise((r) => setTimeout(r, 2000)); // Wait for background task
+                  await loadData();
+                  showToast("Prices refreshed", "success");
+                } catch (e) {
+                  showToast("Refresh failed", "error");
+                }
+              }}
+              className="p-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors aspect-square flex items-center justify-center"
+              title="Refresh Prices">
+              <Loader2 size={20} className={isLoading ? "animate-spin" : ""} />
+            </button>
+            <button
+              onClick={() => setShowTradebookModal(true)}
+              className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-primary-500/20 flex items-center justify-center gap-1.5 active:scale-95"
+              title="Upload Broker Tradebook (Zerodha, Groww, AngelOne CSV)">
+              <FileSpreadsheet size={15} />
+              <span>Upload Tradebook</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowStockModal(true);
+                setStockModalTab("MANUAL");
+              }}
+              className="flex-1 sm:flex-none px-3.5 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+              <Plus size={16} />
+              <span>+ Buy / Sell</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {manualStocks.length > 0 && (
@@ -827,8 +838,196 @@ export default function StocksPage() {
         </div>
       )}
 
-      {/* Stock List */}
-      <div className="grid gap-4">
+      {/* Stock List or Clean Zero State */}
+      {manualStocks.length === 0 && !isLoading ? (
+        <div className="flex flex-col items-center justify-center p-5 sm:p-8 text-center bg-white dark:bg-surface rounded-2xl sm:rounded-3xl border border-neutral-200/80 dark:border-white/5 shadow-xs max-w-xl mx-auto my-3 sm:my-6 space-y-4 sm:space-y-5">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 rounded-2xl flex items-center justify-center shadow-2xs">
+            <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7" />
+          </div>
+
+          <div className="space-y-1 sm:space-y-1.5 max-w-md">
+            <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+              Track Your Stock Portfolio
+            </h2>
+            <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed text-xs sm:text-sm">
+              Import your broker tradebook to automatically sync holdings with live NSE/BSE quotes, money-weighted XIRR, and capital gains tax reports.
+            </p>
+          </div>
+
+          {/* Supported Brokers Pills */}
+          <div className="w-full flex items-center justify-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mr-0.5">
+              Supported:
+            </span>
+            {["Zerodha", "Groww", "Upstox", "Angel One", "ICICI Direct", "Custom CSV"].map((broker) => (
+              <span
+                key={broker}
+                className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-neutral-100 dark:bg-white/5 text-neutral-700 dark:text-neutral-300 border border-neutral-200/70 dark:border-white/10"
+              >
+                {broker}
+              </span>
+            ))}
+          </div>
+
+          {/* Action Cards */}
+          <div className="w-full space-y-2.5">
+            {/* Primary Action: Import Broker Tradebook */}
+            <button
+              onClick={() => setShowTradebookModal(true)}
+              className="group w-full flex items-center justify-between p-3.5 sm:p-4 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl transition-all shadow-md shadow-primary-500/20 active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3 text-left min-w-0">
+                <div className="p-2 sm:p-2.5 bg-white/10 rounded-xl shrink-0">
+                  <FileSpreadsheet className="w-5 h-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-bold text-sm sm:text-base">
+                      Upload Broker Statement
+                    </span>
+                    <span className="text-[9px] sm:text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded-md shrink-0">
+                      Auto-Import
+                    </span>
+                  </div>
+                  <div className="text-[11px] sm:text-xs text-primary-100/80 mt-0.5 truncate">
+                    Drop Zerodha, Groww, Upstox, Angel One CSV
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-white/70 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            </button>
+
+            {/* Secondary Action: Add Manually */}
+            <button
+              onClick={() => {
+                setShowStockModal(true);
+                setStockModalTab("MANUAL");
+              }}
+              className="group w-full flex items-center justify-between p-3.5 sm:p-4 bg-neutral-50 dark:bg-white/[0.03] hover:bg-neutral-100 dark:hover:bg-white/[0.06] border border-neutral-200 dark:border-white/10 rounded-2xl transition-all active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3 text-left min-w-0">
+                <div className="p-2 sm:p-2.5 bg-neutral-200/60 dark:bg-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 shrink-0">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-neutral-900 dark:text-white text-sm sm:text-base">
+                    Add Single Trade Manually
+                  </div>
+                  <div className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                    Search 5,000+ stocks with live price auto-fetch
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-5 h-5 text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            </button>
+          </div>
+
+          {/* 3-Step Walkthrough Banner */}
+          <div className="w-full p-3 sm:p-3.5 rounded-2xl bg-neutral-50/80 dark:bg-white/[0.02] border border-neutral-200/60 dark:border-white/5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2 text-left sm:text-center">
+              How It Works in 3 Steps:
+            </p>
+            <div className="grid grid-cols-3 gap-2 text-left">
+              <div className="space-y-0.5">
+                <span className="inline-block w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 text-[10px] font-bold text-center leading-4">
+                  1
+                </span>
+                <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 leading-tight">
+                  Export CSV
+                </p>
+                <p className="text-[10px] text-neutral-400 leading-tight">
+                  From your broker
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <span className="inline-block w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 text-[10px] font-bold text-center leading-4">
+                  2
+                </span>
+                <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 leading-tight">
+                  Auto-Verify
+                </p>
+                <p className="text-[10px] text-neutral-400 leading-tight">
+                  Skips duplicates
+                </p>
+              </div>
+              <div className="space-y-0.5">
+                <span className="inline-block w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 text-[10px] font-bold text-center leading-4">
+                  3
+                </span>
+                <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 leading-tight">
+                  Live Insights
+                </p>
+                <p className="text-[10px] text-neutral-400 leading-tight">
+                  P&amp;L, XIRR &amp; Tax
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Value Pillars */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full text-left">
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50/60 dark:bg-white/[0.02] border border-neutral-200/50 dark:border-white/5">
+              <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                <BarChart2 size={14} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                  Live NSE/BSE Quotes
+                </p>
+                <p className="text-[10px] text-neutral-400 truncate">
+                  Daily price updates
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50/60 dark:bg-white/[0.02] border border-neutral-200/50 dark:border-white/5">
+              <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                <TrendingUp size={14} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                  Weighted Avg &amp; XIRR
+                </p>
+                <p className="text-[10px] text-neutral-400 truncate">
+                  Accurate returns
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-neutral-50/60 dark:bg-white/[0.02] border border-neutral-200/50 dark:border-white/5">
+              <div className="p-1.5 rounded-lg bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
+                <FileSpreadsheet size={14} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 truncate">
+                  Capital Gains Tax
+                </p>
+                <p className="text-[10px] text-neutral-400 truncate">
+                  ITR-ready STCG/LTCG
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer helper links */}
+          <div className="pt-2 border-t border-neutral-100 dark:border-white/5 w-full flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs text-neutral-400">
+            <a
+              href="/assets/arthavi_sample_tradebook.csv"
+              download
+              className="hover:text-primary-600 dark:hover:text-primary-400 flex items-center gap-1 font-semibold transition-colors"
+            >
+              <Download size={13} />
+              <span>Download sample CSV template</span>
+            </a>
+            <span className="hidden sm:inline opacity-40">•</span>
+            <span className="flex items-center gap-1 text-[11px] sm:text-xs">
+              <ShieldCheck size={13} className="text-emerald-500 shrink-0" />
+              <span>Private &amp; secure (no broker password required)</span>
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4">
         {viewMode === "compact" ? (
           <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
             <div className="grid gap-3 min-w-[760px]">
@@ -1165,38 +1364,6 @@ export default function StocksPage() {
             </Card>
           ))
         )}
-        {manualStocks.length === 0 && !isLoading && (
-          <div className="text-center py-12 text-neutral-500 space-y-4 max-w-md mx-auto">
-            <div className="w-14 h-14 rounded-3xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto shadow-xs">
-              <FileSpreadsheet size={28} />
-            </div>
-            <div>
-              <p className="font-extrabold text-base text-neutral-900 dark:text-white">
-                No stocks in your portfolio yet
-              </p>
-              <p className="text-xs text-neutral-400 mt-1">
-                Upload your Zerodha, Groww, or AngelOne tradebook statement to automatically import your entire stock transaction history in seconds.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
-              <Button
-                onClick={() => setShowTradebookModal(true)}
-                className="flex items-center justify-center gap-2">
-                <FileSpreadsheet className="w-4 h-4" />
-                Upload Broker Tradebook
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowStockModal(true);
-                  setStockModalTab("MANUAL");
-                }}>
-                <Plus className="w-4 h-4 mr-1.5" />
-                Manual Buy / Sell
-              </Button>
-            </div>
-          </div>
-        )}
         {manualStocks.length > 0 &&
           filteredStocks.length === 0 &&
           !isLoading && (
@@ -1222,6 +1389,7 @@ export default function StocksPage() {
             </div>
           )}
       </div>
+      )}
 
       {/* Manual Stock/Import Modal */}
       <Modal
