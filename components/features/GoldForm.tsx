@@ -79,15 +79,22 @@ export default function GoldForm({
     initialData?.purchase_date || new Date().toISOString().split("T")[0]
   );
   const [notes, setNotes] = useState<string>(initialData?.notes || "");
-  const [selectedProfileId, setSelectedProfileId] = useState<string>(
-    initialData?.profile_id
-      ? String(initialData.profile_id)
-      : activeProfileId !== "all"
-      ? activeProfileId
-      : profiles[0]?.id
-      ? String(profiles[0].id)
-      : ""
-  );
+  const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
+    if (initialData?.profile_id) return String(initialData.profile_id);
+    if (activeProfileId && activeProfileId !== "all") return activeProfileId;
+    return profiles[0]?.id ? String(profiles[0].id) : "";
+  });
+
+  useEffect(() => {
+    if (initialData?.profile_id) {
+      setSelectedProfileId(String(initialData.profile_id));
+    } else if (activeProfileId && activeProfileId !== "all") {
+      setSelectedProfileId(activeProfileId);
+    } else if (profiles && profiles.length > 0 && !selectedProfileId) {
+      const def = profiles.find((p) => p.is_default) || profiles[0];
+      if (def) setSelectedProfileId(String(def.id));
+    }
+  }, [activeProfileId, profiles, initialData]);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -137,6 +144,12 @@ export default function GoldForm({
       assetName.trim() ||
       `${purity} ${assetType === "JEWELRY" ? "Jewelry" : "Gold"} (${weightNum}g)`;
 
+    const resolvedProfileId = selectedProfileId
+      ? parseInt(selectedProfileId)
+      : activeProfileId !== "all"
+      ? parseInt(activeProfileId)
+      : profiles.find((p) => p.is_default)?.id || profiles[0]?.id;
+
     try {
       await onSave({
         id: initialData?.id,
@@ -148,7 +161,7 @@ export default function GoldForm({
         making_charges: makingNum,
         purchase_date: purchaseDate,
         notes: notes.trim() || undefined,
-        profile_id: selectedProfileId ? parseInt(selectedProfileId) : undefined,
+        profile_id: resolvedProfileId || undefined,
       });
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to save gold asset. Please try again.");

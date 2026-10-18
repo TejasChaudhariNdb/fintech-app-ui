@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useProfile } from "@/context/ProfileContext";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import InsurancePolicyModal from "@/components/features/InsurancePolicyModal";
@@ -92,6 +93,7 @@ function formatDatePretty(dateStr?: string | null): string {
 }
 
 export default function InsuranceVaultPage() {
+  const { activeProfileId } = useProfile();
   const [policies, setPolicies] = useState<InsurancePolicyItem[]>([]);
   const [summary, setSummary] = useState<InsuranceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export default function InsuranceVaultPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await api.getInsurancePolicies();
+      const res = await api.getInsurancePolicies(activeProfileId);
       if (res) {
         setPolicies(res.policies || []);
         setSummary(res.summary);
@@ -135,7 +137,7 @@ export default function InsuranceVaultPage() {
         window.history.replaceState({}, "", newUrl);
       }
     }
-  }, []);
+  }, [activeProfileId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

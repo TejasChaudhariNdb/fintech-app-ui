@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { api } from "@/lib/api";
+import { useProfile } from "@/context/ProfileContext";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
@@ -82,6 +83,7 @@ function formatDatePretty(dateStr?: string | null): string {
 }
 
 export default function GoldHoldingsPage() {
+  const { activeProfileId } = useProfile();
   const [rates, setRates] = useState<GoldRates | null>(null);
   const [summary, setSummary] = useState<GoldSummary | null>(null);
   const [holdings, setHoldings] = useState<GoldHoldingItem[]>([]);
@@ -101,7 +103,7 @@ export default function GoldHoldingsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await api.getGoldHoldings();
+      const res = await api.getGoldHoldings(activeProfileId);
       if (res) {
         setRates(res.rates);
         setSummary(res.summary);
@@ -124,7 +126,7 @@ export default function GoldHoldingsPage() {
         window.history.replaceState({}, "", newUrl);
       }
     }
-  }, []);
+  }, [activeProfileId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

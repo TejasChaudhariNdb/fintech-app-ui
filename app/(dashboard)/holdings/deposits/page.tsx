@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useProfile } from "@/context/ProfileContext";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import FixedIncomeModal from "@/components/features/FixedIncomeModal";
@@ -93,6 +94,7 @@ function formatDatePretty(dateStr?: string | null): string {
 }
 
 export default function FixedIncomePage() {
+  const { activeProfileId } = useProfile();
   const [holdings, setHoldings] = useState<FixedIncomeItem[]>([]);
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,7 +116,7 @@ export default function FixedIncomePage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await api.getFixedIncomeHoldings();
+      const res = await api.getFixedIncomeHoldings(activeProfileId);
       if (res) {
         setHoldings(res.holdings || []);
         setSummary(res.summary);
@@ -136,7 +138,7 @@ export default function FixedIncomePage() {
         window.history.replaceState({}, "", newUrl);
       }
     }
-  }, []);
+  }, [activeProfileId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

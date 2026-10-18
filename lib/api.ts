@@ -884,6 +884,8 @@ export const api = {
       "transactions",
       "market-cap-allocation",
       "gold-holdings",
+      "fixed-income-holdings",
+      "insurance-policies",
     ]);
   },
 
