@@ -20,6 +20,9 @@ import {
   Filter,
   RefreshCw,
   Sparkles,
+  Plus,
+  Trash2,
+  Files,
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { api } from "@/lib/api";
@@ -71,6 +74,57 @@ const SUPPORTED_BROKERS = [
   { id: "CUSTOM", name: "Custom CSV", desc: "Custom Portfolio Spreadsheet" },
 ];
 
+/**
+ * Merges multiple CSV tradebooks in memory, keeping one clean header
+ * and combining all data rows. Deduplicates identical lines.
+ */
+async function mergeCsvFiles(files: File[]): Promise<File> {
+  if (files.length === 1) return files[0];
+
+  let headerLine = "";
+  const dataLines: string[] = [];
+
+  for (let i = 0; i < files.length; i++) {
+    const text = await files[i].text();
+    const rawLines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    let fileHeaderIdx = -1;
+    for (let j = 0; j < Math.min(rawLines.length, 10); j++) {
+      const lower = rawLines[j].toLowerCase();
+      if (
+        lower.includes("symbol") ||
+        lower.includes("trade_date") ||
+        lower.includes("trade_type") ||
+        lower.includes("stock")
+      ) {
+        fileHeaderIdx = j;
+        break;
+      }
+    }
+
+    if (fileHeaderIdx === -1 && rawLines.length > 0) {
+      fileHeaderIdx = 0;
+    }
+
+    if (!headerLine && fileHeaderIdx !== -1) {
+      headerLine = rawLines[fileHeaderIdx];
+    }
+
+    const rows = fileHeaderIdx !== -1 ? rawLines.slice(fileHeaderIdx + 1) : rawLines;
+    dataLines.push(...rows);
+  }
+
+  // Deduplicate identical data rows across overlapping date ranges
+  const uniqueDataLines = Array.from(new Set(dataLines));
+  const combinedContent = [headerLine, ...uniqueDataLines].join("\n");
+  return new File([combinedContent], `combined_${files.length}_tradebooks.csv`, {
+    type: "text/csv",
+  });
+}
+
 export default function TradebookImportModal({
   isOpen,
   onClose,
@@ -83,6 +137,7 @@ export default function TradebookImportModal({
   const [step, setStep] = useState<"UPLOAD" | "PREVIEW" | "SUCCESS">("UPLOAD");
 
   // Form states
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [targetProfileId, setTargetProfileId] = useState<string>("");
   const [isDragging, setIsDragging] = useState(false);
@@ -94,6 +149,14 @@ export default function TradebookImportModal({
   const [selectedTradeIds, setSelectedTradeIds] = useState<Set<string>>(new Set());
   const [searchFilter, setSearchFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState<"ALL" | "BUY" | "SELL">("ALL");
+
+  // Quick-Add Missing Trade State (Idea 2)
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [manualSymbol, setManualSymbol] = useState("");
+  const [manualType, setManualType] = useState<"BUY" | "SELL">("BUY");
+  const [manualDate, setManualDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [manualQty, setManualQty] = useState("");
+  const [manualPrice, setManualPrice] = useState("");
 
   // Commit states
   const [isCommitting, setIsCommitting] = useState(false);
@@ -124,25 +187,67 @@ export default function TradebookImportModal({
     if (!isOpen) {
       setTimeout(() => {
         setStep("UPLOAD");
+        setSelectedFiles([]);
         setSelectedFile(null);
         setPreviewData(null);
         setSelectedTradeIds(new Set());
         setCommitResult(null);
         setErrorMessage(null);
         setSearchFilter("");
+        setShowQuickAdd(false);
       }, 200);
     }
   }, [isOpen]);
 
   if (!isOpen || !mounted) return null;
 
-  // Handlers
-  const handleFileChange = (file: File | null) => {
-    if (!file) return;
+  // Handlers for Multi-File Selection (Idea 1)
+  const handleFilesSelected = async (newFiles: File[]) => {
+    if (!newFiles || newFiles.length === 0) return;
     setErrorMessage(null);
-    setSelectedFile(file);
-    // Auto-trigger preview when file is selected
-    runPreview(file);
+
+    // Merge with any previously chosen files if in UPLOAD step
+    const combinedList = [...selectedFiles, ...newFiles];
+    // Deduplicate by filename and size
+    const uniqueFilesMap = new Map<string, File>();
+    combinedList.forEach((f) => uniqueFilesMap.set(`${f.name}_${f.size}`, f));
+    const allFiles = Array.from(uniqueFilesMap.values());
+
+    setSelectedFiles(allFiles);
+
+    setIsPreviewing(true);
+    try {
+      const merged = await mergeCsvFiles(allFiles);
+      setSelectedFile(merged);
+      await runPreview(merged);
+    } catch (err: any) {
+      setErrorMessage(
+        "Failed to combine CSV files: " + (err.message || String(err))
+      );
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleRemoveFile = async (indexToRemove: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const remaining = selectedFiles.filter((_, idx) => idx !== indexToRemove);
+    setSelectedFiles(remaining);
+
+    if (remaining.length === 0) {
+      setSelectedFile(null);
+      setPreviewData(null);
+      return;
+    }
+
+    setIsPreviewing(true);
+    try {
+      const merged = await mergeCsvFiles(remaining);
+      setSelectedFile(merged);
+      await runPreview(merged);
+    } catch (err: any) {
+      setErrorMessage("Failed to process remaining files: " + (err.message || String(err)));
+      setIsPreviewing(false);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -158,8 +263,8 @@ export default function TradebookImportModal({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesSelected(Array.from(e.dataTransfer.files));
     }
   };
 
@@ -217,6 +322,116 @@ export default function TradebookImportModal({
       tradesToToggle.forEach((t) => next.add(t.temp_id));
     }
     setSelectedTradeIds(next);
+  };
+
+  // Idea 2: Quick-Add In-Modal Trade Handler
+  const handleAddManualTrade = () => {
+    const sym = manualSymbol.trim().toUpperCase();
+    const qty = parseFloat(manualQty);
+    const price = parseFloat(manualPrice);
+
+    if (!sym) {
+      setErrorMessage("Please enter a stock symbol (e.g. IDEA, BEL).");
+      return;
+    }
+    if (!manualDate) {
+      setErrorMessage("Please select a trade date.");
+      return;
+    }
+    if (isNaN(qty) || qty <= 0) {
+      setErrorMessage("Quantity must be greater than 0.");
+      return;
+    }
+    if (isNaN(price) || price <= 0) {
+      setErrorMessage("Price must be greater than 0.");
+      return;
+    }
+
+    const newId = `manual_${Date.now()}`;
+    const amount = Math.round(qty * price * 100) / 100;
+    const newTrade: TradeRecord = {
+      temp_id: newId,
+      row_num: (previewData?.trades.length || 0) + 1,
+      symbol: sym,
+      company_name: sym,
+      exchange: "NSE",
+      transaction_type: manualType,
+      quantity: qty,
+      price: price,
+      amount: amount,
+      date: manualDate,
+      trade_id: `MANUAL_${Date.now()}`,
+      order_id: "MANUAL_FIX",
+      is_duplicate: false,
+    };
+
+    if (previewData) {
+      const updatedTrades = [...previewData.trades, newTrade].sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        return a.transaction_type === "BUY" ? -1 : 1;
+      });
+
+      const symSet = new Set(previewData.unique_symbols);
+      symSet.add(sym);
+
+      setPreviewData({
+        ...previewData,
+        valid_trades_count: previewData.valid_trades_count + 1,
+        new_trades_count: previewData.new_trades_count + 1,
+        buy_count: previewData.buy_count + (manualType === "BUY" ? 1 : 0),
+        sell_count: previewData.sell_count + (manualType === "SELL" ? 1 : 0),
+        total_buy_value:
+          previewData.total_buy_value + (manualType === "BUY" ? amount : 0),
+        total_sell_value:
+          previewData.total_sell_value + (manualType === "SELL" ? amount : 0),
+        unique_symbols: Array.from(symSet).sort(),
+        trades: updatedTrades,
+      });
+
+      setSelectedTradeIds((prev) => new Set(prev).add(newId));
+    }
+
+    // Reset quick-add form
+    setManualSymbol("");
+    setManualQty("");
+    setManualPrice("");
+    setShowQuickAdd(false);
+    setErrorMessage(null);
+  };
+
+  // In-Modal Trade Deletion Handler
+  const handleDeleteTrade = (tempId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!previewData) return;
+    const target = previewData.trades.find((t) => t.temp_id === tempId);
+    if (!target) return;
+
+    const nextTrades = previewData.trades.filter((t) => t.temp_id !== tempId);
+    const nextSelected = new Set(selectedTradeIds);
+    nextSelected.delete(tempId);
+
+    setSelectedTradeIds(nextSelected);
+    setPreviewData({
+      ...previewData,
+      valid_trades_count: Math.max(0, previewData.valid_trades_count - 1),
+      new_trades_count: Math.max(
+        0,
+        previewData.new_trades_count - (target.is_duplicate ? 0 : 1)
+      ),
+      duplicate_trades_count: Math.max(
+        0,
+        previewData.duplicate_trades_count - (target.is_duplicate ? 1 : 0)
+      ),
+      buy_count: Math.max(
+        0,
+        previewData.buy_count - (target.transaction_type === "BUY" ? 1 : 0)
+      ),
+      sell_count: Math.max(
+        0,
+        previewData.sell_count - (target.transaction_type === "SELL" ? 1 : 0)
+      ),
+      trades: nextTrades,
+    });
   };
 
   const handleCommit = async () => {
@@ -312,7 +527,7 @@ export default function TradebookImportModal({
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {step === "UPLOAD"
-                  ? "Import trade history automatically from Zerodha, Groww, AngelOne & CSV"
+                  ? "Import multi-year tradebooks automatically from Zerodha, Groww, AngelOne & CSV"
                   : step === "PREVIEW"
                   ? `Review detected trades for ${targetProfileName}`
                   : "Holdings and weighted averages updated"}
@@ -398,6 +613,9 @@ export default function TradebookImportModal({
                   <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-neutral-50 dark:bg-white/[0.02] text-neutral-400 border border-dashed border-neutral-200 dark:border-white/10">
                     .CSV
                   </span>
+                  <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 border border-primary-500/20">
+                    Multi-File Drop Supported
+                  </span>
                 </div>
 
                 {/* Expandable How-To Guide */}
@@ -406,7 +624,7 @@ export default function TradebookImportModal({
                     <p className="font-bold text-neutral-900 dark:text-white">Quick Export Instructions:</p>
                     <ul className="space-y-1 list-disc list-inside">
                       <li>
-                        <b>Zerodha:</b> Log in to Console &rarr; Reports &rarr; Tradebook &rarr; Choose dates &rarr; Download CSV.
+                        <b>Zerodha (Multi-Year):</b> If Zerodha limits export to 365 days, export multiple yearly CSVs (e.g. 2020-21, 2021-22, 2022-23) and select or drop them together! Arthavi merges them in date order automatically.
                       </li>
                       <li>
                         <b>Groww:</b> Go to Profile &rarr; Reports &rarr; Stock Orders &rarr; Download statement CSV.
@@ -422,13 +640,13 @@ export default function TradebookImportModal({
                 )}
               </div>
 
-              {/* Drag & Drop File Zone */}
+              {/* Drag & Drop File Zone (Supports Multiple Files - Idea 1) */}
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-3xl p-8 text-center cursor-pointer transition-all ${
+                className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
                   isDragging
                     ? "border-primary-500 bg-primary-500/10 scale-[1.01]"
                     : "border-neutral-200 dark:border-white/15 bg-neutral-50/50 dark:bg-white/[0.02] hover:bg-neutral-50 dark:hover:bg-white/5"
@@ -438,7 +656,8 @@ export default function TradebookImportModal({
                   ref={fileInputRef}
                   type="file"
                   accept=".csv"
-                  onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+                  multiple
+                  onChange={(e) => handleFilesSelected(Array.from(e.target.files || []))}
                   className="hidden"
                 />
 
@@ -447,11 +666,52 @@ export default function TradebookImportModal({
                     <Loader2 size={36} className="animate-spin text-primary-600 dark:text-primary-400 mx-auto" />
                     <div>
                       <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
-                        Analyzing Tradebook CSV...
+                        {selectedFiles.length > 1
+                          ? `Merging ${selectedFiles.length} Tradebooks & Analyzing...`
+                          : "Analyzing Tradebook CSV..."}
                       </p>
                       <p className="text-xs text-neutral-400 mt-0.5">
-                        Detecting broker format, resolving symbols, and checking duplicates
+                        Detecting broker format, ordering dates, and checking duplicates
                       </p>
+                    </div>
+                  </div>
+                ) : selectedFiles.length > 1 ? (
+                  <div className="py-2 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto shadow-sm">
+                      <Files size={24} />
+                    </div>
+                    <div>
+                      <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                        {selectedFiles.length} Yearly Tradebooks Combined
+                      </p>
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Merged seamlessly in chronological order. Click or drop to add more.
+                      </p>
+                    </div>
+                    {/* File chips */}
+                    <div
+                      className="flex flex-wrap gap-1.5 justify-center max-w-lg mx-auto pt-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {selectedFiles.map((f, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 shadow-xs"
+                        >
+                          <span className="truncate max-w-[120px]">{f.name}</span>
+                          <span className="text-[10px] text-neutral-400">
+                            ({(f.size / 1024).toFixed(0)}k)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => handleRemoveFile(i, e)}
+                            className="p-0.5 rounded-full hover:bg-neutral-200 dark:hover:bg-white/20 text-neutral-400 hover:text-rose-500 transition-colors"
+                            title="Remove this file"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
                     </div>
                   </div>
                 ) : selectedFile ? (
@@ -464,7 +724,7 @@ export default function TradebookImportModal({
                         {selectedFile.name}
                       </p>
                       <p className="text-xs text-neutral-400">
-                        {(selectedFile.size / 1024).toFixed(1)} KB &bull; Click or drop another to replace
+                        {(selectedFile.size / 1024).toFixed(1)} KB &bull; Click or drop more files to combine
                       </p>
                     </div>
                   </div>
@@ -475,10 +735,10 @@ export default function TradebookImportModal({
                     </div>
                     <div>
                       <p className="font-bold text-sm text-neutral-900 dark:text-white">
-                        Click to select your Tradebook statement (.csv)
+                        Drop 1 or multiple Tradebook CSVs here
                       </p>
                       <p className="text-xs text-neutral-400 mt-0.5">
-                        or drag and drop your CSV file here
+                        Export yearly statements from Zerodha/Groww and drop all at once
                       </p>
                     </div>
                   </div>
@@ -533,7 +793,7 @@ export default function TradebookImportModal({
                 </div>
 
                 <div className="bg-amber-50/60 dark:bg-amber-500/10 p-3 rounded-2xl border border-amber-500/20">
-                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase">Already Added (Duplicate)</span>
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase">Already Added</span>
                   <div className="text-base sm:text-lg font-black text-amber-700 dark:text-amber-400 mt-0.5">
                     {previewData.duplicate_trades_count}
                   </div>
@@ -552,12 +812,12 @@ export default function TradebookImportModal({
                 <div className="px-3.5 py-2.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-500/25 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
                   <Info size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
                   <span>
-                    <b>{previewData.duplicate_trades_count} trade{previewData.duplicate_trades_count > 1 ? "s" : ""}</b> were already added to your portfolio in a previous upload and are unchecked by default to prevent duplicate counting.
+                    <b>{previewData.duplicate_trades_count} trade{previewData.duplicate_trades_count > 1 ? "s" : ""}</b> were already added in a previous upload and are unchecked to prevent duplicates.
                   </span>
                 </div>
               )}
 
-              {/* Filter & Selection Bar */}
+              {/* Filter & Action Toolbar */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1">
                 <div className="flex items-center gap-2">
                   <input
@@ -565,7 +825,7 @@ export default function TradebookImportModal({
                     placeholder="Search stock symbol..."
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
-                    className="px-3 py-1.5 rounded-xl text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none w-44"
+                    className="px-3 py-1.5 rounded-xl text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none w-40 sm:w-44"
                   />
 
                   <div className="flex rounded-xl bg-neutral-100 dark:bg-white/5 p-0.5 border border-neutral-200 dark:border-white/10 text-[11px] font-semibold">
@@ -587,13 +847,20 @@ export default function TradebookImportModal({
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-2 text-xs">
-                  <span className="text-neutral-500 font-medium">
-                    <b>{selectedCount}</b> of {previewData.trades.length} selected
-                  </span>
+                  {/* Idea 2: Quick-Add Button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAdd(!showQuickAdd)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-500/25 border border-primary-500/20 transition-all shrink-0"
+                  >
+                    <Plus size={14} />
+                    <span>Add Missing Trade</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleSelectAllFiltered(filteredTrades)}
-                    className="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline"
+                    className="text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-primary-600 underline"
                   >
                     {filteredTrades.every((t) => selectedTradeIds.has(t.temp_id))
                       ? "Deselect All"
@@ -602,12 +869,150 @@ export default function TradebookImportModal({
                 </div>
               </div>
 
+              {/* Idea 2: Quick-Add In-Modal Form */}
+              {showQuickAdd && (
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-primary-500/30 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={14} className="text-primary-500" />
+                      <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                        Add Missing Trade (e.g. older buy, demat transfer, or IPO)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickAdd(false)}
+                      className="p-1 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
+                        Stock Symbol
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. IDEA, BEL"
+                        value={manualSymbol}
+                        onChange={(e) => setManualSymbol(e.target.value.toUpperCase())}
+                        className="w-full px-2.5 py-1.5 rounded-xl text-xs bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white font-mono font-bold uppercase outline-none focus:border-primary-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
+                        Action
+                      </label>
+                      <div className="grid grid-cols-2 gap-1 bg-white dark:bg-white/5 p-0.5 rounded-xl border border-neutral-200 dark:border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setManualType("BUY")}
+                          className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
+                            manualType === "BUY"
+                              ? "bg-emerald-500 text-white shadow-xs"
+                              : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                          }`}
+                        >
+                          BUY
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setManualType("SELL")}
+                          className={`py-1 text-[11px] font-bold rounded-lg transition-all ${
+                            manualType === "SELL"
+                              ? "bg-rose-500 text-white shadow-xs"
+                              : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                          }`}
+                        >
+                          SELL
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
+                        Trade Date
+                      </label>
+                      <input
+                        type="date"
+                        value={manualDate}
+                        onChange={(e) => setManualDate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl text-xs bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-primary-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
+                        Quantity
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="Qty"
+                        value={manualQty}
+                        onChange={(e) => setManualQty(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl text-xs bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white font-mono outline-none focus:border-primary-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
+                        Price (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        placeholder="Price"
+                        value={manualPrice}
+                        onChange={(e) => setManualPrice(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-xl text-xs bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white font-mono outline-none focus:border-primary-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="text-[11px] text-neutral-500 font-mono">
+                      Total:{" "}
+                      <b className="text-neutral-900 dark:text-white">
+                        ₹
+                        {(
+                          (parseFloat(manualQty) || 0) * (parseFloat(manualPrice) || 0)
+                        ).toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+                      </b>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowQuickAdd(false)}
+                        className="px-3 py-1.5 rounded-xl text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddManualTrade}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-primary-600 hover:bg-primary-700 text-white shadow-xs transition-all"
+                      >
+                        Add to Preview
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Trades List Table */}
-              <div className="flex items-center justify-end text-[10px] text-neutral-400 px-1 sm:hidden">
-                <span>← Swipe table to view Price &amp; Total →</span>
+              <div className="flex items-center justify-between text-[10px] text-neutral-400 px-1">
+                <span>
+                  <b>{selectedCount}</b> of {previewData.trades.length} trades selected
+                </span>
+                <span className="sm:hidden">← Swipe to view Price & Total →</span>
               </div>
               <div className="border border-neutral-200 dark:border-white/10 rounded-2xl overflow-x-auto overflow-y-auto max-h-64 sm:max-h-72 scrollbar-thin touch-pan-x">
-                <table className="w-full min-w-[540px] text-left text-xs">
+                <table className="w-full min-w-[560px] text-left text-xs">
                   <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-white/10 text-neutral-500 font-semibold sticky top-0 z-10">
                     <tr>
                       <th className="py-2.5 pl-3 pr-2 w-8"></th>
@@ -616,7 +1021,8 @@ export default function TradebookImportModal({
                       <th className="py-2.5 px-2">Date</th>
                       <th className="py-2.5 px-2 text-right">Qty</th>
                       <th className="py-2.5 px-2 text-right">Price</th>
-                      <th className="py-2.5 pr-3 text-right">Total</th>
+                      <th className="py-2.5 px-2 text-right">Total</th>
+                      <th className="py-2.5 pr-3 pl-1 w-8"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
@@ -637,7 +1043,7 @@ export default function TradebookImportModal({
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleTrade(t.temp_id)}
-                              className="rounded text-primary-600 focus:ring-primary-500"
+                              className="rounded text-primary-600 focus:ring-primary-500 cursor-pointer"
                             />
                           </td>
                           <td className="py-2 px-2">
@@ -645,7 +1051,7 @@ export default function TradebookImportModal({
                               <span>{t.symbol}</span>
                               {t.is_duplicate && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold whitespace-nowrap">
-                                  Already Added (Duplicate)
+                                  Already Added
                                 </span>
                               )}
                             </div>
@@ -673,8 +1079,18 @@ export default function TradebookImportModal({
                           <td className="py-2 px-2 text-right font-mono text-neutral-600 dark:text-neutral-400">
                             ₹{t.price.toLocaleString("en-IN")}
                           </td>
-                          <td className="py-2 pr-3 text-right font-mono font-bold text-neutral-900 dark:text-white whitespace-nowrap">
+                          <td className="py-2 px-2 text-right font-mono font-bold text-neutral-900 dark:text-white whitespace-nowrap">
                             ₹{Math.round(t.amount).toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-2 pr-3 pl-1 text-center" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteTrade(t.temp_id, e)}
+                              className="p-1 rounded-md text-neutral-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                              title="Delete row from import"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </td>
                         </tr>
                       );
