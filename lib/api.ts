@@ -509,6 +509,8 @@ export const api = {
   },
   refreshNAVs: () => api.fetch("/portfolio/refresh-navs", { method: "POST" }),
   getXIRR: () => api.fetch("/portfolio/xirr", { cacheKey: "xirr" }),
+  getMarketCapAllocation: () =>
+    api.fetch("/portfolio/market-cap-allocation", { cacheKey: "market-cap-allocation" }),
 
   getPortfolioHistory: () => api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
   getMutualFundJourney: (range: string = "ALL") =>
@@ -548,6 +550,60 @@ export const api = {
     api.fetch(`/goals/${id}`, {
       method: "DELETE",
     }),
+
+  // Gold & Commodities
+  getGoldRates: () => api.fetch("/gold/rates"),
+  getGoldHoldings: () => api.fetch("/gold/holdings", { cacheKey: "gold-holdings" }),
+  addGoldHolding: async (data: Record<string, unknown>) => {
+    const res = await api.fetch("/gold/holdings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  updateGoldHolding: async (id: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/gold/holdings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteGoldHolding: async (id: number) => {
+    const res = await api.fetch(`/gold/holdings/${id}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+
+  // Fixed Income & Deposits
+  getFixedIncomeHoldings: () =>
+    api.fetch("/fixed-income/holdings", { cacheKey: "fixed-income-holdings" }),
+  addFixedIncomeHolding: async (data: Record<string, unknown>) => {
+    const res = await api.fetch("/fixed-income/holdings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  updateFixedIncomeHolding: async (id: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/fixed-income/holdings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteFixedIncomeHolding: async (id: number) => {
+    const res = await api.fetch(`/fixed-income/holdings/${id}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
 
   // CAS Upload
   uploadCAS: async (file: File, password: string, profileId?: string, pan?: string) => {
@@ -782,6 +838,8 @@ export const api = {
       "family-summary",
       "family-top-holdings",
       "transactions",
+      "market-cap-allocation",
+      "gold-holdings",
     ]);
   },
 

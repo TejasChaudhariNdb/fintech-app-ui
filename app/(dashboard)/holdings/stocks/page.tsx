@@ -61,6 +61,48 @@ export default function StocksPage() {
     return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20";
   };
 
+  const LARGE_CAP_TICKERS = new Set([
+    "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "BHARTIARTL", "SBIN", "LICI", "ITC",
+    "HINDUNILVR", "LT", "BAJFINANCE", "HCLTECH", "MARUTI", "SUNPHARMA", "ADANIENT", "KOTAKBANK",
+    "TITAN", "ONGC", "TATAMOTORS", "NTPC", "AXISBANK", "DMART", "ADANIPORTS", "COALINDIA",
+    "POWERGRID", "BAJAJFINSV", "ULTRACEMCO", "ASIANPAINT", "SIEMENS", "IOC", "HAL", "ZOMATO",
+    "DLF", "VBL", "BEL", "JSWSTEEL", "TATASTEEL", "GRASIM", "REC", "PFC", "JIOFIN", "TRENT",
+    "GAIL", "HDFCLIFE", "SBILIFE", "CHOLAFIN", "INDIGO", "VEDL", "EICHERMOT", "DIVISLAB",
+    "TECHM", "WIPRO", "NESTLEIND", "PIDILITIND", "ADANIPOWER", "BPCL", "SHREECEM", "AMBUJACEM",
+    "DRREDDY", "CIPLA", "GODREJCP", "TATACONSUM", "DABUR", "BAJAJ-AUTO", "APOLLOHOSP",
+    "BRITANNIA", "CANBK", "TVSMOTOR", "IRFC", "RVNL", "PNB", "BANKBARODA", "LTIM", "MAXHEALTH",
+    "ABB", "HAVELLS", "CGPOWER", "BOSCHLTD", "MOTHERSON", "UNIONBANK", "IOB", "JSWENERGY",
+    "POLYCAB", "SRF", "TORNTPOWER", "COLPAL", "ICICIPRULI", "ICICIGI", "NAUKRI", "INDIANB",
+    "PERSISTENT", "OFSS", "MANAPPURAM", "MUTHOOTFIN", "CUMMINSIND", "SUZLON", "BERGEPAINT",
+    "AUROPHARMA", "LUPIN", "INDUSINDBK"
+  ]);
+
+  const MID_CAP_TICKERS = new Set([
+    "BHEL", "TATACOMM", "COCHINSHIP", "HUDCO", "IRCTC", "TATATECH", "VIPIND", "ASTRAL",
+    "BSOFT", "ZEEL", "TIINDIA", "AMBER", "CASTROLIND", "CDSL", "NSLNISP", "ALKYLAMINE",
+    "DEEPAKNTR", "PRESTIGE", "FEDERALBNK", "ASHOKLEY", "IDFCFIRSTB", "TATAELXSI", "KPITTECH",
+    "JUBLFOOD", "SUPREMEIND", "FACT", "ESCORTS", "BATAINDIA", "IPCALAB", "GLENMARK",
+    "GMRINFRA", "OBEROIRLTY", "PHOENIXLTD", "MPHASIS", "COFORGE", "PAGEIND", "ABCAPITAL",
+    "GODREJPROP", "COROMANDEL", "DALBHARAT", "FORTIS", "GUJGASLTD", "PETRONET", "BALKRISIND",
+    "EXIDEIND", "GLAXO", "LICHSGFIN", "MFSL", "NATIONALUM", "PIIND", "SAIL", "SYNGENE",
+    "VOLTAS", "WHIRLPOOL", "BIOCON", "BANDHANBNK", "APLAPOLLO", "CROMPTON", "DEEPAKFERT",
+    "DEVYANI", "FINEORG", "FLUOROCHEM", "GMRAIRPORT", "HDFCAMC", "KAYNES", "LALPATHLAB",
+    "MAHABANK", "METROPOLIS", "MSUMI", "NAM-INDIA", "PATANJALI", "POONAWALLA", "RADICO",
+    "RAMCOCEM", "RELAXO", "SJVN", "SONACOMS", "STARHEALTH", "SUMICHEM", "SUNDARMFIN",
+    "SUNTV", "SYRMA", "TATACHEM", "THERMAX", "TIMKEN", "TRIDENT", "UBL", "UPL", "VGUARD", "YESBANK"
+  ]);
+
+  const getStockCapTier = (symbol: string) => {
+    const clean = (symbol || "").toUpperCase().replace(".NS", "").replace(".BO", "").trim();
+    if (LARGE_CAP_TICKERS.has(clean)) {
+      return { label: "Large Cap", color: "bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-500/20" };
+    }
+    if (MID_CAP_TICKERS.has(clean)) {
+      return { label: "Mid Cap", color: "bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-200/50 dark:border-purple-500/20" };
+    }
+    return { label: "Small Cap", color: "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200/50 dark:border-emerald-500/20" };
+  };
+
   const [targetProfileId, setTargetProfileId] = useState<string>(() => {
     if (activeProfileId && activeProfileId !== "all") return activeProfileId;
     return profiles[0]?.id ? String(profiles[0].id) : "";
@@ -810,6 +852,14 @@ export default function StocksPage() {
                           <span className="text-neutral-900 dark:text-white font-bold text-[15px] truncate max-w-[280px]">
                             {stock.symbol}
                           </span>
+                          {(() => {
+                            const cap = getStockCapTier(stock.symbol);
+                            return (
+                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold border ${cap.color} shrink-0`}>
+                                {cap.label}
+                              </span>
+                            );
+                          })()}
                           {stock.sector && (
                             <span className="px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-500/10 text-[9px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 border border-primary-200/40 dark:border-primary-500/15 shrink-0">
                               {stock.sector}
@@ -916,10 +966,18 @@ export default function StocksPage() {
                 href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
                 className="flex items-start justify-between gap-3 group/header cursor-pointer">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                       {stock.symbol}
                     </h3>
+                    {(() => {
+                      const cap = getStockCapTier(stock.symbol);
+                      return (
+                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold border ${cap.color} shrink-0`}>
+                          {cap.label}
+                        </span>
+                      );
+                    })()}
                     {stock.sector && (
                       <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5 max-w-[120px] truncate">
                         {stock.sector}

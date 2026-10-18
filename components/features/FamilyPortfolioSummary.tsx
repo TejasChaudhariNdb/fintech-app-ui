@@ -28,8 +28,11 @@ interface ProfileBreakdown {
   stock_day_change?: number;
   stock_day_change_pct?: number;
   xirr?: number;
+  lifetime_xirr?: number;
   mf_xirr?: number;
+  mf_lifetime_xirr?: number;
   stock_xirr?: number;
+  stock_lifetime_xirr?: number;
 }
 
 interface FamilyPortfolioSummaryProps {
@@ -97,9 +100,18 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
   const dayChangePctToDisplay = p.day_change_pct !== undefined ? p.day_change_pct : returnPct;
   const isHeaderDayPositive = dayChangePctToDisplay >= 0;
 
-  const profileXirrVal = p.xirr !== undefined ? p.xirr.toFixed(2) : (returnPct > 0 ? returnPct.toFixed(2) : "0.00");
+  const profileXirrVal =
+    headerXirrMode === "lifetime"
+      ? ((p.lifetime_xirr ?? p.xirr) !== undefined
+          ? (p.lifetime_xirr ?? p.xirr)!.toFixed(2)
+          : (returnPct > 0 ? returnPct.toFixed(2) : "0.00"))
+      : (p.xirr !== undefined ? p.xirr.toFixed(2) : (returnPct > 0 ? returnPct.toFixed(2) : "0.00"));
+
   const mfXirrVal = p.mf_xirr !== undefined ? p.mf_xirr.toFixed(2) : (mfReturnPct > 0 ? mfReturnPct.toFixed(2) : "0.00");
+  const mfLifetimeXirrVal = p.mf_lifetime_xirr !== undefined ? p.mf_lifetime_xirr.toFixed(2) : mfXirrVal;
+
   const stockXirrVal = p.stock_xirr !== undefined ? p.stock_xirr.toFixed(2) : (stockReturnPct > 0 ? stockReturnPct.toFixed(2) : "0.00");
+  const stockLifetimeXirrVal = p.stock_lifetime_xirr !== undefined ? p.stock_lifetime_xirr.toFixed(2) : stockXirrVal;
 
   const isGain = totalGain >= 0;
   const sharePercent = totalFamilyValue > 0 ? Math.round((totalValue / totalFamilyValue) * 100) : 0;
@@ -301,7 +313,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
                   </span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
                     {mfMetricMode === "xirr" && `${mfXirrVal}%`}
-                    {mfMetricMode === "lifetime" && `${mfXirrVal}%`}
+                    {mfMetricMode === "lifetime" && `${mfLifetimeXirrVal}%`}
                     {mfMetricMode === "absolute" && `${fmtPct(mfReturnPct)}%`}
                   </span>
                 </button>
@@ -359,7 +371,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
                   </span>
                   <span className="font-bold text-blue-600 dark:text-blue-400 tabular-nums shrink-0">
                     {stockMetricMode === "xirr" && `${stockXirrVal}%`}
-                    {stockMetricMode === "lifetime" && `${stockXirrVal}%`}
+                    {stockMetricMode === "lifetime" && `${stockLifetimeXirrVal}%`}
                     {stockMetricMode === "absolute" && `${fmtPct(stockReturnPct)}%`}
                   </span>
                 </button>

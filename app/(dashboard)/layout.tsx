@@ -65,6 +65,7 @@ export default function DashboardLayout({
       if (path.includes("/holdings/mutual-funds"))
         return "Mutual Funds - Arthavi";
       if (path.includes("/holdings/stocks")) return "Stocks - Arthavi";
+      if (path.includes("/holdings/gold")) return "Gold & Metals - Arthavi";
       if (path.startsWith("/holdings")) return "Holdings - Arthavi";
       if (path.startsWith("/reports")) return "Tax Reports - Arthavi";
       if (path.startsWith("/goals")) return "Goals - Arthavi";

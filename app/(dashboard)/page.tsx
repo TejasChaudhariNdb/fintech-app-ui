@@ -33,6 +33,7 @@ import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
 import BenchmarkCard from "@/components/features/BenchmarkCard";
 import MarketPredictionCard from "@/components/features/MarketPredictionCard";
 import AssetAllocationCard from "@/components/features/AssetAllocationCard";
+import MarketCapAllocationCard from "@/components/features/MarketCapAllocationCard";
 
 export default function HomePage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function HomePage() {
   const [netWorth, setNetWorth] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
   const [familySummary, setFamilySummary] = useState<any>(null);
+  const [marketCapData, setMarketCapData] = useState<any>(null);
   const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [topHoldings, setTopHoldings] = useState<any[]>([]);
@@ -107,7 +109,7 @@ export default function HomePage() {
         setBenchmark(null);
 
         // 2. Fetch Fresh Family Data directly from API
-        const [famData, g, up, ps, history, topH, xirrData] = await Promise.all([
+        const [famData, g, up, ps, history, topH, xirrData, mcData] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
             return null;
@@ -134,18 +136,33 @@ export default function HomePage() {
           }),
           api.getXIRR().catch((err) => {
             console.error("Family XIRR error:", err);
-            return { xirr: 0, mf_xirr: 0, stock_xirr: 0 };
+            return {
+              xirr: 0,
+              lifetime_xirr: 0,
+              mf_xirr: 0,
+              mf_lifetime_xirr: 0,
+              stock_xirr: 0,
+              stock_lifetime_xirr: 0,
+            };
+          }),
+          api.getMarketCapAllocation().catch((err) => {
+            console.error("Market cap allocation (family) error:", err);
+            return null;
           }),
         ]);
 
         if (famData) setFamilySummary(famData);
+        if (mcData) setMarketCapData(mcData);
         setGoals(g || []);
         if (ps) {
           setSummary({
             ...ps,
             xirr: xirrData?.xirr ?? ps.xirr,
+            lifetime_xirr: xirrData?.lifetime_xirr ?? ps.lifetime_xirr,
             mf_xirr: xirrData?.mf_xirr ?? ps.mf_xirr,
+            mf_lifetime_xirr: xirrData?.mf_lifetime_xirr ?? ps.mf_lifetime_xirr,
             stock_xirr: xirrData?.stock_xirr ?? ps.stock_xirr,
+            stock_lifetime_xirr: xirrData?.stock_lifetime_xirr ?? ps.stock_lifetime_xirr,
           });
         }
         if (history) setPerfData(history);
@@ -165,7 +182,7 @@ export default function HomePage() {
         setTopHoldings([]);
 
         // 2. Fetch Fresh Data directly from API
-        const [nw, ps, g, xirrData, history, ins, bm, up] = await Promise.all([
+        const [nw, ps, g, xirrData, history, ins, bm, up, mcData] = await Promise.all([
           api.getNetWorth().catch((err) => {
             console.error("Net worth error:", err);
             return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -187,7 +204,14 @@ export default function HomePage() {
           }),
           api.getXIRR().catch((err) => {
             console.error("XIRR error:", err);
-            return { xirr: 0 };
+            return {
+              xirr: 0,
+              lifetime_xirr: 0,
+              mf_xirr: 0,
+              mf_lifetime_xirr: 0,
+              stock_xirr: 0,
+              stock_lifetime_xirr: 0,
+            };
           }),
           api.getPortfolioHistory().catch((err) => {
             console.error("History error:", err);
@@ -205,14 +229,22 @@ export default function HomePage() {
             console.error("Profile error:", err);
             return null;
           }),
+          api.getMarketCapAllocation().catch((err) => {
+            console.error("Market cap allocation error:", err);
+            return null;
+          }),
         ]);
 
         setNetWorth(nw);
+        if (mcData) setMarketCapData(mcData);
         setSummary({
           ...ps,
           xirr: xirrData?.xirr || 0,
+          lifetime_xirr: xirrData?.lifetime_xirr || 0,
           mf_xirr: xirrData?.mf_xirr || 0,
+          mf_lifetime_xirr: xirrData?.mf_lifetime_xirr || 0,
           stock_xirr: xirrData?.stock_xirr || 0,
+          stock_lifetime_xirr: xirrData?.stock_lifetime_xirr || 0,
         });
         setGoals(g || []);
         setPerfData(history || []);
@@ -347,8 +379,11 @@ export default function HomePage() {
           stockDayChangePct={summary?.stock_day_change_pct}
           lastUpdated={familySummary?.last_updated || netWorth?.last_updated}
           xirr={summary?.xirr}
+          lifetimeXirr={summary?.lifetime_xirr}
           mfXirr={summary?.mf_xirr}
+          mfLifetimeXirr={summary?.mf_lifetime_xirr}
           stockXirr={summary?.stock_xirr}
+          stockLifetimeXirr={summary?.stock_lifetime_xirr}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
         />
@@ -375,6 +410,13 @@ export default function HomePage() {
               stockCurrent={(summary.stock_invested || 0) + (summary.stock_profit || 0)}
               profileBreakdown={familySummary?.profile_breakdown || []}
             />
+          </section>
+        )}
+
+        {/* Market Cap Allocation Card */}
+        {marketCapData && marketCapData.total_equity_value > 0 && (
+          <section>
+            <MarketCapAllocationCard data={marketCapData} isLoading={loading} />
           </section>
         )}
 
@@ -677,8 +719,11 @@ export default function HomePage() {
               stockDayChangePct={summary?.stock_day_change_pct}
               lastUpdated={netWorth?.last_updated}
               xirr={summary?.xirr}
+              lifetimeXirr={summary?.lifetime_xirr}
               mfXirr={summary?.mf_xirr}
+              mfLifetimeXirr={summary?.mf_lifetime_xirr}
               stockXirr={summary?.stock_xirr}
+              stockLifetimeXirr={summary?.stock_lifetime_xirr}
               onAddMF={() => router.push("/holdings/mutual-funds")}
               onAddStock={() => router.push("/holdings/stocks")}
             />
@@ -705,6 +750,12 @@ export default function HomePage() {
                 mfInvested={summary.mf_invested || 0}
                 stockInvested={summary.stock_invested || 0}
               />
+            </section>
+          )}
+          {/* Market Cap Allocation Card */}
+          {marketCapData && marketCapData.total_equity_value > 0 && (
+            <section className="animate-fade-in">
+              <MarketCapAllocationCard data={marketCapData} isLoading={loading} />
             </section>
           )}
           {/* Performance Chart */}
