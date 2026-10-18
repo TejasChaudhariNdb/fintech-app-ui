@@ -8,12 +8,13 @@ import {
   Coins,
   Landmark,
   Shield,
+  Building,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
 interface TabItem {
-  id: "mutual-funds" | "stocks" | "gold" | "deposits" | "insurance";
+  id: "mutual-funds" | "stocks" | "gold" | "deposits" | "insurance" | "real-estate";
   label: string;
   path: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -26,6 +27,7 @@ const TABS: TabItem[] = [
   { id: "gold", label: "Gold", path: "/holdings/gold", icon: Coins, hasLiveBadge: true },
   { id: "deposits", label: "Fixed Income", path: "/holdings/deposits", icon: Landmark },
   { id: "insurance", label: "Insurance", path: "/holdings/insurance", icon: Shield },
+  { id: "real-estate", label: "Real Estate", path: "/holdings/real-estate", icon: Building },
 ];
 
 type TabId = TabItem["id"];
@@ -42,8 +44,11 @@ export default function HoldingsLayout({
   const isGold = pathname?.includes("/holdings/gold");
   const isDeposits = pathname?.includes("/holdings/deposits");
   const isInsurance = pathname?.includes("/holdings/insurance");
+  const isRealEstate = pathname?.includes("/holdings/real-estate");
 
-  const activeTab: TabId = isInsurance
+  const activeTab: TabId = isRealEstate
+    ? "real-estate"
+    : isInsurance
     ? "insurance"
     : isDeposits
     ? "deposits"

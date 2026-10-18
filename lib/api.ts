@@ -130,7 +130,9 @@ export const api = {
           "/fixed-income/holdings",
           "/fixed-income",
           "/gold/holdings",
-          "/gold"
+          "/gold",
+          "/real-estate/holdings",
+          "/real-estate"
         ];
         
         const pathPart = endpoint.split("?")[0];
@@ -649,6 +651,36 @@ export const api = {
     return res;
   },
 
+  // Real Estate & Property Vault
+  getRealEstateHoldings: (profileId?: string) => {
+    const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const query = activeProf ? `?profile_id=${activeProf}` : "";
+    return api.fetch(`/real-estate/holdings${query}`, { cacheKey: "real-estate-holdings" });
+  },
+  addRealEstateHolding: async (data: Record<string, unknown>) => {
+    const res = await api.fetch("/real-estate/holdings", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  updateRealEstateHolding: async (id: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/real-estate/holdings/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteRealEstateHolding: async (id: number) => {
+    const res = await api.fetch(`/real-estate/holdings/${id}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+
   // CAS Upload
   uploadCAS: async (file: File, password: string, profileId?: string, pan?: string) => {
     checkDemoRestriction();
@@ -886,6 +918,7 @@ export const api = {
       "gold-holdings",
       "fixed-income-holdings",
       "insurance-policies",
+      "real-estate-holdings",
     ]);
   },
 
