@@ -207,20 +207,20 @@ export default function GoldForm({
             [
               {
                 id: "24K",
-                label: "24K (99.9%)",
-                sub: "Pure Bullion",
+                label: "24K",
+                sub: "99.9%",
                 rate: rates?.rate_24k_per_gram,
               },
               {
                 id: "22K",
-                label: "22K (91.6%)",
-                sub: "Standard Jewelry",
+                label: "22K",
+                sub: "91.6%",
                 rate: rates?.rate_22k_per_gram,
               },
               {
                 id: "18K",
-                label: "18K (75.0%)",
-                sub: "Diamond / Stone",
+                label: "18K",
+                sub: "75.0%",
                 rate: rates?.rate_18k_per_gram,
               },
             ] as const
@@ -233,13 +233,13 @@ export default function GoldForm({
                 onClick={() => setPurity(item.id)}
                 className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer touch-manipulation ${
                   isSelected
-                    ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-emerald-300 ring-2 ring-emerald-500/20 shadow-sm"
+                    ? "bg-amber-50 dark:bg-amber-500/15 border-amber-500 text-amber-950 dark:text-amber-300 ring-2 ring-amber-500/25 shadow-xs"
                     : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300 dark:hover:border-white/20"
                 }`}
               >
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-bold">{item.label}</span>
-                  {isSelected && <Check size={14} className="text-emerald-600 dark:text-emerald-400" />}
+                  {isSelected && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
                 </div>
                 <span className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-0.5">
                   {item.sub}
@@ -302,7 +302,7 @@ export default function GoldForm({
             placeholder="0.00"
             value={weightStr}
             onChange={(e) => setWeightStr(e.target.value)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-3 text-lg font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600 pr-12"
+            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl px-4 py-3 text-lg font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600 pr-12"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-400">
             grams
@@ -346,7 +346,7 @@ export default function GoldForm({
             <button
               type="button"
               onClick={handleUseLiveRate}
-              className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center gap-0.5"
+              className="text-[11px] text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5"
             >
               <Sparkles size={11} /> Use Live Rate
             </button>
@@ -364,7 +364,7 @@ export default function GoldForm({
               placeholder={liveRateFormatted}
               value={priceStr}
               onChange={(e) => setPriceStr(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl pl-8 pr-4 py-3 text-base font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600"
+              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-8 pr-4 py-3 text-base font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600"
             />
           </div>
         </div>
@@ -389,7 +389,7 @@ export default function GoldForm({
               placeholder="0"
               value={makingChargesStr}
               onChange={(e) => setMakingChargesStr(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl pl-8 pr-4 py-3 text-base font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600"
+              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-8 pr-4 py-3 text-base font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600"
             />
           </div>
         </div>
@@ -450,7 +450,7 @@ export default function GoldForm({
           placeholder="e.g. Wedding chain, Tanishq coin"
           value={assetName}
           onChange={(e) => setAssetName(e.target.value)}
-          className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl px-4 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
+          className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl px-4 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
         />
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -477,7 +477,7 @@ export default function GoldForm({
             type="date"
             value={purchaseDate}
             onChange={(e) => setPurchaseDate(e.target.value)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all"
+            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all"
           />
         </div>
 
@@ -490,7 +490,7 @@ export default function GoldForm({
             placeholder="e.g. Stored in SBI locker, receipt saved"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
+            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
           />
         </div>
       </div>
@@ -517,11 +517,11 @@ export default function GoldForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex-1 py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-sm shadow-md transition-all active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-neutral-950 font-bold text-sm shadow-md shadow-amber-500/25 transition-all active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-neutral-950 border-t-transparent rounded-full animate-spin" />
               <span>Saving...</span>
             </>
           ) : (

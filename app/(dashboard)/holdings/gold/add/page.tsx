@@ -68,7 +68,7 @@ export default function AddGoldPage() {
           <div>
             <div className="text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
               <span>Today&apos;s Live Gold Benchmark</span>
-              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.2 rounded font-semibold">
+              <span className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-500/20">
                 Live
               </span>
             </div>
@@ -77,8 +77,8 @@ export default function AddGoldPage() {
                 "Fetching latest rates..."
               ) : (
                 <>
-                  24K: ₹{Math.round(rates?.rate_24k_per_gram || 13500).toLocaleString("en-IN")}/g · 22K: ₹
-                  {Math.round(rates?.rate_22k_per_gram || 12375).toLocaleString("en-IN")}/g
+                  24K: ₹{Math.round(rates?.rate_24k_per_gram || 14766).toLocaleString("en-IN")}/g · 22K: ₹
+                  {Math.round(rates?.rate_22k_per_gram || 13535).toLocaleString("en-IN")}/g
                 </>
               )}
             </div>

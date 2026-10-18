@@ -24,7 +24,7 @@ interface TabItem {
 const TABS: TabItem[] = [
   { id: "mutual-funds", label: "Mutual Funds", path: "/holdings/mutual-funds", icon: PieChart },
   { id: "stocks", label: "Stocks", path: "/holdings/stocks", icon: TrendingUp },
-  { id: "gold", label: "Gold", path: "/holdings/gold", icon: Coins, hasLiveBadge: true },
+  { id: "gold", label: "Gold", path: "/holdings/gold", icon: Coins },
   { id: "deposits", label: "Fixed Income", path: "/holdings/deposits", icon: Landmark },
   { id: "insurance", label: "Insurance", path: "/holdings/insurance", icon: Shield },
   { id: "real-estate", label: "Real Estate", path: "/holdings/real-estate", icon: Building },
@@ -180,12 +180,6 @@ export default function HoldingsLayout({
                     }
                   />
                   <span>{tab.label}</span>
-                  {tab.hasLiveBadge && (
-                    <span
-                      className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5"
-                      title="Live Online Rates"
-                    />
-                  )}
                 </button>
               );
             })}

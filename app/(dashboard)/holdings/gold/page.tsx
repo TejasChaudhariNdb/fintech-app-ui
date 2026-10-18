@@ -178,93 +178,94 @@ export default function GoldHoldingsPage() {
   return (
     <div className="px-4 space-y-6 max-w-7xl mx-auto">
       {/* ── LIVE ONLINE GOLD RATE TICKER ── */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/20 rounded-2xl p-4 sm:p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+      <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/[0.04] to-transparent border border-amber-500/25 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">
               <Coins size={22} />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
-                  Today&apos;s Live Gold Rates (India)
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-black text-neutral-900 dark:text-white">
+                  Live Gold Spot Rates
                 </h3>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                   Live Market
                 </span>
               </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Live bullion &amp; spot benchmark rate per gram (INR)
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Indian bullion benchmark rate per gram (INR)
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors"
-              title="Refresh Live Gold Rates">
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              className="p-2 sm:p-2.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors"
+              title="Refresh Live Gold Rates"
+            >
+              <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
             </button>
-            <Link
-              href="/holdings/gold/add"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 font-semibold text-xs sm:text-sm transition-colors"
-              title="Open full dedicated add page">
-              <ExternalLink size={15} />
-              <span>Full Page</span>
-            </Link>
             <button
               onClick={handleOpenAddSheet}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95">
+              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-neutral-950 font-bold text-xs sm:text-sm shadow-sm shadow-amber-500/25 transition-all active:scale-95"
+            >
               <Plus size={16} />
               <span>Add Gold</span>
             </button>
           </div>
         </div>
 
-        {/* Live Rates Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 pt-3 border-t border-amber-500/15">
-          <div className="bg-white/80 dark:bg-black/25 p-3 rounded-xl border border-neutral-200/50 dark:border-white/5">
-            <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-              <span className="font-semibold text-neutral-800 dark:text-neutral-200">24K Gold (99.9%)</span>
-              <span className="text-[10px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded font-medium">Pure</span>
+        {/* Live Rates Grid - Minimalist 3 Columns */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-3 border-t border-amber-500/20">
+          <div className="bg-white/90 dark:bg-black/30 p-2.5 sm:p-3 rounded-2xl border border-amber-500/20 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="font-extrabold text-neutral-900 dark:text-white text-xs sm:text-sm">24K</span>
+              <span className="text-[10px] text-neutral-400 font-medium">99.9%</span>
             </div>
-            <div className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tabular-nums">
-              ₹{rates?.rate_24k_per_gram ? Math.round(rates.rate_24k_per_gram).toLocaleString("en-IN") : "--"}{" "}
-              <span className="text-xs text-neutral-500 font-normal">/ gram</span>
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5">
-              10g: ₹{rates?.rate_24k_per_gram ? Math.round(rates.rate_24k_per_gram * 10).toLocaleString("en-IN") : "--"}
-            </div>
-          </div>
-
-          <div className="bg-white/80 dark:bg-black/25 p-3 rounded-xl border border-neutral-200/50 dark:border-white/5">
-            <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-              <span className="font-semibold text-neutral-800 dark:text-neutral-200">22K Gold (91.6%)</span>
-              <span className="text-[10px] bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.2 rounded font-medium">Jewelry</span>
-            </div>
-            <div className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tabular-nums">
-              ₹{rates?.rate_22k_per_gram ? Math.round(rates.rate_22k_per_gram).toLocaleString("en-IN") : "--"}{" "}
-              <span className="text-xs text-neutral-500 font-normal">/ gram</span>
-            </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5">
-              10g: ₹{rates?.rate_22k_per_gram ? Math.round(rates.rate_22k_per_gram * 10).toLocaleString("en-IN") : "--"}
+            <div>
+              <div className="text-sm sm:text-lg font-black text-neutral-900 dark:text-white tabular-nums tracking-tight font-mono">
+                ₹{rates?.rate_24k_per_gram ? Math.round(rates.rate_24k_per_gram).toLocaleString("en-IN") : "--"}
+                <span className="text-[10px] text-neutral-400 font-normal ml-0.5">/g</span>
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-0.5">
+                10g: ₹{rates?.rate_24k_per_gram ? Math.round(rates.rate_24k_per_gram * 10).toLocaleString("en-IN") : "--"}
+              </div>
             </div>
           </div>
 
-          <div className="col-span-2 sm:col-span-1 bg-white/80 dark:bg-black/25 p-3 rounded-xl border border-neutral-200/50 dark:border-white/5">
-            <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-              <span className="font-semibold text-neutral-800 dark:text-neutral-200">18K Gold (75.0%)</span>
-              <span className="text-[10px] bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 px-1.5 py-0.2 rounded font-medium">Diamond</span>
+          <div className="bg-white/90 dark:bg-black/30 p-2.5 sm:p-3 rounded-2xl border border-amber-500/20 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="font-extrabold text-neutral-900 dark:text-white text-xs sm:text-sm">22K</span>
+              <span className="text-[10px] text-neutral-400 font-medium">91.6%</span>
             </div>
-            <div className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tabular-nums">
-              ₹{rates?.rate_18k_per_gram ? Math.round(rates.rate_18k_per_gram).toLocaleString("en-IN") : "--"}{" "}
-              <span className="text-xs text-neutral-500 font-normal">/ gram</span>
+            <div>
+              <div className="text-sm sm:text-lg font-black text-neutral-900 dark:text-white tabular-nums tracking-tight font-mono">
+                ₹{rates?.rate_22k_per_gram ? Math.round(rates.rate_22k_per_gram).toLocaleString("en-IN") : "--"}
+                <span className="text-[10px] text-neutral-400 font-normal ml-0.5">/g</span>
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-0.5">
+                10g: ₹{rates?.rate_22k_per_gram ? Math.round(rates.rate_22k_per_gram * 10).toLocaleString("en-IN") : "--"}
+              </div>
             </div>
-            <div className="text-[11px] text-neutral-400 mt-0.5">
-              10g: ₹{rates?.rate_18k_per_gram ? Math.round(rates.rate_18k_per_gram * 10).toLocaleString("en-IN") : "--"}
+          </div>
+
+          <div className="bg-white/90 dark:bg-black/30 p-2.5 sm:p-3 rounded-2xl border border-amber-500/20 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="font-extrabold text-neutral-900 dark:text-white text-xs sm:text-sm">18K</span>
+              <span className="text-[10px] text-neutral-400 font-medium">75.0%</span>
+            </div>
+            <div>
+              <div className="text-sm sm:text-lg font-black text-neutral-900 dark:text-white tabular-nums tracking-tight font-mono">
+                ₹{rates?.rate_18k_per_gram ? Math.round(rates.rate_18k_per_gram).toLocaleString("en-IN") : "--"}
+                <span className="text-[10px] text-neutral-400 font-normal ml-0.5">/g</span>
+              </div>
+              <div className="text-[10px] sm:text-[11px] text-neutral-400 mt-0.5">
+                10g: ₹{rates?.rate_18k_per_gram ? Math.round(rates.rate_18k_per_gram * 10).toLocaleString("en-IN") : "--"}
+              </div>
             </div>
           </div>
         </div>
@@ -323,7 +324,8 @@ export default function GoldHoldingsPage() {
           </h3>
           <button
             onClick={handleOpenAddSheet}
-            className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1">
+            className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+          >
             <Plus size={14} />
             <span>Add another</span>
           </button>
@@ -346,7 +348,8 @@ export default function GoldHoldingsPage() {
             </p>
             <button
               onClick={handleOpenAddSheet}
-              className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm">
+              className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-neutral-950 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-amber-500/25 active:scale-95"
+            >
               + Add First Gold Holding
             </button>
           </Card>

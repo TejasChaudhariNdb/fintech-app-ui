@@ -29,12 +29,9 @@ export default function GoldModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? "Edit Gold Holding" : "Add Physical Gold"}
+      title={isEditing ? "Edit Gold" : "Add Gold"}
     >
-      <div className="pb-4">
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 -mt-1">
-          Track jewelry, bullion, coins, or digital gold with live spot rates and returns.
-        </p>
+      <div className="pb-6">
         <GoldForm
           initialData={initialData}
           rates={rates}

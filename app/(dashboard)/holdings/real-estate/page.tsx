@@ -172,7 +172,7 @@ export default function RealEstateHoldingsPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("added") === "true") {
-        showToast("Property saved to vault successfully");
+        showToast("Property saved successfully");
         const newUrl = window.location.pathname;
         window.history.replaceState({}, "", newUrl);
       }
@@ -201,7 +201,7 @@ export default function RealEstateHoldingsPage() {
       showToast("Property updated successfully");
     } else {
       await api.addRealEstateHolding(payload as any);
-      showToast("Property added to vault successfully");
+      showToast("Property added successfully");
     }
     await loadData();
   };

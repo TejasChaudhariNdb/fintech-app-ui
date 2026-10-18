@@ -29,13 +29,13 @@ export default function AddInsurancePage() {
         <Link
           href="/insurance"
           className="p-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 transition-colors"
-          title="Back to Insurance Vault"
+          title="Back to Insurance"
         >
           <ChevronLeft size={20} />
         </Link>
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
-            Add Policy to Vault
+            Add Policy
           </h1>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
             Securely track family life cover, health insurance, and premium renewal dates

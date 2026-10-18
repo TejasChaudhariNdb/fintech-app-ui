@@ -170,7 +170,7 @@ export default function InsuranceVaultPage() {
     if (!confirm("Are you sure you want to remove this insurance policy?")) return;
     try {
       await api.deleteInsurancePolicy(id);
-      showToast("Policy removed from vault");
+      showToast("Policy removed successfully");
       await loadData();
     } catch (err: any) {
       alert(err?.message || "Failed to delete policy");
@@ -193,7 +193,7 @@ export default function InsuranceVaultPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
-            <span>Insurance &amp; Policy Vault</span>
+            <span>Insurance Policies</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 flex items-center gap-1">
               <Shield size={12} /> Family Safety Net
             </span>
@@ -343,7 +343,7 @@ export default function InsuranceVaultPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
           <Loader2 size={32} className="animate-spin mb-3 text-indigo-600" />
-          <p className="text-sm">Loading policy vault &amp; renewal dates...</p>
+          <p className="text-sm">Loading policies &amp; renewal dates...</p>
         </div>
       ) : filteredPolicies.length === 0 ? (
         <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto">
