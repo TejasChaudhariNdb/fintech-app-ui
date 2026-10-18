@@ -605,6 +605,33 @@ export const api = {
     return res;
   },
 
+  // Insurance & Policy Vault
+  getInsurancePolicies: () =>
+    api.fetch("/insurance/policies", { cacheKey: "insurance-policies" }),
+  addInsurancePolicy: async (data: Record<string, unknown>) => {
+    const res = await api.fetch("/insurance/policies", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  updateInsurancePolicy: async (id: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/insurance/policies/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteInsurancePolicy: async (id: number) => {
+    const res = await api.fetch(`/insurance/policies/${id}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+
   // CAS Upload
   uploadCAS: async (file: File, password: string, profileId?: string, pan?: string) => {
     checkDemoRestriction();

@@ -13,9 +13,20 @@ export default function HoldingsLayout({
   const isStocks = pathname?.includes("/holdings/stocks");
   const isGold = pathname?.includes("/holdings/gold");
   const isDeposits = pathname?.includes("/holdings/deposits");
-  const activeTab = isDeposits ? "deposits" : isGold ? "gold" : isStocks ? "stocks" : "mutual-funds";
+  const isInsurance = pathname?.includes("/holdings/insurance");
+  const activeTab = isInsurance
+    ? "insurance"
+    : isDeposits
+    ? "deposits"
+    : isGold
+    ? "gold"
+    : isStocks
+    ? "stocks"
+    : "mutual-funds";
 
-  const handleTabChange = (tab: "mutual-funds" | "stocks" | "gold" | "deposits") => {
+  const handleTabChange = (
+    tab: "mutual-funds" | "stocks" | "gold" | "deposits" | "insurance"
+  ) => {
     router.push(`/holdings/${tab}`);
   };
 
@@ -52,7 +63,7 @@ export default function HoldingsLayout({
             </button>
             <button
               onClick={() => handleTabChange("gold")}
-              className={`flex-1 min-w-[105px] py-2 px-2.5 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
+              className={`flex-1 min-w-[85px] py-2 px-2.5 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 ${
                 activeTab === "gold"
                   ? "bg-white dark:bg-amber-600 text-amber-600 dark:text-white shadow-sm"
                   : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
@@ -62,12 +73,21 @@ export default function HoldingsLayout({
             </button>
             <button
               onClick={() => handleTabChange("deposits")}
-              className={`flex-1 min-w-[110px] py-2 px-2.5 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
+              className={`flex-1 min-w-[100px] py-2 px-2.5 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
                 activeTab === "deposits"
                   ? "bg-white dark:bg-emerald-600 text-emerald-600 dark:text-white shadow-sm"
                   : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
               }`}>
               <span>Fixed Income</span>
+            </button>
+            <button
+              onClick={() => handleTabChange("insurance")}
+              className={`flex-1 min-w-[90px] py-2 px-2.5 sm:px-4 rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1 ${
+                activeTab === "insurance"
+                  ? "bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-sm"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+              }`}>
+              <span>Insurance</span>
             </button>
           </div>
         </div>
