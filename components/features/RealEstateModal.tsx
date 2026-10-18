@@ -23,12 +23,9 @@ export default function RealEstateModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? "Edit Real Estate Asset" : "Add Property to Vault"}
+      title={isEditing ? "Edit Property" : "Add Property"}
     >
-      <div className="pb-4">
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 -mt-1">
-          Track residential apartments, commercial units, or land parcels with true acquisition cost basis, appreciation CAGR, and rental yields.
-        </p>
+      <div className="pb-6">
         <RealEstateForm
           initialData={initialData}
           onSave={async (data) => {

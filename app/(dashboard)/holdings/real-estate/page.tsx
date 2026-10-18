@@ -225,7 +225,7 @@ export default function RealEstateHoldingsPage() {
   });
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="px-4 space-y-6 max-w-7xl mx-auto pb-12">
       {/* ── TOAST NOTIFICATION ── */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-[9999] flex items-center gap-2 px-4 py-3 bg-neutral-900 text-white rounded-2xl shadow-xl text-sm font-semibold border border-white/10 animate-in fade-in slide-in-from-top-4 duration-200">
@@ -235,90 +235,86 @@ export default function RealEstateHoldingsPage() {
       )}
 
       {/* ── HEADER ROW ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 dark:text-white tracking-tight">
-              Real Estate & Property Vault
-            </h1>
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-              <Sparkles size={12} />
-              Tangible Assets
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight whitespace-nowrap">
+            Real Estate
+          </h1>
+          {holdings.length > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300 font-bold shrink-0">
+              {holdings.length}
             </span>
-          </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Track residential homes, commercial units, and plots with acquisition basis, CAGR, and rental yields
-          </p>
+          )}
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             onClick={handleRefresh}
             disabled={refreshing || loading}
-            className="p-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-50"
+            className="p-2 sm:p-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-50"
             title="Refresh Real Estate"
           >
-            <RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />
+            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
           </button>
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-indigo-500/20"
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-indigo-500/20 active:scale-95"
           >
-            <Plus size={18} />
-            <span>Add Property</span>
+            <Plus size={15} />
+            <span>Add<span className="hidden xs:inline sm:inline"> Property</span></span>
           </button>
         </div>
       </div>
 
-      {/* ── SUMMARY STATS BANNER ── */}
-      {summary && (
+      {/* ── SUMMARY STATS BANNER (Only when properties exist) ── */}
+      {summary && holdings.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Total Valuation */}
-          <Card className="p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider">
-              <span>Total Valuation</span>
-              <Building size={16} className="text-indigo-500" />
+          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
+              <span>Valuation</span>
+              <Building size={15} className="text-indigo-500" />
             </div>
-            <div className="mt-3">
-              <div className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
+            <div className="mt-2.5">
+              <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
                 <PrivacyMask>{formatINRShort(summary.total_current_valuation)}</PrivacyMask>
               </div>
-              <div className="text-xs text-neutral-500 mt-0.5">
-                Across {summary.total_properties_count} {summary.total_properties_count === 1 ? "property" : "properties"}
+              <div className="text-[11px] text-neutral-400 mt-0.5">
+                {summary.total_properties_count} {summary.total_properties_count === 1 ? "property" : "properties"}
               </div>
             </div>
           </Card>
 
           {/* Total Invested Basis */}
-          <Card className="p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider">
+          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
               <span>Cost Basis</span>
-              <IndianRupee size={16} className="text-blue-500" />
+              <IndianRupee size={15} className="text-blue-500" />
             </div>
-            <div className="mt-3">
-              <div className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
+            <div className="mt-2.5">
+              <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
                 <PrivacyMask>{formatINRShort(summary.total_invested)}</PrivacyMask>
               </div>
-              <div className="text-xs text-neutral-500 mt-0.5">
-                Purchase + Stamp Duty + Interiors
+              <div className="text-[11px] text-neutral-400 mt-0.5">
+                Purchase + additions
               </div>
             </div>
           </Card>
 
           {/* Unrealized Capital Gain */}
-          <Card className="p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider">
-              <span>Net Appreciation</span>
+          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
+              <span>Net Gain</span>
               {summary.total_gain_loss >= 0 ? (
-                <TrendingUp size={16} className="text-emerald-500" />
+                <TrendingUp size={15} className="text-emerald-500" />
               ) : (
-                <TrendingDown size={16} className="text-rose-500" />
+                <TrendingDown size={15} className="text-rose-500" />
               )}
             </div>
-            <div className="mt-3">
+            <div className="mt-2.5">
               <div
-                className={`text-xl sm:text-2xl font-black font-mono tracking-tight ${
+                className={`text-lg sm:text-2xl font-black font-mono tracking-tight ${
                   summary.total_gain_loss >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-rose-600 dark:text-rose-400"
@@ -329,61 +325,63 @@ export default function RealEstateHoldingsPage() {
                   {formatINRShort(summary.total_gain_loss)}
                 </PrivacyMask>
               </div>
-              <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+              <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {summary.total_gain_pct >= 0 ? "+" : ""}
-                {summary.total_gain_pct.toFixed(1)}% All-Time Return
+                {summary.total_gain_pct.toFixed(1)}% Return
               </div>
             </div>
           </Card>
 
           {/* Annual Rental Income & Yield */}
-          <Card className="p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-xs font-bold uppercase tracking-wider">
-              <span>Annual Rental Yield</span>
-              <Key size={16} className="text-amber-500" />
+          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
+              <span>Rental Income</span>
+              <Key size={15} className="text-amber-500" />
             </div>
-            <div className="mt-3">
-              <div className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
+            <div className="mt-2.5">
+              <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
                 <PrivacyMask>{formatINRShort(summary.total_annual_rental_income)}</PrivacyMask>
                 <span className="text-xs font-bold text-neutral-400 ml-1">/yr</span>
               </div>
-              <div className="text-xs text-neutral-500 mt-0.5">
+              <div className="text-[11px] text-neutral-500 mt-0.5">
                 <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
                   {summary.portfolio_rental_yield_pct.toFixed(2)}%
                 </strong>{" "}
-                portfolio gross yield ({summary.rented_properties_count} rented)
+                yield ({summary.rented_properties_count} rented)
               </div>
             </div>
           </Card>
         </div>
       )}
 
-      {/* ── FILTER CHIPS ── */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-        {[
-          { id: "ALL", label: `All Properties (${holdings.length})` },
-          { id: "RESIDENTIAL_APARTMENT", label: "Apartments" },
-          { id: "VILLA_HOUSE", label: "Villas & Houses" },
-          { id: "COMMERCIAL", label: "Commercial" },
-          { id: "LAND_PLOT", label: "Plots & Land" },
-          { id: "RENTED", label: `Rented Out (${summary?.rented_properties_count || 0})` },
-        ].map((f) => {
-          const isActive = activeFilter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setActiveFilter(f.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                isActive
-                  ? "bg-neutral-900 dark:bg-white text-white dark:text-black shadow-sm"
-                  : "bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300"
-              }`}
-            >
-              {f.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* ── FILTER CHIPS (Only when properties exist) ── */}
+      {holdings.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {[
+            { id: "ALL", label: `All (${holdings.length})` },
+            { id: "RESIDENTIAL_APARTMENT", label: "Apartments" },
+            { id: "VILLA_HOUSE", label: "Villas & Houses" },
+            { id: "COMMERCIAL", label: "Commercial" },
+            { id: "LAND_PLOT", label: "Plots & Land" },
+            { id: "RENTED", label: `Rented (${summary?.rented_properties_count || 0})` },
+          ].map((f) => {
+            const isActive = activeFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  isActive
+                    ? "bg-neutral-900 dark:bg-white text-white dark:text-black shadow-sm"
+                    : "bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300"
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── HOLDINGS LIST / EMPTY STATE ── */}
       {loading ? (
@@ -391,23 +389,63 @@ export default function RealEstateHoldingsPage() {
           <Loader2 size={32} className="animate-spin text-indigo-500 mb-3" />
           <p className="text-sm font-semibold text-neutral-500">Loading properties...</p>
         </div>
-      ) : filteredHoldings.length === 0 ? (
-        <Card className="py-16 px-6 text-center border-dashed">
-          <div className="w-16 h-16 rounded-3xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
+      ) : holdings.length === 0 ? (
+        /* Empty State when 0 properties in vault */
+        <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-xs">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
             <Building2 size={32} />
           </div>
-          <h3 className="text-lg font-black text-neutral-900 dark:text-white">
-            {holdings.length === 0 ? "No Properties Added Yet" : "No Properties Match This Filter"}
-          </h3>
-          <p className="text-sm text-neutral-500 max-w-md mx-auto mt-1 mb-6">
-            Log your residential apartments, commercial offices, or plots to track capital appreciation, holding period CAGR, and annual rental cashflows.
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-white">
+              No Properties Added Yet
+            </h3>
+            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1.5 max-w-sm mx-auto">
+              Add your flats, houses, commercial units, or land to track capital appreciation, holding period CAGR, and rental cashflow.
+            </p>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={handleOpenAdd}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-500/20 transition-all active:scale-95"
+            >
+              <Plus size={18} />
+              <span>Add First Property</span>
+            </button>
+          </div>
+
+          {/* Highlights */}
+          <div className="flex items-center justify-center gap-3 pt-3 text-[11px] text-neutral-400 flex-wrap">
+            <span className="flex items-center gap-1">
+              <TrendingUp size={13} className="text-indigo-500" /> Capital Appreciation
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Key size={13} className="text-amber-500" /> Rental Yields
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Sparkles size={13} className="text-emerald-500" /> XIRR Returns
+            </span>
+          </div>
+        </div>
+      ) : filteredHoldings.length === 0 ? (
+        /* Filter matched 0 properties */
+        <Card className="py-12 px-6 text-center border-dashed">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-white/5 text-neutral-400 flex items-center justify-center mx-auto mb-3">
+            <Building2 size={24} />
+          </div>
+          <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+            No properties match this filter
+          </h4>
+          <p className="text-xs text-neutral-500 mt-1 mb-4">
+            Try selecting a different property category or view all properties.
           </p>
           <button
-            onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-indigo-500/20"
+            onClick={() => setActiveFilter("ALL")}
+            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
           >
-            <Plus size={18} />
-            <span>Add First Property</span>
+            View All Properties ({holdings.length})
           </button>
         </Card>
       ) : (

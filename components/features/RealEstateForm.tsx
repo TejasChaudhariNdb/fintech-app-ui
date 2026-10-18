@@ -104,9 +104,9 @@ export default function RealEstateForm({
   );
   const [purchaseDate, setPurchaseDate] = useState<string>(
     initialData?.purchase_date ||
-      new Date(Date.now() - 3 * 365 * 24 * 3600 * 1000)
-        .toISOString()
-        .split("T")[0]
+    new Date(Date.now() - 3 * 365 * 24 * 3600 * 1000)
+      .toISOString()
+      .split("T")[0]
   );
   const [purchasePriceStr, setPurchasePriceStr] = useState<string>(
     initialData ? String(initialData.purchase_price) : ""
@@ -211,8 +211,8 @@ export default function RealEstateForm({
     const resolvedProfileId = selectedProfileId
       ? parseInt(selectedProfileId)
       : activeProfileId !== "all"
-      ? parseInt(activeProfileId)
-      : profiles.find((p) => p.is_default)?.id || profiles[0]?.id;
+        ? parseInt(activeProfileId)
+        : profiles.find((p) => p.is_default)?.id || profiles[0]?.id;
 
     try {
       await onSave({
@@ -237,17 +237,17 @@ export default function RealEstateForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* ── PROFILE SELECTOR (If multi-profile) ── */}
       {profiles.length > 1 && (
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
             Property Owner (Profile)
           </label>
           <select
             value={selectedProfileId}
             onChange={(e) => setSelectedProfileId(e.target.value)}
-            className="w-full bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm font-semibold outline-none transition-all dark:text-white"
+            className="w-full bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm font-semibold outline-none transition-all dark:text-white"
           >
             {profiles.map((p) => (
               <option key={p.id} value={p.id}>
@@ -260,7 +260,7 @@ export default function RealEstateForm({
 
       {/* ── PROPERTY TYPE SELECTOR ── */}
       <div>
-        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5">
           Property Type
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -272,14 +272,14 @@ export default function RealEstateForm({
                 key={item.id}
                 type="button"
                 onClick={() => setPropertyType(item.id)}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all ${
+                className={`flex items-center sm:flex-col justify-center gap-2 sm:gap-1 p-2.5 sm:p-3 rounded-xl border text-center transition-all ${
                   isSelected
-                    ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-sm"
-                    : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-white/20"
+                    ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold shadow-xs"
+                    : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300"
                 }`}
               >
-                <Icon size={20} className="mb-1.5" />
-                <span className="text-xs font-bold leading-tight">{item.label}</span>
+                <Icon size={18} />
+                <span className="text-xs leading-tight">{item.label}</span>
               </button>
             );
           })}
@@ -287,46 +287,46 @@ export default function RealEstateForm({
       </div>
 
       {/* ── PROPERTY NAME & LOCATION ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Property / Project Name <span className="text-rose-500">*</span>
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+            Property Name <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={17} />
+            <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
             <input
               type="text"
               value={propertyName}
               onChange={(e) => setPropertyName(e.target.value)}
               placeholder="e.g. 3BHK Oberoi Sky City"
-              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            City / Location
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+            Location / City
           </label>
           <div className="relative">
-            <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={17} />
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
             <input
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Borivali East, Mumbai"
-              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
             />
           </div>
         </div>
       </div>
 
       {/* ── AREA & PURCHASE DATE ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Carpet / Super Area (Sq. Ft.)
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+            Carpet Area (sq ft, optional)
           </label>
           <input
             type="number"
@@ -334,55 +334,97 @@ export default function RealEstateForm({
             value={areaSqftStr}
             onChange={(e) => setAreaSqftStr(e.target.value)}
             placeholder="e.g. 1250"
-            className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
+            className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Acquisition Date <span className="text-rose-500">*</span>
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+            Purchase Date <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={17} />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
             <input
               type="date"
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
-              className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
               required
             />
           </div>
         </div>
       </div>
 
-      {/* ── ACQUISITION COSTS (Purchase Price + Stamp Duty + Interiors) ── */}
-      <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/10 space-y-3.5">
-        <div className="text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider flex items-center justify-between">
-          <span>Acquisition Cost Basis</span>
-          <span className="text-[11px] font-semibold text-neutral-500">
-            Total Basis: <strong className="text-neutral-900 dark:text-white font-mono">{formatINRShort(totalCostBasis)}</strong>
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-[11px] font-semibold text-neutral-500 mb-1">
-              Purchase Cost (₹) <span className="text-rose-500">*</span>
+      {/* ── VALUATION & PURCHASE PRICE ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Purchase Price */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400">
+              Purchase Price (₹) <span className="text-rose-500">*</span>
             </label>
+            {purchasePriceNum > 0 && (
+              <span className="text-xs font-bold text-neutral-500 font-mono">
+                {formatINRShort(purchasePriceNum)}
+              </span>
+            )}
+          </div>
+          <div className="relative">
+            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
             <input
               type="number"
               step="any"
               value={purchasePriceStr}
               onChange={(e) => setPurchasePriceStr(e.target.value)}
               placeholder="e.g. 8500000"
-              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-bold font-mono outline-none dark:text-white"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-bold font-mono outline-none transition-all dark:text-white"
               required
             />
           </div>
+        </div>
 
+        {/* Current Market Valuation */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400">
+              Current Valuation (₹) <span className="text-rose-500">*</span>
+            </label>
+            {currentValuationNum > 0 && (
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                {formatINRShort(currentValuationNum)}
+              </span>
+            )}
+          </div>
+          <div className="relative">
+            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
+            <input
+              type="number"
+              step="any"
+              value={currentValuationStr}
+              onChange={(e) => setCurrentValuationStr(e.target.value)}
+              placeholder="e.g. 13500000"
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-bold font-mono outline-none transition-all dark:text-white"
+              required
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── ADDITIONAL ACQUISITION COSTS (Stamp duty & Renovation) ── */}
+      <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200/80 dark:border-white/10 space-y-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+            Stamp Duty, Registration &amp; Interior Works
+          </span>
+          <span className="text-neutral-500 font-mono">
+            Total Cost Basis: <strong className="text-neutral-900 dark:text-white font-bold">{formatINRShort(totalCostBasis)}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <div>
-            <label className="block text-[11px] font-semibold text-neutral-500 mb-1">
-              Stamp Duty & Registration (₹)
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Stamp Duty &amp; Registration (₹, optional)
             </label>
             <input
               type="number"
@@ -390,13 +432,13 @@ export default function RealEstateForm({
               value={stampDutyStr}
               onChange={(e) => setStampDutyStr(e.target.value)}
               placeholder="e.g. 550000"
-              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold font-mono outline-none dark:text-white"
+              className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-xs font-semibold font-mono outline-none dark:text-white"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-neutral-500 mb-1">
-              Renovation & Interiors (₹)
+            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              Renovation &amp; Interiors (₹, optional)
             </label>
             <input
               type="number"
@@ -404,82 +446,43 @@ export default function RealEstateForm({
               value={renovationStr}
               onChange={(e) => setRenovationStr(e.target.value)}
               placeholder="e.g. 600000"
-              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold font-mono outline-none dark:text-white"
+              className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-xs font-semibold font-mono outline-none dark:text-white"
             />
           </div>
         </div>
       </div>
 
-      {/* ── CURRENT ESTIMATED VALUATION ── */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-            Current Estimated Market Valuation <span className="text-rose-500">*</span>
-          </label>
-          <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">
-            {currentValuationNum > 0 ? formatINRShort(currentValuationNum) : ""}
-          </span>
-        </div>
-
-        <div className="relative">
-          <IndianRupee className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" size={17} />
-          <input
-            type="number"
-            step="any"
-            value={currentValuationStr}
-            onChange={(e) => setCurrentValuationStr(e.target.value)}
-            placeholder="e.g. 13500000"
-            className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-bold font-mono outline-none transition-all dark:text-white"
-            required
-          />
-        </div>
-
-        {/* Quick valuation chips */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          {VALUATION_QUICK_CHIPS.map((chip) => (
-            <button
-              key={chip.val}
-              type="button"
-              onClick={() => setCurrentValuationStr(String(chip.val))}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 transition-colors"
-            >
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* ── RENTAL INCOME SECTION ── */}
-      <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200 dark:border-white/10 space-y-3">
+      <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.02] border border-neutral-200/80 dark:border-white/10 space-y-2.5">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xs font-bold text-neutral-900 dark:text-white">
               Currently Rented Out?
             </div>
             <div className="text-[11px] text-neutral-500">
-              Factor monthly rental yields into your property XIRR return
+              Calculate rental yield and cashflow
             </div>
           </div>
           <button
             type="button"
             onClick={() => setIsRented(!isRented)}
-            className={`w-12 h-6 rounded-full transition-colors relative flex items-center p-0.5 ${
+            className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 ${
               isRented ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-700"
             }`}
           >
             <div
-              className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${
-                isRented ? "translate-x-6" : "translate-x-0"
+              className={`w-5 h-5 rounded-full bg-white shadow-xs transition-transform ${
+                isRented ? "translate-x-5" : "translate-x-0"
               }`}
             />
           </button>
         </div>
 
         {isRented && (
-          <div className="pt-2 border-t border-neutral-200 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-neutral-500 mb-1">
-                Monthly Rental Income (₹)
+          <div className="pt-2 border-t border-neutral-200 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex-1">
+              <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+                Monthly Rent (₹)
               </label>
               <input
                 type="number"
@@ -487,110 +490,98 @@ export default function RealEstateForm({
                 value={monthlyRentStr}
                 onChange={(e) => setMonthlyRentStr(e.target.value)}
                 placeholder="e.g. 38000"
-                className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-bold font-mono outline-none dark:text-white"
+                className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-black/30 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-xs font-bold font-mono outline-none dark:text-white"
               />
             </div>
-            <div className="flex flex-col justify-center">
-              <span className="text-[11px] text-neutral-500">Gross Rental Yield</span>
+            <div className="shrink-0 text-left sm:text-right">
+              <span className="text-[11px] text-neutral-500 block">Gross Yield</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                 {rentalYieldPct.toFixed(2)}% p.a.
               </span>
-              <span className="text-[10px] text-neutral-400">
-                ({formatINRShort(annualRent)} / year)
+              <span className="text-[10px] text-neutral-400 ml-1">
+                ({formatINRShort(annualRent)}/yr)
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── LIVE RETURN & XIRR PREVIEW CARD ── */}
+      {/* ── LIVE RETURN & CAGR PREVIEW STRIP ── */}
       {totalCostBasis > 0 && currentValuationNum > 0 && (
-        <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 rounded-2xl p-4 space-y-2.5">
-          <div className="flex items-center justify-between text-xs font-bold text-neutral-900 dark:text-white">
-            <span className="flex items-center gap-1.5">
-              <Sparkles size={14} className="text-indigo-500" />
-              Real Estate Return Analytics
-            </span>
-            <span className="text-[11px] font-normal text-neutral-500">
-              Held for {tenureYears.toFixed(1)} Years
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-center">
-            <div className="p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-neutral-200/50 dark:border-white/5">
-              <div className="text-[10px] uppercase font-semibold text-neutral-500">Unrealized Gain</div>
-              <div
-                className={`text-sm font-black font-mono ${
-                  unrealizedGain >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {unrealizedGain >= 0 ? "+" : ""}
-                {formatINRShort(unrealizedGain)}
-              </div>
-            </div>
-
-            <div className="p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-neutral-200/50 dark:border-white/5">
-              <div className="text-[10px] uppercase font-semibold text-neutral-500">Absolute Return</div>
-              <div
-                className={`text-sm font-black font-mono ${
-                  gainPct >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {gainPct >= 0 ? "+" : ""}
-                {gainPct.toFixed(1)}%
-              </div>
-            </div>
-
-            <div className="p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-neutral-200/50 dark:border-white/5">
-              <div className="text-[10px] uppercase font-semibold text-neutral-500">Appreciation CAGR</div>
-              <div className="text-sm font-black font-mono text-indigo-600 dark:text-indigo-400">
-                {cagrPct.toFixed(1)}% p.a.
-              </div>
-            </div>
-
-            <div className="p-2 rounded-xl bg-white/60 dark:bg-white/5 border border-neutral-200/50 dark:border-white/5">
-              <div className="text-[10px] uppercase font-semibold text-neutral-500">Total Return XIRR</div>
-              <div className="text-sm font-black font-mono text-emerald-600 dark:text-emerald-400">
-                {totalReturnXirrPct.toFixed(1)}% p.a.
-              </div>
+        <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-around text-center gap-2">
+          <div>
+            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Return</div>
+            <div
+              className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${
+                unrealizedGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+              }`}
+            >
+              {unrealizedGain >= 0 ? "+" : ""}
+              {gainPct.toFixed(1)}%
             </div>
           </div>
+
+          <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
+
+          <div>
+            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Appreciation CAGR</div>
+            <div className="text-xs sm:text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">
+              {cagrPct.toFixed(1)}% p.a.
+            </div>
+          </div>
+
+          <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
+
+          <div>
+            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Holding Tenure</div>
+            <div className="text-xs sm:text-sm font-bold font-mono text-neutral-700 dark:text-neutral-300 mt-0.5">
+              {tenureYears.toFixed(1)} yrs
+            </div>
+          </div>
+
+          {isRented && rentalYieldPct > 0 && (
+            <>
+              <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
+              <div>
+                <div className="text-[10px] font-semibold text-neutral-500 uppercase">Total Return</div>
+                <div className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  {totalReturnXirrPct.toFixed(1)}% XIRR
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* ── NOTES ── */}
       <div>
-        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-          Notes / Registration Number (Optional)
+        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
+          Notes (Optional)
         </label>
-        <textarea
-          rows={2}
+        <input
+          type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. Registered in Sub-Registrar Borivali, Rented to TCS employee"
-          className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-medium outline-none transition-all dark:text-white resize-none"
+          placeholder="e.g. Registered in Borivali office, rental agreement valid till 2026"
+          className="w-full px-3.5 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-xs font-medium outline-none transition-all dark:text-white"
         />
       </div>
 
       {errorMsg && (
-        <div className="flex items-center gap-2 text-rose-500 text-xs font-semibold p-3 bg-rose-500/10 rounded-xl">
-          <AlertCircle size={16} className="shrink-0" />
+        <div className="flex items-center gap-2 text-rose-500 text-xs font-semibold p-2.5 bg-rose-500/10 rounded-xl">
+          <AlertCircle size={15} className="shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* ── ACTION BUTTONS ── */}
-      <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100 dark:border-white/10">
+      <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-neutral-100 dark:border-white/10">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors"
+            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors"
           >
             Cancel
           </button>
@@ -598,14 +589,14 @@ export default function RealEstateForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-indigo-500/20 disabled:opacity-50"
+          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-indigo-500/20 active:scale-95 disabled:opacity-50"
         >
           {isSubmitting ? (
             <span>Saving Property...</span>
           ) : (
             <>
               <Check size={16} />
-              <span>{initialData ? "Update Property" : "Save to Vault"}</span>
+              <span>{initialData ? "Update Property" : "Save Property"}</span>
             </>
           )}
         </button>
