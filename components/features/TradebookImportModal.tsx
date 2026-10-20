@@ -23,6 +23,7 @@ import {
   Plus,
   Trash2,
   Files,
+  Gift,
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import { api } from "@/lib/api";
@@ -64,6 +65,7 @@ interface TradebookImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onOpenDematReconcile?: () => void;
 }
 
 const SUPPORTED_BROKERS = [
@@ -129,12 +131,26 @@ export default function TradebookImportModal({
   isOpen,
   onClose,
   onSuccess,
+  onOpenDematReconcile,
 }: TradebookImportModalProps) {
   const { profiles, activeProfileId } = useProfile();
   const [mounted, setMounted] = useState(false);
 
   // Flow steps: 'UPLOAD' -> 'PREVIEW' -> 'SUCCESS'
   const [step, setStep] = useState<"UPLOAD" | "PREVIEW" | "SUCCESS">("UPLOAD");
+
+  // Mode: 'HOLDINGS' (primary / single truth) vs 'TRADEBOOK' (historical order log)
+  const [importMode, setImportMode] = useState<"HOLDINGS" | "TRADEBOOK">("HOLDINGS");
+  const [holdingsFile, setHoldingsFile] = useState<File | null>(null);
+  const [isImportingHoldings, setIsImportingHoldings] = useState(false);
+  const [isDraggingHoldings, setIsDraggingHoldings] = useState(false);
+  const [holdingsImportResult, setHoldingsImportResult] = useState<{
+    imported_count: number;
+    total_invested: number;
+    total_current_value: number;
+    items: any[];
+  } | null>(null);
+  const holdingsFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -168,6 +184,22 @@ export default function TradebookImportModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const handleHoldingsFileSelected = async (f: File) => {
+    if (!f) return;
+    setHoldingsFile(f);
+    setIsImportingHoldings(true);
+    setErrorMessage(null);
+    try {
+      const res = await api.importHoldingsStatement(f, targetProfileId);
+      setHoldingsImportResult(res);
+      onSuccess();
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to import holdings statement.");
+    } finally {
+      setIsImportingHoldings(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -187,6 +219,11 @@ export default function TradebookImportModal({
     if (!isOpen) {
       setTimeout(() => {
         setStep("UPLOAD");
+        setImportMode("HOLDINGS");
+        setHoldingsFile(null);
+        setHoldingsImportResult(null);
+        setIsImportingHoldings(false);
+        setIsDraggingHoldings(false);
         setSelectedFiles([]);
         setSelectedFile(null);
         setPreviewData(null);
@@ -514,7 +551,9 @@ export default function TradebookImportModal({
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-base sm:text-lg text-neutral-900 dark:text-white">
                   {step === "UPLOAD"
-                    ? "Upload Broker Tradebook"
+                    ? importMode === "HOLDINGS"
+                      ? "Import Stock Portfolio"
+                      : "Upload Broker Tradebook"
                     : step === "PREVIEW"
                     ? "Verify & Import Trades"
                     : "Import Complete"}
@@ -527,7 +566,9 @@ export default function TradebookImportModal({
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {step === "UPLOAD"
-                  ? "Import multi-year tradebooks automatically from Zerodha, Groww, AngelOne & CSV"
+                  ? importMode === "HOLDINGS"
+                    ? "Instant 1-click sync from Broker Demat Holdings (Zerodha, Groww, Upstox)"
+                    : "Import multi-year tradebooks automatically from Zerodha, Groww, AngelOne & CSV"
                   : step === "PREVIEW"
                   ? `Review detected trades for ${targetProfileName}`
                   : "Holdings and weighted averages updated"}
@@ -542,6 +583,46 @@ export default function TradebookImportModal({
             <X size={18} />
           </button>
         </div>
+
+        {/* ── MODE TABS (Holdings Statement vs Tradebook) ── */}
+        {step === "UPLOAD" && (
+          <div className="px-5 sm:px-6 pt-3 pb-0 bg-neutral-50/50 dark:bg-white/[0.01] border-b border-neutral-100 dark:border-white/5 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setImportMode("HOLDINGS");
+                setErrorMessage(null);
+              }}
+              className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+                importMode === "HOLDINGS"
+                  ? "border-primary-600 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}>
+              <Sparkles size={16} />
+              <span>Holdings Statement</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                Recommended
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setImportMode("TRADEBOOK");
+                setErrorMessage(null);
+              }}
+              className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+                importMode === "TRADEBOOK"
+                  ? "border-primary-600 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}>
+              <FileSpreadsheet size={16} />
+              <span>Tradebook Orders</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 dark:bg-white/10 text-neutral-500">
+                Order Logs
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* ── BODY ── */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
@@ -558,7 +639,7 @@ export default function TradebookImportModal({
               {/* Profile Selector */}
               <div>
                 <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5 uppercase tracking-wider">
-                  Import Trades For Family Member
+                  Import For Family Member
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {profiles.map((p) => {
@@ -584,192 +665,473 @@ export default function TradebookImportModal({
                 </div>
               </div>
 
-              {/* Supported Brokers Badges */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                    Auto-Supported Brokers & Formats
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowGuide(!showGuide)}
-                    className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
-                  >
-                    <HelpCircle size={13} />
-                    How to export
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {SUPPORTED_BROKERS.map((b) => (
-                    <span
-                      key={b.id}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-800 dark:text-neutral-200"
-                    >
-                      <Sparkles size={11} className="text-primary-500" />
-                      {b.name}
-                    </span>
-                  ))}
-                  <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-neutral-50 dark:bg-white/[0.02] text-neutral-400 border border-dashed border-neutral-200 dark:border-white/10">
-                    .CSV
-                  </span>
-                  <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 border border-primary-500/20">
-                    Multi-File Drop Supported
-                  </span>
-                </div>
-
-                {/* Expandable How-To Guide */}
-                {showGuide && (
-                  <div className="mt-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-600 dark:text-neutral-300 space-y-2 animate-in fade-in">
-                    <p className="font-bold text-neutral-900 dark:text-white">Quick Export Instructions:</p>
-                    <ul className="space-y-1 list-disc list-inside">
-                      <li>
-                        <b>Zerodha (Multi-Year):</b> If Zerodha limits export to 365 days, export multiple yearly CSVs (e.g. 2020-21, 2021-22, 2022-23) and select or drop them together! Arthavi merges them in date order automatically.
-                      </li>
-                      <li>
-                        <b>Groww:</b> Go to Profile &rarr; Reports &rarr; Stock Orders &rarr; Download statement CSV.
-                      </li>
-                      <li>
-                        <b>AngelOne:</b> Go to Reports &rarr; Tradebook &rarr; Download CSV.
-                      </li>
-                      <li>
-                        <b>Custom Sheet:</b> Columns: <code>Stock/Symbol</code>, <code>Trade Date</code>, <code>Type (BUY/SELL)</code>, <code>Quantity</code>, <code>Price</code>.
-                      </li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              {/* Drag & Drop File Zone (Supports Multiple Files - Idea 1) */}
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
-                  isDragging
-                    ? "border-primary-500 bg-primary-500/10 scale-[1.01]"
-                    : "border-neutral-200 dark:border-white/15 bg-neutral-50/50 dark:bg-white/[0.02] hover:bg-neutral-50 dark:hover:bg-white/5"
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  multiple
-                  onChange={(e) => handleFilesSelected(Array.from(e.target.files || []))}
-                  className="hidden"
-                />
-
-                {isPreviewing ? (
-                  <div className="py-4 space-y-3">
-                    <Loader2 size={36} className="animate-spin text-primary-600 dark:text-primary-400 mx-auto" />
-                    <div>
-                      <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
-                        {selectedFiles.length > 1
-                          ? `Merging ${selectedFiles.length} Tradebooks & Analyzing...`
-                          : "Analyzing Tradebook CSV..."}
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        Detecting broker format, ordering dates, and checking duplicates
-                      </p>
+              {/* ════════ TAB A: HOLDINGS STATEMENT (RECOMMENDED) ════════ */}
+              {importMode === "HOLDINGS" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  {/* Supported Brokers Badges */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        Auto-Supported Broker Statements
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowGuide(!showGuide)}
+                        className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+                      >
+                        <HelpCircle size={13} />
+                        How to export
+                      </button>
                     </div>
-                  </div>
-                ) : selectedFiles.length > 1 ? (
-                  <div className="py-2 space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto shadow-sm">
-                      <Files size={24} />
-                    </div>
-                    <div>
-                      <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
-                        {selectedFiles.length} Yearly Tradebooks Combined
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        Merged seamlessly in chronological order. Click or drop to add more.
-                      </p>
-                    </div>
-                    {/* File chips */}
-                    <div
-                      className="flex flex-wrap gap-1.5 justify-center max-w-lg mx-auto pt-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {selectedFiles.map((f, i) => (
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Zerodha (Console)", "Groww", "Upstox", "AngelOne", "ICICI Direct"].map((b) => (
                         <span
-                          key={i}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 shadow-xs"
+                          key={b}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-800 dark:text-neutral-200"
                         >
-                          <span className="truncate max-w-[120px]">{f.name}</span>
-                          <span className="text-[10px] text-neutral-400">
-                            ({(f.size / 1024).toFixed(0)}k)
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => handleRemoveFile(i, e)}
-                            className="p-0.5 rounded-full hover:bg-neutral-200 dark:hover:bg-white/20 text-neutral-400 hover:text-rose-500 transition-colors"
-                            title="Remove this file"
-                          >
-                            <X size={12} />
-                          </button>
+                          <Sparkles size={11} className="text-primary-500" />
+                          {b}
                         </span>
                       ))}
+                      <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                        .XLSX & .CSV
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 border border-primary-500/20">
+                        1-Click Instant Sync
+                      </span>
                     </div>
-                  </div>
-                ) : selectedFile ? (
-                  <div className="py-2 space-y-2">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                      <FileSpreadsheet size={24} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm text-neutral-900 dark:text-white truncate max-w-sm mx-auto">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-xs text-neutral-400">
-                        {(selectedFile.size / 1024).toFixed(1)} KB &bull; Click or drop more files to combine
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-4 space-y-2">
-                    <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto">
-                      <Upload size={24} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm text-neutral-900 dark:text-white">
-                        Drop 1 or multiple Tradebook CSVs here
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        Export yearly statements from Zerodha/Groww and drop all at once
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Sample Template Download */}
-              <div className="bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0">
-                    <Download size={15} />
+                    {showGuide && (
+                      <div className="mt-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-600 dark:text-neutral-300 space-y-2 animate-in fade-in">
+                        <p className="font-bold text-neutral-900 dark:text-white">Where to download Demat statement:</p>
+                        <ul className="space-y-1.5 list-disc list-inside">
+                          <li>
+                            <b>Zerodha:</b> Console &rarr; <b>Portfolio</b> &rarr; <b>Holdings</b> &rarr; Click <b>Download (.xlsx or .csv)</b> on top right.
+                          </li>
+                          <li>
+                            <b>Groww:</b> Go to <b>Profile</b> &rarr; <b>Reports</b> &rarr; <b>Stocks Holdings Statement</b>.
+                          </li>
+                          <li>
+                            <b>Upstox:</b> Go to <b>Account</b> &rarr; <b>Reports</b> &rarr; <b>Holdings Statement</b>.
+                          </li>
+                          <li>
+                            <b>Custom Excel/CSV:</b> Columns: <code>Symbol</code> (or Stock/ISIN), <code>Quantity Available</code> (or Qty), <code>Average Price</code> (or Buy Price).
+                          </li>
+                        </ul>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Why Demat Statement Banner */}
+                  <div className="bg-primary-50/50 dark:bg-primary-500/[0.06] border border-primary-200/60 dark:border-primary-500/20 rounded-2xl p-3.5 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles size={16} />
+                    </div>
+                    <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                      <span className="font-bold text-neutral-900 dark:text-white">
+                        Single Source of Truth:
+                      </span>{" "}
+                      Your broker Holdings statement automatically factors in multi-year historical buys, bonus shares (e.g. NBCC 1:2), stock splits, and demergers. It provides 100% precision with zero missing-buy errors.
+                    </div>
+                  </div>
+
+                  {/* Drag & Drop Zone / Results */}
+                  {holdingsImportResult ? (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div className="p-4 rounded-3xl bg-emerald-500/[0.08] border border-emerald-500/25 space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                              <CheckCircle2 size={20} />
+                            </div>
+                            <div>
+                              <h4 className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                                Demat Holdings Synchronized!
+                              </h4>
+                              <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                                Loaded {holdingsImportResult.imported_count} active stocks for {targetProfileName}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHoldingsImportResult(null);
+                              setHoldingsFile(null);
+                            }}
+                            className="px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-300 transition-colors"
+                          >
+                            Upload Another
+                          </button>
+                        </div>
+
+                        {/* 3 Metric Cards */}
+                        <div className="grid grid-cols-3 gap-2.5">
+                          <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase">Active Stocks</span>
+                            <div className="text-base sm:text-lg font-black text-neutral-900 dark:text-white mt-0.5">
+                              {holdingsImportResult.imported_count}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase">Total Invested</span>
+                            <div className="text-base sm:text-lg font-black text-neutral-900 dark:text-white mt-0.5">
+                              ₹{Number(holdingsImportResult.total_invested || 0).toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10">
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase">Current Value</span>
+                            <div className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                              ₹{Number(holdingsImportResult.total_current_value || 0).toLocaleString("en-IN", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Preview items list */}
+                        {holdingsImportResult.items && holdingsImportResult.items.length > 0 && (
+                          <div className="max-h-48 overflow-y-auto rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#151922] text-xs">
+                            <table className="w-full border-collapse">
+                              <thead className="bg-neutral-50 dark:bg-white/5 sticky top-0 text-[10px] font-bold text-neutral-500 uppercase tracking-wider">
+                                <tr>
+                                  <th className="text-left px-3 py-2">Stock</th>
+                                  <th className="text-right px-3 py-2">Qty</th>
+                                  <th className="text-right px-3 py-2">Avg Buy</th>
+                                  <th className="text-right px-3 py-2">Invested</th>
+                                  <th className="text-right px-3 py-2">LTP</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
+                                {holdingsImportResult.items.map((item, idx) => (
+                                  <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-white/[0.02]">
+                                    <td className="px-3 py-2 font-mono font-bold text-neutral-900 dark:text-white">
+                                      {item.symbol}
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-medium text-neutral-700 dark:text-neutral-300">
+                                      {item.quantity}
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-mono text-neutral-700 dark:text-neutral-300">
+                                      ₹{Number(item.avg_buy_price || 0).toFixed(2)}
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-mono font-semibold text-neutral-900 dark:text-white">
+                                      ₹{Number(item.total_invested || 0).toLocaleString("en-IN", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </td>
+                                    <td className="px-3 py-2 text-right font-mono text-neutral-500">
+                                      {item.current_price ? `₹${Number(item.current_price).toFixed(2)}` : "-"}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingHoldings(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDraggingHoldings(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingHoldings(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleHoldingsFileSelected(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      onClick={() => holdingsFileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
+                        isDraggingHoldings
+                          ? "border-primary-500 bg-primary-500/10 scale-[1.01]"
+                          : "border-neutral-200 dark:border-white/15 bg-neutral-50/50 dark:bg-white/[0.02] hover:bg-neutral-50 dark:hover:bg-white/5"
+                      }`}
+                    >
+                      <input
+                        ref={holdingsFileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleHoldingsFileSelected(e.target.files[0]);
+                          }
+                        }}
+                        className="hidden"
+                      />
+
+                      {isImportingHoldings ? (
+                        <div className="py-6 space-y-3">
+                          <Loader2 size={38} className="animate-spin text-primary-600 dark:text-primary-400 mx-auto" />
+                          <div>
+                            <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                              Syncing Demat Portfolio...
+                            </p>
+                            <p className="text-xs text-neutral-400 mt-0.5">
+                              Reading stocks, quantities, average buy costs, and updating live market prices
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="py-4 space-y-2.5">
+                          <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto shadow-xs">
+                            <Upload size={24} />
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                              Drop your Demat Holdings Statement here
+                            </p>
+                            <p className="text-xs text-neutral-400 mt-1">
+                              Supports Zerodha Excel (<b>.xlsx</b>) / <b>.csv</b>, Groww, Upstox holdings
+                            </p>
+                          </div>
+                          <div className="pt-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-xs font-bold text-primary-600 dark:text-primary-400 shadow-xs">
+                              <FileSpreadsheet size={13} />
+                              <span>Browse File (.xlsx / .csv)</span>
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ════════ TAB B: TRADEBOOK ORDERS ════════ */}
+              {importMode === "TRADEBOOK" && (
+                <div className="space-y-4 animate-in fade-in duration-150">
+                  {/* Supported Brokers Badges */}
                   <div>
-                    <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
-                      Need a reference template?
-                    </span>
-                    <p className="text-[11px] text-neutral-400">
-                      Pre-formatted CSV columns with sample BUY & SELL rows
-                    </p>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                        Auto-Supported Brokers & Formats
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowGuide(!showGuide)}
+                        className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+                      >
+                        <HelpCircle size={13} />
+                        How to export
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {SUPPORTED_BROKERS.map((b) => (
+                        <span
+                          key={b.id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-800 dark:text-neutral-200"
+                        >
+                          <Sparkles size={11} className="text-primary-500" />
+                          {b.name}
+                        </span>
+                      ))}
+                      <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-neutral-50 dark:bg-white/[0.02] text-neutral-400 border border-dashed border-neutral-200 dark:border-white/10">
+                        .CSV
+                      </span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-xl text-xs font-semibold bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 border border-primary-500/20">
+                        Multi-File Drop Supported
+                      </span>
+                    </div>
+
+                    {/* Expandable How-To Guide */}
+                    {showGuide && (
+                      <div className="mt-3 p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-600 dark:text-neutral-300 space-y-2 animate-in fade-in">
+                        <p className="font-bold text-neutral-900 dark:text-white">Quick Export Instructions:</p>
+                        <ul className="space-y-1 list-disc list-inside">
+                          <li>
+                            <b>Zerodha (Multi-Year):</b> If Zerodha limits export to 365 days, export multiple yearly CSVs (e.g. 2020-21, 2021-22, 2022-23) and select or drop them together! Arthavi merges them in date order automatically.
+                          </li>
+                          <li>
+                            <b>Groww:</b> Go to Profile &rarr; Reports &rarr; Stock Orders &rarr; Download statement CSV.
+                          </li>
+                          <li>
+                            <b>AngelOne:</b> Go to Reports &rarr; Tradebook &rarr; Download CSV.
+                          </li>
+                          <li>
+                            <b>Custom Sheet:</b> Columns: <code>Stock/Symbol</code>, <code>Trade Date</code>, <code>Type (BUY/SELL)</code>, <code>Quantity</code>, <code>Price</code>.
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Drag & Drop File Zone (Supports Multiple Files - Idea 1) */}
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
+                      isDragging
+                        ? "border-primary-500 bg-primary-500/10 scale-[1.01]"
+                        : "border-neutral-200 dark:border-white/15 bg-neutral-50/50 dark:bg-white/[0.02] hover:bg-neutral-50 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv"
+                      multiple
+                      onChange={(e) => handleFilesSelected(Array.from(e.target.files || []))}
+                      className="hidden"
+                    />
+
+                    {isPreviewing ? (
+                      <div className="py-4 space-y-3">
+                        <Loader2 size={36} className="animate-spin text-primary-600 dark:text-primary-400 mx-auto" />
+                        <div>
+                          <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                            {selectedFiles.length > 1
+                              ? `Merging ${selectedFiles.length} Tradebooks & Analyzing...`
+                              : "Analyzing Tradebook CSV..."}
+                          </p>
+                          <p className="text-xs text-neutral-400 mt-0.5">
+                            Detecting broker format, ordering dates, and checking duplicates
+                          </p>
+                        </div>
+                      </div>
+                    ) : selectedFiles.length > 1 ? (
+                      <div className="py-2 space-y-3">
+                        <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto shadow-sm">
+                          <Files size={24} />
+                        </div>
+                        <div>
+                          <p className="font-extrabold text-sm text-neutral-900 dark:text-white">
+                            {selectedFiles.length} Yearly Tradebooks Combined
+                          </p>
+                          <p className="text-xs text-neutral-400 mt-0.5">
+                            Merged seamlessly in chronological order. Click or drop to add more.
+                          </p>
+                        </div>
+                        {/* File chips */}
+                        <div
+                          className="flex flex-wrap gap-1.5 justify-center max-w-lg mx-auto pt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {selectedFiles.map((f, i) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-[11px] font-medium text-neutral-700 dark:text-neutral-300 shadow-xs"
+                            >
+                              <span className="truncate max-w-[120px]">{f.name}</span>
+                              <span className="text-[10px] text-neutral-400">
+                                ({(f.size / 1024).toFixed(0)}k)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => handleRemoveFile(i, e)}
+                                className="p-0.5 rounded-full hover:bg-neutral-200 dark:hover:bg-white/20 text-neutral-400 hover:text-rose-500 transition-colors"
+                                title="Remove this file"
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : selectedFile ? (
+                      <div className="py-2 space-y-2">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                          <FileSpreadsheet size={24} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-neutral-900 dark:text-white truncate max-w-sm mx-auto">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-xs text-neutral-400">
+                            {(selectedFile.size / 1024).toFixed(1)} KB &bull; Click or drop more files to combine
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-4 space-y-2">
+                        <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center mx-auto">
+                          <Upload size={24} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-neutral-900 dark:text-white">
+                            Drop 1 or multiple Tradebook CSVs here
+                          </p>
+                          <p className="text-xs text-neutral-400 mt-0.5">
+                            Export yearly statements from Zerodha/Groww and drop all at once
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Demat Reconciliation Banner */}
+                  {onOpenDematReconcile && (
+                    <div className="bg-gradient-to-r from-amber-500/[0.08] to-amber-500/[0.02] border border-amber-500/20 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <Gift size={16} />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                            Have Bonus Shares or Demat Discrepancies?
+                          </span>
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                            Bonus shares (like NBCC 1:2) don&apos;t appear in tradebook orders. Reconcile with your Demat statement.
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onOpenDematReconcile();
+                        }}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-xs shrink-0 active:scale-95"
+                      >
+                        <span>Reconcile Demat</span>
+                        <ArrowRight size={13} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Sample Template Download */}
+                  <div className="bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 rounded-2xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0">
+                        <Download size={15} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                          Need a reference template?
+                        </span>
+                        <p className="text-[11px] text-neutral-400">
+                          Pre-formatted CSV columns with sample BUY & SELL rows
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href="/assets/arthavi_sample_tradebook.csv"
+                      download="arthavi_sample_tradebook.csv"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/15 transition-all shadow-xs shrink-0"
+                    >
+                      <Download size={13} />
+                      <span>Download Sample CSV</span>
+                    </a>
                   </div>
                 </div>
-
-                <a
-                  href="/assets/arthavi_sample_tradebook.csv"
-                  download="arthavi_sample_tradebook.csv"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/15 transition-all shadow-xs shrink-0"
-                >
-                  <Download size={13} />
-                  <span>Download Sample CSV</span>
-                </a>
-              </div>
+              )}
             </div>
           )}
 
@@ -1157,33 +1519,74 @@ export default function TradebookImportModal({
         {/* ── FOOTER ACTIONS ── */}
         <div className="px-5 sm:px-6 py-4 border-t border-neutral-100 dark:border-white/5 bg-neutral-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-3">
           {step === "UPLOAD" && (
-            <>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 text-xs font-bold text-neutral-700 dark:text-neutral-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!selectedFile || isPreviewing}
-                onClick={() => runPreview()}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm shadow-primary-500/25 transition-all"
-              >
-                {isPreviewing ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>Analyzing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Next: Verify Trades</span>
-                    <ArrowRight size={14} />
-                  </>
-                )}
-              </button>
-            </>
+            importMode === "HOLDINGS" ? (
+              holdingsImportResult ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs shadow-sm shadow-primary-500/25 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <CheckCircle2 size={15} />
+                  <span>Done & View Stock Holdings</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 text-xs font-bold text-neutral-700 dark:text-neutral-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isImportingHoldings}
+                    onClick={() => holdingsFileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm shadow-primary-500/25 transition-all"
+                  >
+                    {isImportingHoldings ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Importing Holdings...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={14} />
+                        <span>Select File (.xlsx / .csv)</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-white/10 hover:bg-neutral-100 dark:hover:bg-white/10 text-xs font-bold text-neutral-700 dark:text-neutral-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedFile || isPreviewing}
+                  onClick={() => runPreview()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm shadow-primary-500/25 transition-all"
+                >
+                  {isPreviewing ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Analyzing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Next: Verify Trades</span>
+                      <ArrowRight size={14} />
+                    </>
+                  )}
+                </button>
+              </>
+            )
           )}
 
           {step === "PREVIEW" && (

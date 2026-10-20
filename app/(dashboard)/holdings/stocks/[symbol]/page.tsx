@@ -21,8 +21,13 @@ import {
   TrendingDown,
   TrendingUp,
   Users,
+  Gift,
+  Scissors,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
+import CorporateActionModal from "@/components/features/CorporateActionModal";
 
 type StockHolding = {
   id: number;
@@ -39,11 +44,12 @@ type StockHolding = {
 type StockTransaction = {
   id: number;
   symbol: string;
-  transaction_type: "BUY" | "SELL";
+  transaction_type: "BUY" | "SELL" | "BONUS" | "SPLIT" | "MERGER" | "DEMAT_SYNC" | "ADJUSTMENT" | string;
   quantity: number;
   price: number;
   date: string;
   amount: number;
+  notes?: string | null;
 };
 
 type StockFundamentals = {
@@ -95,7 +101,7 @@ type StockFundamentals = {
 
 type EditableTransaction = {
   id: number;
-  transaction_type: "BUY" | "SELL";
+  transaction_type: string;
   quantity: string;
   price: string;
   date: string;
@@ -115,6 +121,7 @@ export default function StockDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingTx, setEditingTx] = useState<EditableTransaction | null>(null);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [isCorporateActionOpen, setIsCorporateActionOpen] = useState(false);
   const [newTxForm, setNewTxForm] = useState({
     transaction_type: "BUY" as "BUY" | "SELL",
     quantity: "",
@@ -384,6 +391,14 @@ export default function StockDetailPage() {
               <Plus size={14} />
               <span>Buy / Sell</span>
             </Button>
+            <button
+              type="button"
+              onClick={() => setIsCorporateActionOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 transition-all shadow-xs"
+            >
+              <Gift size={13} className="text-cyan-600 dark:text-cyan-400" />
+              <span>Bonus / Split</span>
+            </button>
           </div>
         </div>
 
@@ -400,12 +415,24 @@ export default function StockDetailPage() {
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                           tx.transaction_type === "BUY"
                             ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                            : tx.transaction_type === "BONUS"
+                            ? "bg-cyan-50 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300 border border-cyan-500/30 font-bold"
+                            : tx.transaction_type === "SPLIT"
+                            ? "bg-purple-50 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300 border border-purple-500/30 font-bold"
+                            : tx.transaction_type === "DEMAT_SYNC" || tx.transaction_type === "ADJUSTMENT"
+                            ? "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 border border-amber-500/30 font-bold"
                             : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
                         }`}>
                         {tx.transaction_type === "BUY" ? (
                           <TrendingUp size={12} />
-                        ) : (
+                        ) : tx.transaction_type === "BONUS" ? (
+                          <Gift size={12} className="text-cyan-500" />
+                        ) : tx.transaction_type === "SPLIT" ? (
+                          <Scissors size={12} className="text-purple-500" />
+                        ) : tx.transaction_type === "SELL" ? (
                           <TrendingDown size={12} />
+                        ) : (
+                          <Sparkles size={12} />
                         )}
                         {tx.transaction_type}
                       </span>
@@ -438,6 +465,12 @@ export default function StockDetailPage() {
                         </p>
                       </div>
                     </div>
+
+                    {tx.notes && (
+                      <p className="mt-2 text-[11px] font-medium text-cyan-700 dark:text-cyan-300/90 bg-cyan-50/50 dark:bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/10 inline-block">
+                        {tx.notes}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -934,6 +967,25 @@ export default function StockDetailPage() {
           </Button>
         </form>
       </Modal>
+
+      <CorporateActionModal
+        isOpen={isCorporateActionOpen}
+        onClose={() => setIsCorporateActionOpen(false)}
+        onSuccess={() => {
+          showToast("Corporate action recorded successfully");
+          loadPageData();
+        }}
+        initialSymbol={symbol}
+        currentHolding={
+          holding
+            ? {
+                quantity: holding.quantity,
+                avg_price: holding.avg_price,
+                value: holding.value,
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

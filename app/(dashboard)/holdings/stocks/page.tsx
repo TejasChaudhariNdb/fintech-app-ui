@@ -39,11 +39,14 @@ import {
   ShieldCheck,
   ArrowRight,
   Zap,
+  Gift,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 import StockJourneyChart from "@/components/features/StockJourneyChart";
 import TradebookImportModal from "@/components/features/TradebookImportModal";
+import CorporateActionModal from "@/components/features/CorporateActionModal";
+import DematReconcileModal from "@/components/features/DematReconcileModal";
 
 export default function StocksPage() {
   const { profiles, activeProfileId } = useProfile();
@@ -171,6 +174,8 @@ export default function StocksPage() {
   );
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const [showTradebookModal, setShowTradebookModal] = useState(false);
+  const [showDematReconcileModal, setShowDematReconcileModal] = useState(false);
+  const [corpActionStock, setCorpActionStock] = useState<any>(null);
 
   // Import State
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -676,9 +681,16 @@ export default function StocksPage() {
             <button
               onClick={() => setShowTradebookModal(true)}
               className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-primary-500/20 flex items-center justify-center gap-1.5 active:scale-95"
-              title="Upload Broker Tradebook (Zerodha, Groww, AngelOne CSV)">
+              title="Import Broker Holdings (.xlsx / .csv) or Tradebook">
               <FileSpreadsheet size={15} />
-              <span>Upload Tradebook</span>
+              <span>Import Portfolio</span>
+            </button>
+            <button
+              onClick={() => setShowDematReconcileModal(true)}
+              className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              title="Reconcile with Zerodha Demat holdings to detect Bonus shares & Splits">
+              <Gift size={15} />
+              <span>Demat Reconcile</span>
             </button>
             <button
               onClick={() => {
@@ -1343,6 +1355,12 @@ export default function StocksPage() {
                   <TrendingDown size={14} /> Sell
                 </button>
                 <button
+                  onClick={() => setCorpActionStock(stock)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                  title="Record Bonus shares, Stock Split, or Demat balance adjustment">
+                  <Gift size={14} /> Bonus/Split
+                </button>
+                <button
                   onClick={() => {
                     setEditingStock({ ...stock });
                     setIsEditModalOpen(true);
@@ -1902,9 +1920,39 @@ export default function StocksPage() {
       <TradebookImportModal
         isOpen={showTradebookModal}
         onClose={() => setShowTradebookModal(false)}
+        onOpenDematReconcile={() => setShowDematReconcileModal(true)}
         onSuccess={() => {
           loadData(false);
           showToast("Broker tradebook imported successfully!", "success");
+        }}
+      />
+
+      <DematReconcileModal
+        isOpen={showDematReconcileModal}
+        onClose={() => setShowDematReconcileModal(false)}
+        onSuccess={() => {
+          loadData(false);
+          showToast("Holdings reconciled with Demat successfully!", "success");
+        }}
+      />
+
+      <CorporateActionModal
+        isOpen={!!corpActionStock}
+        onClose={() => setCorpActionStock(null)}
+        initialSymbol={corpActionStock?.symbol || ""}
+        currentHolding={
+          corpActionStock
+            ? {
+                quantity: corpActionStock.quantity,
+                avg_price: corpActionStock.avg_price,
+                value: corpActionStock.value,
+              }
+            : undefined
+        }
+        onSuccess={() => {
+          setCorpActionStock(null);
+          loadData(false);
+          showToast("Corporate action applied successfully!", "success");
         }}
       />
     </div>

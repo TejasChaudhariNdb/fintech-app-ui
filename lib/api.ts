@@ -353,7 +353,8 @@ export const api = {
       quantity: number;
       price: number;
       date: string;
-      transaction_type: "BUY" | "SELL";
+      transaction_type: string;
+      notes?: string;
     },
   ) =>
     api.fetch(`/equity/transaction/${id}`, {
@@ -779,6 +780,93 @@ export const api = {
       const errorObj = new Error(errorMsg);
       (errorObj as any).data = typeof detail === "object" ? detail : null;
       throw errorObj;
+    }
+    api.clearPortfolioCache();
+    return r.json();
+  },
+
+  recordCorporateAction: async (
+    data: {
+      symbol: string;
+      action_type: string;
+      quantity: number;
+      price?: number;
+      date: string;
+      ratio?: string;
+      notes?: string;
+    },
+    profileId?: string
+  ) => {
+    const url = profileId
+      ? `/equity/corporate-action?profile_id=${profileId}`
+      : `/equity/corporate-action`;
+    const res = await api.fetch(url, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+
+  getCorporateActions: async (symbol?: string, profileId?: string) => {
+    let url = "/equity/corporate-actions";
+    const params = new URLSearchParams();
+    if (symbol) params.append("symbol", symbol);
+    if (profileId) params.append("profile_id", profileId);
+    if (params.toString()) url += `?${params.toString()}`;
+    return api.fetch(url);
+  },
+
+  reconcileDematStatement: async (file: File, profileId?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const url = profileId
+      ? `${API_URL}/equity/reconcile-demat?profile_id=${profileId}`
+      : `${API_URL}/equity/reconcile-demat`;
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Reconciliation failed" }));
+      throw new Error(err.detail || err.message || "Failed to reconcile statement");
+    }
+    return r.json();
+  },
+
+  syncDematReconcile: async (items: any[], notes?: string, profileId?: string) => {
+    const url = profileId
+      ? `/equity/reconcile-sync?profile_id=${profileId}`
+      : `/equity/reconcile-sync`;
+    const res = await api.fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ items, notes }),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+
+  importHoldingsStatement: async (file: File, profileId?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const url = profileId
+      ? `${API_URL}/equity/import-holdings?profile_id=${profileId}`
+      : `${API_URL}/equity/import-holdings`;
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Import failed" }));
+      throw new Error(err.detail || err.message || "Failed to import holdings statement");
     }
     api.clearPortfolioCache();
     return r.json();
