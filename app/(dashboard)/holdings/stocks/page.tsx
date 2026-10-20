@@ -30,6 +30,7 @@ import {
   ChevronRight,
   Grid,
   List,
+  LayoutGrid,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -40,6 +41,7 @@ import {
   ArrowRight,
   Zap,
   Gift,
+  RefreshCw,
 } from "lucide-react";
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
@@ -231,6 +233,11 @@ export default function StocksPage() {
     }
   }, []);
 
+  const handleSetViewMode = (mode: "compact" | "detailed") => {
+    setViewMode(mode);
+    localStorage.setItem("holdings_view_mode", mode);
+  };
+
   const handleToggleViewMode = () => {
     const nextMode = viewMode === "compact" ? "detailed" : "compact";
     setViewMode(nextMode);
@@ -248,14 +255,14 @@ export default function StocksPage() {
       if (activeProfileId) {
         headers["x-profile-id"] = String(activeProfileId);
       }
-      
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(`${API_URL}/api/reports/capital-gains/csv?financial_year=${selectedFy}`, {
         headers
       });
-      
+
       if (!res.ok) throw new Error("Failed to download tax report");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -491,7 +498,7 @@ export default function StocksPage() {
     try {
       const isFirst = manualStocks.length === 0;
       const res = await api.importTrades(importFile, broker, targetProfileId);
-      
+
       if (isFirst && res.added > 0) {
         analytics.track({
           name: "first_stock_added",
@@ -605,11 +612,10 @@ export default function StocksPage() {
               setHoldingViewTab("holdings");
               localStorage.setItem("stock_holding_view_tab", "holdings");
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-              holdingViewTab === "holdings"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${holdingViewTab === "holdings"
                 ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-            }`}>
+              }`}>
             <List size={16} />
             <span>Holdings ({manualStocks.length})</span>
           </button>
@@ -618,11 +624,10 @@ export default function StocksPage() {
               setHoldingViewTab("analytics");
               localStorage.setItem("stock_holding_view_tab", "analytics");
             }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-              holdingViewTab === "analytics"
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${holdingViewTab === "analytics"
                 ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
                 : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-            }`}>
+              }`}>
             <BarChart2 size={16} />
             <span>Visual Analytics</span>
           </button>
@@ -646,10 +651,32 @@ export default function StocksPage() {
       {/* Manual Stocks Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
-            My Stocks
-          </h3>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+              My Stocks
+            </h3>
+            {manualStocks.length > 0 && (
+              <button
+                onClick={async () => {
+                  showToast("Refreshing prices...", "loading");
+                  try {
+                    await api.refreshStockPrices();
+                    await new Promise((r) => setTimeout(r, 2000));
+                    await loadData();
+                    showToast("Prices refreshed", "success");
+                  } catch (e) {
+                    showToast("Refresh failed", "error");
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 border border-neutral-200/80 dark:border-white/10 rounded-lg text-neutral-700 dark:text-neutral-300 text-xs font-semibold transition-all active:scale-95 shadow-2xs"
+                title="Refresh stock prices"
+              >
+                <RefreshCw size={12} className={isLoading ? "animate-spin text-primary-500 shrink-0" : "shrink-0"} />
+                <span>Refresh</span>
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
             {manualStocks.length > 0 ? (
               <>
                 Total Value:{" "}
@@ -661,35 +688,19 @@ export default function StocksPage() {
           </p>
         </div>
         {manualStocks.length > 0 && (
-          <div className="flex w-full sm:w-auto gap-2">
-            <button
-              onClick={async () => {
-                showToast("Refreshing prices...", "loading");
-                try {
-                  await api.refreshStockPrices();
-                  await new Promise((r) => setTimeout(r, 2000)); // Wait for background task
-                  await loadData();
-                  showToast("Prices refreshed", "success");
-                } catch (e) {
-                  showToast("Refresh failed", "error");
-                }
-              }}
-              className="p-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors aspect-square flex items-center justify-center"
-              title="Refresh Prices">
-              <Loader2 size={20} className={isLoading ? "animate-spin" : ""} />
-            </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar py-1 sm:py-0">
             <button
               onClick={() => setShowTradebookModal(true)}
-              className="flex-1 sm:flex-none px-3.5 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-primary-500/20 flex items-center justify-center gap-1.5 active:scale-95"
+              className="shrink-0 whitespace-nowrap px-3.5 py-2 sm:py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm shadow-primary-500/20 flex items-center justify-center gap-1.5 active:scale-95"
               title="Import Broker Holdings (.xlsx / .csv) or Tradebook">
-              <FileSpreadsheet size={15} />
+              <FileSpreadsheet size={15} className="shrink-0" />
               <span>Import Portfolio</span>
             </button>
             <button
               onClick={() => setShowDematReconcileModal(true)}
-              className="flex-1 sm:flex-none px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
+              className="shrink-0 whitespace-nowrap px-3.5 py-2 sm:py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
               title="Reconcile with Zerodha Demat holdings to detect Bonus shares & Splits">
-              <Gift size={15} />
+              <Gift size={15} className="shrink-0" />
               <span>Demat Reconcile</span>
             </button>
             <button
@@ -697,8 +708,8 @@ export default function StocksPage() {
                 setShowStockModal(true);
                 setStockModalTab("MANUAL");
               }}
-              className="flex-1 sm:flex-none px-3.5 py-2 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
-              <Plus size={16} />
+              className="shrink-0 whitespace-nowrap px-3.5 py-2 sm:py-2.5 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors">
+              <Plus size={16} className="shrink-0" />
               <span>+ Buy / Sell</span>
             </button>
           </div>
@@ -735,9 +746,8 @@ export default function StocksPage() {
                 Total P&amp;L
               </p>
               <div
-                className={`flex items-baseline gap-1.5 flex-wrap ${
-                  stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
-                }`}>
+                className={`flex items-baseline gap-1.5 flex-wrap ${stockStats.pnl >= 0 ? "text-green-500" : "text-red-500"
+                  }`}>
                 <p className="text-lg sm:text-2xl font-bold">
                   <PrivacyMask>
                     {stockStats.pnl >= 0 ? "+" : ""}
@@ -755,9 +765,8 @@ export default function StocksPage() {
                 XIRR
               </p>
               <p
-                className={`text-lg sm:text-2xl font-bold ${
-                  portfolioXirr >= 0 ? "text-green-500" : "text-red-500"
-                }`}>
+                className={`text-lg sm:text-2xl font-bold ${portfolioXirr >= 0 ? "text-green-500" : "text-red-500"
+                  }`}>
                 {formatPercent(portfolioXirr)}
               </p>
             </Card>
@@ -786,15 +795,37 @@ export default function StocksPage() {
               ) : null}
             </div>
             <div className="flex gap-2 flex-wrap items-center">
-              {/* View Toggle */}
-              <button
-                onClick={handleToggleViewMode}
-                title={viewMode === "compact" ? "Detailed card view" : "Compact list view"}
-                className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent hover:bg-neutral-200 dark:hover:bg-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
+              {/* View Toggle: Segmented Control (Cards vs Compact) */}
+              <div
+                className="flex items-center p-0.5 bg-neutral-100 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 rounded-xl shadow-xs"
+                role="group"
+                aria-label="Holdings View Mode"
               >
-                {viewMode === "compact" ? <Grid size={14} /> : <List size={14} />}
-                <span className="hidden sm:inline">{viewMode === "compact" ? "Detailed" : "Compact"}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode("detailed")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === "detailed"
+                      ? "bg-white dark:bg-white/15 text-primary-600 dark:text-white shadow-xs"
+                      : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                    }`}
+                  title="Detailed Cards View"
+                >
+                  <LayoutGrid size={13} className="shrink-0" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetViewMode("compact")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === "compact"
+                      ? "bg-white dark:bg-white/15 text-primary-600 dark:text-white shadow-xs"
+                      : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                    }`}
+                  title="Compact List View"
+                >
+                  <List size={13} className="shrink-0" />
+                  <span>Compact</span>
+                </button>
+              </div>
 
               {/* Tax Report Download */}
               <div className="flex items-center gap-1 bg-neutral-100 dark:bg-white/5 border border-transparent rounded-xl px-2.5 py-0.5">
@@ -1040,373 +1071,405 @@ export default function StocksPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-        {viewMode === "compact" ? (
-          <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
-            <div className="grid gap-3 min-w-[760px]">
-              {filteredStocks.map((stock) => {
-                const invested = stock.value - (stock.pnl || 0);
-                const gain = stock.pnl || 0;
-                const isPositive = stock.pnl_pct >= 0;
-                const isDayPositive = stock.day_change >= 0;
-                
-                return (
-                  <Link
-                    key={stock.id || stock.symbol}
-                    href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
-                    className="flex flex-col p-4 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/[0.06] rounded-2xl gap-3 hover:border-primary-500/20 hover:shadow-md cursor-pointer transition-all duration-300"
-                  >
-                    {/* Row 1 */}
-                    <div className="flex justify-between items-center gap-4 text-sm font-semibold">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-neutral-900 dark:text-white font-bold text-[15px] truncate max-w-[280px]">
-                            {stock.symbol}
-                          </span>
-                          {(() => {
-                            const cap = getStockCapTier(stock.symbol);
-                            return (
-                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold border ${cap.color} shrink-0`}>
-                                {cap.label}
+          {viewMode === "compact" ? (
+            <div className="space-y-2">
+              {/* Mobile Scroll Hint Banner */}
+              <div className="sm:hidden flex items-center justify-between px-3 py-1.5 rounded-xl bg-primary-50/70 dark:bg-primary-500/10 border border-primary-200/50 dark:border-primary-500/20 text-xs text-primary-800 dark:text-primary-300">
+                <span className="flex items-center gap-1.5 text-[11px] font-medium">
+                  <ArrowRight size={13} className="text-primary-600 dark:text-primary-400 shrink-0" />
+                  <span>Swipe table left to view Invested, Gain &amp; Returns</span>
+                </span>
+                <span className="text-[10px] font-bold bg-white dark:bg-white/10 px-1.5 py-0.5 rounded-md text-primary-700 dark:text-primary-300 shadow-xs shrink-0">
+                  ⇄ Swipe
+                </span>
+              </div>
+
+              <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
+                <div className="grid gap-3 min-w-[760px]">
+                  {filteredStocks.map((stock) => {
+                    const invested = stock.value - (stock.pnl || 0);
+                    const gain = stock.pnl || 0;
+                    const isPositive = stock.pnl_pct >= 0;
+                    const isDayPositive = stock.day_change >= 0;
+
+                    return (
+                      <Link
+                        key={stock.id || stock.symbol}
+                        href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
+                        className="flex flex-col p-4 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/[0.06] rounded-2xl gap-3 hover:border-primary-500/20 hover:shadow-md cursor-pointer transition-all duration-300"
+                      >
+                        {/* Row 1 */}
+                        <div className="flex justify-between items-center gap-4 text-sm font-semibold">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-neutral-900 dark:text-white font-bold text-[15px] truncate max-w-[280px]">
+                                {stock.symbol}
                               </span>
-                            );
-                          })()}
-                          {stock.sector && (
-                            <span className="px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-500/10 text-[9px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 border border-primary-200/40 dark:border-primary-500/15 shrink-0">
-                              {stock.sector}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-400 mt-0.5 truncate">
-                          {stock.company_name !== stock.symbol ? stock.company_name : "Equity Share"}
-                        </p>
-                        {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
-                            {stock.profile_breakdown.map((pb: any, idx: number) => {
-                              const relation = getRelationForProfile(pb.profile_id);
-                              const formattedValue = pb.value >= 100000 
-                                ? `₹${(pb.value / 100000).toFixed(2)}L`
-                                : `₹${pb.value.toLocaleString("en-IN")}`;
-                              return (
-                                <span
-                                  key={`stock-pb-compact-${pb.profile_id}-${idx}`}
-                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${getProfileBadgeColor(
-                                    relation
-                                  )}`}
-                                >
-                                  <span className="truncate max-w-[70px]">{pb.profile_name}</span>
-                                  <span className="opacity-60">•</span>
-                                  <span>{formattedValue}</span>
+                              {(() => {
+                                const cap = getStockCapTier(stock.symbol);
+                                return (
+                                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold border ${cap.color} shrink-0`}>
+                                    {cap.label}
+                                  </span>
+                                );
+                              })()}
+                              {stock.sector && (
+                                <span className="px-2 py-0.5 rounded-md bg-primary-50 dark:bg-primary-500/10 text-[9px] font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400 border border-primary-200/40 dark:border-primary-500/15 shrink-0">
+                                  {stock.sector}
                                 </span>
-                              );
-                            })}
+                              )}
+                            </div>
+                            <p className="text-xs text-neutral-400 mt-0.5 truncate">
+                              {stock.company_name !== stock.symbol ? stock.company_name : "Equity Share"}
+                            </p>
+                            {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                                {stock.profile_breakdown.map((pb: any, idx: number) => {
+                                  const relation = getRelationForProfile(pb.profile_id);
+                                  const formattedValue = pb.value >= 100000
+                                    ? `₹${(pb.value / 100000).toFixed(2)}L`
+                                    : `₹${pb.value.toLocaleString("en-IN")}`;
+                                  return (
+                                    <span
+                                      key={`stock-pb-compact-${pb.profile_id}-${idx}`}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-semibold border ${getProfileBadgeColor(
+                                        relation
+                                      )}`}
+                                    >
+                                      <span className="truncate max-w-[70px]">{pb.profile_name}</span>
+                                      <span className="opacity-60">•</span>
+                                      <span>{formattedValue}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      <div className="flex gap-6 justify-end items-center text-right shrink-0">
-                        <div className="w-24">
-                          <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Invested</p>
-                          <p className="text-neutral-700 dark:text-neutral-300 font-semibold text-xs sm:text-sm">
-                            <PrivacyMask>₹{invested.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
-                          </p>
+                          <div className="flex gap-6 justify-end items-center text-right shrink-0">
+                            <div className="w-24">
+                              <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Invested</p>
+                              <p className="text-neutral-700 dark:text-neutral-300 font-semibold text-xs sm:text-sm">
+                                <PrivacyMask>₹{invested.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                              </p>
+                            </div>
+                            <div className="w-24">
+                              <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Gain</p>
+                              <p className={`font-bold text-xs sm:text-sm ${gain >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                                <PrivacyMask>{gain >= 0 ? "+" : ""}₹{Math.abs(gain).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                              </p>
+                            </div>
+                            <div className="w-28">
+                              <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Current</p>
+                              <p className="text-neutral-900 dark:text-white text-sm sm:text-base font-bold">
+                                <PrivacyMask>₹{stock.value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div className="w-24">
-                          <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Gain</p>
-                          <p className={`font-bold text-xs sm:text-sm ${gain >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                            <PrivacyMask>{gain >= 0 ? "+" : ""}₹{Math.abs(gain).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
-                          </p>
-                        </div>
-                        <div className="w-28">
-                          <p className="text-[9px] uppercase tracking-wider text-neutral-400 font-medium">Current</p>
-                          <p className="text-neutral-900 dark:text-white text-sm sm:text-base font-bold">
-                            <PrivacyMask>₹{stock.value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</PrivacyMask>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Row 2 */}
-                    <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
-                      <div className="flex gap-6 items-center flex-wrap">
-                        <div>
-                          <span className="text-neutral-400 mr-1">LTP:</span>
-                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.current_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-400 mr-1">Shares:</span>
-                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{stock.quantity}</span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-400 mr-1">Avg Price:</span>
-                          <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.avg_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      </div>
+                        {/* Row 2 */}
+                        <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
+                          <div className="flex gap-6 items-center flex-wrap">
+                            <div>
+                              <span className="text-neutral-400 mr-1">LTP:</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.current_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-400 mr-1">Shares:</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">{stock.quantity}</span>
+                            </div>
+                            <div>
+                              <span className="text-neutral-400 mr-1">Avg Price:</span>
+                              <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.avg_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
 
-                      <div className="flex gap-6 justify-end items-center text-right shrink-0">
-                        <div className="w-24">
-                          <span className="text-neutral-400 mr-1">P&L:</span>
-                          <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                            {isPositive ? "+" : ""}{stock.pnl_pct.toFixed(2)}%
-                          </span>
+                          <div className="flex gap-6 justify-end items-center text-right shrink-0">
+                            <div className="w-24">
+                              <span className="text-neutral-400 mr-1">P&L:</span>
+                              <span className={`font-bold ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                {isPositive ? "+" : ""}{stock.pnl_pct.toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="w-24">
+                              <span className="text-neutral-400 mr-1">Today:</span>
+                              <span className={`font-bold ${isDayPositive ? "text-emerald-500" : "text-red-500"}`}>
+                                {isDayPositive ? "+" : ""}{stock.day_change_pct?.toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="w-28">
+                              <span className="text-neutral-400 mr-1">XIRR:</span>
+                              <span className={`font-bold ${stock.xirr !== undefined && stock.xirr !== null ? (stock.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                                {stock.xirr !== undefined && stock.xirr !== null ? `${stock.xirr.toFixed(2)}%` : "--"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="w-24">
-                          <span className="text-neutral-400 mr-1">Today:</span>
-                          <span className={`font-bold ${isDayPositive ? "text-emerald-500" : "text-red-500"}`}>
-                            {isDayPositive ? "+" : ""}{stock.day_change_pct?.toFixed(2)}%
-                          </span>
-                        </div>
-                        <div className="w-28">
-                          <span className="text-neutral-400 mr-1">XIRR:</span>
-                          <span className={`font-bold ${stock.xirr !== undefined && stock.xirr !== null ? (stock.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
-                            {stock.xirr !== undefined && stock.xirr !== null ? `${stock.xirr.toFixed(2)}%` : "--"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        ) : (
-          filteredStocks.map((stock) => (
-            <Card
-              key={stock.id || stock.symbol}
-              className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-3.5 group hover:border-primary-500/20 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all rounded-3xl overflow-hidden">
-              <Link
-                href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
-                className="flex items-start justify-between gap-3 group/header cursor-pointer">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {stock.symbol}
-                    </h3>
-                    {(() => {
-                      const cap = getStockCapTier(stock.symbol);
-                      return (
-                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold border ${cap.color} shrink-0`}>
-                          {cap.label}
-                        </span>
-                      );
-                    })()}
-                    {stock.sector && (
-                      <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5 max-w-[120px] truncate">
-                        {stock.sector}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate pr-2">
-                    {stock.company_name !== stock.symbol
-                      ? stock.company_name
-                      : "Equity Share"}
-                  </p>
-                  {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      {stock.profile_breakdown.map((pb: any, idx: number) => {
-                        const relation = getRelationForProfile(pb.profile_id);
-                        const formattedValue = pb.value >= 100000 
-                          ? `₹${(pb.value / 100000).toFixed(2)}L`
-                          : `₹${pb.value.toLocaleString("en-IN")}`;
+          ) : (
+            filteredStocks.map((stock) => (
+              <Card
+                key={stock.id || stock.symbol}
+                className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col gap-3.5 group hover:border-primary-500/20 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all rounded-3xl overflow-hidden">
+                <Link
+                  href={`/holdings/stocks/${encodeURIComponent(stock.symbol)}`}
+                  className="flex items-start justify-between gap-3 group/header cursor-pointer">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <h3 className="text-xl font-black tracking-tight text-neutral-900 dark:text-white group-hover/header:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                        {stock.symbol}
+                      </h3>
+                      {(() => {
+                        const cap = getStockCapTier(stock.symbol);
                         return (
-                          <span
-                            key={`stock-pb-card-${pb.profile_id}-${idx}`}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
-                              relation
-                            )}`}
-                          >
-                            <span className="truncate max-w-[80px]">{pb.profile_name}</span>
-                            <span className="opacity-60">•</span>
-                            <span>{formattedValue}</span>
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-semibold border ${cap.color} shrink-0`}>
+                            {cap.label}
                           </span>
                         );
-                      })}
+                      })()}
+                      {stock.sector && (
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-[9px] font-semibold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-white/5 max-w-[120px] truncate">
+                          {stock.sector}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                <div className="flex items-start gap-2 shrink-0">
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1.5">
-                      <PrivacyMask>
-                        {stock.value > 0 ? (
-                          formatCompactCurrency(stock.value)
-                        ) : stock.quantity > 0 ? (
-                          <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
-                            <Loader2 size={12} className="animate-spin" />
-                            Updating...
-                          </span>
-                        ) : (
-                          "₹0"
-                        )}
-                      </PrivacyMask>
-                    </div>
-                    <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-neutral-500">
-                      Avg {formatPrice(stock.avg_price)}
-                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate pr-2">
+                      {stock.company_name !== stock.symbol
+                        ? stock.company_name
+                        : "Equity Share"}
+                    </p>
+                    {stock.profile_breakdown && stock.profile_breakdown.length > 0 && (
+                      <div className="mt-2.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {stock.profile_breakdown.map((pb: any, idx: number) => {
+                          const relation = getRelationForProfile(pb.profile_id);
+                          const formattedValue = pb.value >= 100000
+                            ? `₹${(pb.value / 100000).toFixed(2)}L`
+                            : `₹${pb.value.toLocaleString("en-IN")}`;
+                          return (
+                            <span
+                              key={`stock-pb-card-${pb.profile_id}-${idx}`}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${getProfileBadgeColor(
+                                relation
+                              )}`}
+                            >
+                              <span className="truncate max-w-[80px]">{pb.profile_name}</span>
+                              <span className="opacity-60">•</span>
+                              <span>{formattedValue}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <ChevronRight
-                    className="mt-0.5 text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all shrink-0"
-                    size={18}
-                  />
-                </div>
-              </Link>
 
-              <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    Quantity
-                  </p>
-                  <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
-                    {stock.quantity} shares
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    LTP
-                  </p>
-                  <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
-                    {formatPrice(stock.current_price)}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    Day Change
-                  </p>
-                  <p
-                    className={`text-xs sm:text-sm font-semibold truncate ${
-                      (stock.day_change || 0) >= 0 ? "text-green-500" : "text-red-500"
-                    }`}>
-                    {(stock.day_change || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.day_change || 0).toLocaleString("en-IN")}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    P&amp;L
-                  </p>
-                  <p
-                    className={`text-xs sm:text-sm font-semibold truncate ${
-                      (stock.pnl || 0) >= 0 ? "text-green-500" : "text-red-500"
-                    }`}>
-                    {stock.pnl >= 0 ? "+" : ""}
-                    {formatPercent(stock.pnl_pct)}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    XIRR
-                  </p>
-                  <p
-                    className={`text-xs sm:text-sm font-semibold truncate ${
-                      (stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
-                    }`}>
-                    {stock.xirr !== null && stock.xirr !== undefined
-                      ? formatPercent(stock.xirr)
-                      : "--"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                    Invested
-                  </p>
-                  <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
-                    <PrivacyMask>
-                      {formatCompactCurrency(stock.value - (stock.pnl || 0))}
-                    </PrivacyMask>
-                  </p>
-                </div>
-              </div>
+                  <div className="flex items-start gap-2 shrink-0">
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-neutral-900 dark:text-white leading-none mb-1.5">
+                        <PrivacyMask>
+                          {stock.value > 0 ? (
+                            formatCompactCurrency(stock.value)
+                          ) : stock.quantity > 0 ? (
+                            <span className="text-sm font-medium text-yellow-600 dark:text-yellow-500 flex items-center gap-1">
+                              <Loader2 size={12} className="animate-spin" />
+                              Updating...
+                            </span>
+                          ) : (
+                            "₹0"
+                          )}
+                        </PrivacyMask>
+                      </div>
+                      <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-neutral-500">
+                        Avg {formatPrice(stock.avg_price)}
+                      </div>
+                    </div>
+                    <ChevronRight
+                      className="mt-0.5 text-neutral-300 dark:text-neutral-600 group-hover/header:text-primary-500 group-hover/header:translate-x-1 transition-all shrink-0"
+                      size={18}
+                    />
+                  </div>
+                </Link>
 
-              <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-wrap gap-2">
-                <button
-                  onClick={() => {
-                    setShowStockModal(true);
-                    setStockModalTab("MANUAL");
-                    setStockForm({
-                      symbol: stock.symbol || "",
-                      quantity: "",
-                      price: stock.current_price
-                        ? String(stock.current_price)
-                        : "",
-                      date: new Date().toISOString().split("T")[0],
-                      transaction_type: "BUY",
-                    });
-                    setIsValidSymbol(true);
-                    setShowSearchResults(false);
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
-                  <TrendingUp size={14} /> Buy
-                </button>
-                <button
-                  onClick={() => {
-                    setShowStockModal(true);
-                    setStockModalTab("MANUAL");
-                    setStockForm({
-                      symbol: stock.symbol || "",
-                      quantity: "",
-                      price: stock.current_price
-                        ? String(stock.current_price)
-                        : "",
-                      date: new Date().toISOString().split("T")[0],
-                      transaction_type: "SELL",
-                    });
-                    setIsValidSymbol(true);
-                    setShowSearchResults(false);
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                  <TrendingDown size={14} /> Sell
-                </button>
-                <button
-                  onClick={() => setCorpActionStock(stock)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                  title="Record Bonus shares, Stock Split, or Demat balance adjustment">
-                  <Gift size={14} /> Bonus/Split
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingStock({ ...stock });
-                    setIsEditModalOpen(true);
-                  }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors">
-                  <Pencil size={14} /> Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteStock(stock.id)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                  <Trash2 size={14} /> Delete
-                </button>
-                <button
-                  onClick={() => setSelectedShareStock(stock)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
-                  <Share2 size={14} /> Share
-                </button>
-              </div>
-            </Card>
-          ))
-        )}
-        {manualStocks.length > 0 &&
-          filteredStocks.length === 0 &&
-          !isLoading && (
-            <div className="text-center py-10 text-neutral-500 space-y-2">
-              <p>No stocks match your search.</p>
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
-                  Clear search
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowStockModal(true);
-                    setStockModalTab("MANUAL");
-                  }}
-                  className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
-                  Add New Stock
-                </button>
-              </div>
-            </div>
+                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                  <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                      Quantity
+                    </p>
+                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                      {stock.quantity} shares
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                      LTP
+                    </p>
+                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                      {formatPrice(stock.current_price)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2 flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                      <span>Day Change</span>
+                      {stock.day_change_pct !== undefined && stock.day_change_pct !== null && (
+                        <span
+                          className={`font-semibold ${(stock.day_change || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                            }`}
+                        >
+                          {(stock.day_change || 0) >= 0 ? "+" : ""}{stock.day_change_pct?.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`text-xs sm:text-sm font-semibold truncate ${(stock.day_change || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                        }`}>
+                      {(stock.day_change || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.day_change || 0).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2 flex flex-col justify-between">
+                    <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                      <span>P&amp;L</span>
+                      <span
+                        className={`font-bold ${(stock.pnl || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                          }`}
+                      >
+                        {stock.pnl >= 0 ? "+" : ""}
+                        {formatPercent(stock.pnl_pct)}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-xs sm:text-sm font-bold truncate ${(stock.pnl || 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                        }`}>
+                      <PrivacyMask>
+                        {(stock.pnl || 0) >= 0 ? "+" : "-"}₹{Math.abs(stock.pnl || 0).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </PrivacyMask>
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                      XIRR
+                    </p>
+                    <p
+                      className={`text-xs sm:text-sm font-semibold truncate ${(stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
+                        }`}>
+                      {stock.xirr !== null && stock.xirr !== undefined
+                        ? formatPercent(stock.xirr)
+                        : "--"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
+                      Invested
+                    </p>
+                    <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                      <PrivacyMask>
+                        {formatCompactCurrency(stock.value - (stock.pnl || 0))}
+                      </PrivacyMask>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-neutral-100 dark:border-white/5 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      setShowStockModal(true);
+                      setStockModalTab("MANUAL");
+                      setStockForm({
+                        symbol: stock.symbol || "",
+                        quantity: "",
+                        price: stock.current_price
+                          ? String(stock.current_price)
+                          : "",
+                        date: new Date().toISOString().split("T")[0],
+                        transaction_type: "BUY",
+                      });
+                      setIsValidSymbol(true);
+                      setShowSearchResults(false);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors">
+                    <TrendingUp size={14} /> Buy
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowStockModal(true);
+                      setStockModalTab("MANUAL");
+                      setStockForm({
+                        symbol: stock.symbol || "",
+                        quantity: "",
+                        price: stock.current_price
+                          ? String(stock.current_price)
+                          : "",
+                        date: new Date().toISOString().split("T")[0],
+                        transaction_type: "SELL",
+                      });
+                      setIsValidSymbol(true);
+                      setShowSearchResults(false);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                    <TrendingDown size={14} /> Sell
+                  </button>
+                  <button
+                    onClick={() => setCorpActionStock(stock)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
+                    title="Record Bonus shares, Stock Split, or Demat balance adjustment">
+                    <Gift size={14} /> Bonus/Split
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingStock({ ...stock });
+                      setIsEditModalOpen(true);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors">
+                    <Pencil size={14} /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteStock(stock.id)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                    <Trash2 size={14} /> Delete
+                  </button>
+                  <button
+                    onClick={() => setSelectedShareStock(stock)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
+                    <Share2 size={14} /> Share
+                  </button>
+                </div>
+              </Card>
+            ))
           )}
-      </div>
+          {manualStocks.length > 0 &&
+            filteredStocks.length === 0 &&
+            !isLoading && (
+              <div className="text-center py-10 text-neutral-500 space-y-2">
+                <p>No stocks match your search.</p>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                    Clear search
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowStockModal(true);
+                      setStockModalTab("MANUAL");
+                    }}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
+                    Add New Stock
+                  </button>
+                </div>
+              </div>
+            )}
+        </div>
       )}
 
       {/* Manual Stock/Import Modal */}
@@ -1419,11 +1482,10 @@ export default function StocksPage() {
         <div className="flex border-b border-neutral-200 dark:border-white/10 mb-6">
           <button
             onClick={() => setStockModalTab("MANUAL")}
-            className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${
-              stockModalTab === "MANUAL"
+            className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${stockModalTab === "MANUAL"
                 ? "border-primary-500 text-primary-600 dark:text-primary-400"
                 : "border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
-            }`}>
+              }`}>
             Enter Manually
           </button>
           <button
@@ -1466,11 +1528,10 @@ export default function StocksPage() {
                 onClick={() =>
                   setStockForm({ ...stockForm, transaction_type: "BUY" })
                 }
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  stockForm.transaction_type === "BUY"
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${stockForm.transaction_type === "BUY"
                     ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
-                }`}>
+                  }`}>
                 Buy
               </button>
               <button
@@ -1478,11 +1539,10 @@ export default function StocksPage() {
                 onClick={() =>
                   setStockForm({ ...stockForm, transaction_type: "SELL" })
                 }
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  stockForm.transaction_type === "SELL"
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${stockForm.transaction_type === "SELL"
                     ? "bg-white dark:bg-surface text-primary-600 dark:text-primary-400 shadow-sm"
                     : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
-                }`}>
+                  }`}>
                 Sell
               </button>
             </div>
@@ -1666,13 +1726,12 @@ export default function StocksPage() {
           <div className="space-y-5">
             {/* Status Header */}
             <div
-              className={`p-4 rounded-xl flex items-start gap-3 border ${
-                importResult.status === "success"
+              className={`p-4 rounded-xl flex items-start gap-3 border ${importResult.status === "success"
                   ? "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-900 dark:text-emerald-200"
                   : importResult.status === "partial"
-                  ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200"
-                  : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-900 dark:text-red-200"
-              }`}>
+                    ? "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200"
+                    : "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-900 dark:text-red-200"
+                }`}>
               {importResult.status === "success" ? (
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
               ) : importResult.status === "partial" ? (
@@ -1685,10 +1744,9 @@ export default function StocksPage() {
                   {importResult.status === "success"
                     ? "All Stocks Imported Successfully!"
                     : importResult.status === "partial"
-                    ? `Imported ${importResult.added} stocks with ${importResult.failed} issue${
-                        importResult.failed !== 1 ? "s" : ""
+                      ? `Imported ${importResult.added} stocks with ${importResult.failed} issue${importResult.failed !== 1 ? "s" : ""
                       }`
-                    : "Failed to Import CSV Rows"}
+                      : "Failed to Import CSV Rows"}
                 </h4>
                 <p className="text-xs sm:text-sm mt-0.5 opacity-90">
                   {importResult.status === "success"
@@ -1943,10 +2001,10 @@ export default function StocksPage() {
         currentHolding={
           corpActionStock
             ? {
-                quantity: corpActionStock.quantity,
-                avg_price: corpActionStock.avg_price,
-                value: corpActionStock.value,
-              }
+              quantity: corpActionStock.quantity,
+              avg_price: corpActionStock.avg_price,
+              value: corpActionStock.value,
+            }
             : undefined
         }
         onSuccess={() => {

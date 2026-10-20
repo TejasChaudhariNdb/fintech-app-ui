@@ -723,19 +723,6 @@ export default function TradebookImportModal({
                     )}
                   </div>
 
-                  {/* Why Demat Statement Banner */}
-                  <div className="bg-primary-50/50 dark:bg-primary-500/[0.06] border border-primary-200/60 dark:border-primary-500/20 rounded-2xl p-3.5 flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-500/20 text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0 mt-0.5">
-                      <Sparkles size={16} />
-                    </div>
-                    <div className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                      <span className="font-bold text-neutral-900 dark:text-white">
-                        Single Source of Truth:
-                      </span>{" "}
-                      Your broker Holdings statement automatically factors in multi-year historical buys, bonus shares (e.g. NBCC 1:2), stock splits, and demergers. It provides 100% precision with zero missing-buy errors.
-                    </div>
-                  </div>
-
                   {/* Drag & Drop Zone / Results */}
                   {holdingsImportResult ? (
                     <div className="space-y-4 animate-in fade-in duration-200">
