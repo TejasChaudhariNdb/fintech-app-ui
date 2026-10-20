@@ -27,6 +27,7 @@ export default function ActivityPage() {
   const { light } = useHaptic();
 
   // Modal States
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const [showAddTx, setShowAddTx] = useState(false);
   const [showAddStock, setShowAddStock] = useState(false);
   
@@ -306,36 +307,57 @@ export default function ActivityPage() {
             }`}>
             <Download size={20} className={exporting ? "animate-bounce" : ""} />
           </button>
-          <div className="relative group">
+          <div className="relative">
             <button
-              className="p-2 bg-primary-600 text-white rounded-full shadow-lg shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all"
-              onClick={() => setShowAddTx(true)}>
-              <Plus size={20} />
+              className="p-2 bg-primary-600 text-white rounded-full shadow-lg shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              onClick={() => {
+                light();
+                setShowAddMenu(!showAddMenu);
+              }}
+              aria-label="Add transaction options"
+            >
+              <Plus size={20} className={`transition-transform duration-200 ${showAddMenu ? "rotate-45" : ""}`} />
             </button>
-            <div className="absolute right-0 top-full mt-2 hidden group-hover:block z-50">
-                <div className="bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[160px]">
-                    <button 
-                        onClick={() => setShowAddTx(true)}
-                        className="w-full text-left px-4 py-3 text-sm hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 font-medium">
-                        Buy/Sell Mutual Fund
-                    </button>
-                    <button 
-                        onClick={() => {
-                            setStockForm({
-                                symbol: "",
-                                quantity: "",
-                                price: "",
-                                date: new Date().toISOString().split("T")[0],
-                                transaction_type: "BUY",
-                            });
-                            setIsValidSymbol(false);
-                            setShowAddStock(true);
-                        }}
-                        className="w-full text-left px-4 py-3 text-sm hover:bg-neutral-50 dark:hover:bg-white/5 font-medium">
-                        Buy/Sell Stock
-                    </button>
+            {showAddMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-transparent"
+                  onClick={() => setShowAddMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden min-w-[190px] animate-in fade-in zoom-in-95 duration-150">
+                  <button 
+                    onClick={() => {
+                      light();
+                      setShowAddMenu(false);
+                      setShowAddTx(true);
+                    }}
+                    className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
+                  >
+                    <span>Buy/Sell Mutual Fund</span>
+                    <span className="text-[10px] text-primary-500 font-bold">MF</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      light();
+                      setShowAddMenu(false);
+                      setStockForm({
+                        symbol: "",
+                        quantity: "",
+                        price: "",
+                        date: new Date().toISOString().split("T")[0],
+                        transaction_type: "BUY",
+                      });
+                      setIsValidSymbol(false);
+                      setShowAddStock(true);
+                    }}
+                    className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
+                  >
+                    <span>Buy/Sell Stock</span>
+                    <span className="text-[10px] text-emerald-500 font-bold">Equity</span>
+                  </button>
                 </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </div>

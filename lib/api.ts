@@ -522,7 +522,6 @@ export const api = {
   getMarketCapAllocation: () =>
     api.fetch("/portfolio/market-cap-allocation", { cacheKey: "market-cap-allocation" }),
 
-  getPortfolioHistory: () => api.fetch("/portfolio/timeseries", { cacheKey: "portfolio-history" }),
   getMutualFundJourney: (range: string = "ALL") =>
     api.fetch(`/portfolio/mf-journey?range=${range}`),
 

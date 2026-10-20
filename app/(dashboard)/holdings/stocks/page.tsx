@@ -46,7 +46,6 @@ import {
 
 import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 import StockJourneyChart from "@/components/features/StockJourneyChart";
-import BenchmarkGrowthCard from "@/components/features/BenchmarkGrowthCard";
 import TradebookImportModal from "@/components/features/TradebookImportModal";
 import CorporateActionModal from "@/components/features/CorporateActionModal";
 import DematReconcileModal from "@/components/features/DematReconcileModal";
@@ -637,10 +636,6 @@ export default function StocksPage() {
 
       {holdingViewTab === "analytics" && manualStocks.length > 0 && (
         <div className="space-y-6">
-          <BenchmarkGrowthCard
-            title="Stock Portfolio vs Benchmarks"
-            subtitle="Compare your equity performance against Nifty 50 and Nifty 500"
-          />
           <StockJourneyChart
             data={journeyHistory || undefined}
             coverageStart={journeyMeta?.coverage_start || null}

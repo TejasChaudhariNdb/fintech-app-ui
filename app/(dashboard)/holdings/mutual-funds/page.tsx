@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud, Grid, List, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff, BarChart2 } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, LayoutGrid, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff, BarChart2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -16,7 +16,6 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import MutualFundJourneyChart from "@/components/features/MutualFundJourneyChart";
-import BenchmarkGrowthCard from "@/components/features/BenchmarkGrowthCard";
 
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
@@ -443,11 +442,6 @@ export default function MutualFundsPage() {
 
       {holdingViewTab === "analytics" && (
         <>
-          <BenchmarkGrowthCard
-            title="Mutual Fund Portfolio vs Benchmarks"
-            subtitle="Alpha generation and comparative growth vs Nifty 50 and Nifty 500"
-          />
-
           <MutualFundJourneyChart
             data={journeyHistory || undefined}
             coverageStart={journeyMeta?.coverage_start || null}
@@ -691,12 +685,12 @@ export default function MutualFundsPage() {
               </button>
             ) : null}
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex gap-2 items-center overflow-x-auto no-scrollbar pb-1 max-w-full">
             {/* One-Click Hide 0 Balance */}
             <button
               onClick={handleToggleHideZero}
               title={hideZeroBalance ? "Showing active funds (click to show all including 0 balance)" : "Click to hide 0 balance folios/funds"}
-              className={`px-3 py-2 border rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm dark:shadow-none ${
+              className={`px-3 py-2 border rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm dark:shadow-none shrink-0 ${
                 hideZeroBalance
                   ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
                   : "bg-neutral-100 dark:bg-white/5 border-transparent text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/10"
@@ -715,15 +709,35 @@ export default function MutualFundsPage() {
               )}
             </button>
 
-            {/* View Toggle */}
-            <button
-              onClick={handleToggleViewMode}
-              title={viewMode === "compact" ? "Detailed card view" : "Compact list view"}
-              className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent hover:bg-neutral-200 dark:hover:bg-white/10 rounded-xl text-neutral-600 dark:text-neutral-300 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors"
-            >
-              {viewMode === "compact" ? <Grid size={14} /> : <List size={14} />}
-              <span className="hidden sm:inline">{viewMode === "compact" ? "Detailed" : "Compact"}</span>
-            </button>
+            {/* View Mode Toggle: Segmented Control */}
+            <div className="flex items-center p-0.5 bg-neutral-100 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 rounded-xl text-xs font-semibold shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode("detailed")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
+                  viewMode === "detailed"
+                    ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-xs font-bold"
+                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                }`}
+                title="Cards view"
+              >
+                <LayoutGrid size={13} />
+                <span>Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("compact")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all ${
+                  viewMode === "compact"
+                    ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-xs font-bold"
+                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                }`}
+                title="Compact list view"
+              >
+                <List size={13} />
+                <span>Compact</span>
+              </button>
+            </div>
 
             {/* Tax Report Download */}
             <div className="flex items-center gap-1 bg-neutral-100 dark:bg-white/5 border border-transparent rounded-xl px-2.5 py-0.5">
@@ -797,8 +811,15 @@ export default function MutualFundsPage() {
         <div className="space-y-4">
           {filteredSchemes.length > 0 ? (
             viewMode === "compact" ? (
-              <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
-                <div className="grid gap-3 min-w-[840px]">
+              <div className="space-y-2">
+                {/* Mobile scroll indicator banner */}
+                <div className="sm:hidden px-3 py-1.5 bg-neutral-100/90 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 rounded-xl text-[11px] font-medium text-neutral-500 dark:text-neutral-400 flex items-center justify-between">
+                  <span>⇄ Swipe table left to view Invested, Gain &amp; Returns</span>
+                  <span className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold">Scrollable</span>
+                </div>
+
+                <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-thin">
+                  <div className="grid gap-3 min-w-[840px]">
                   {filteredSchemes.map((scheme) => {
                     const invested = scheme.current - (scheme.profit || 0);
                     const gain = scheme.profit || 0;
@@ -919,7 +940,8 @@ export default function MutualFundsPage() {
                   })}
                 </div>
               </div>
-            ) : (
+            </div>
+          ) : (
               filteredSchemes.map((scheme) => (
                 <SchemeCard
                   key={scheme.scheme_id}

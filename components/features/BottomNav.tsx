@@ -16,7 +16,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 const tabs = [
   { id: "/", label: "Home", icon: Home },
   { id: "/holdings", label: "Holdings", icon: Briefcase },
-  { id: "/activity", label: "Transactions", icon: ArrowLeftRight },
+  { id: "/activity", label: "Activity", icon: ArrowLeftRight },
   { id: "/reports", label: "Reports", icon: FileSpreadsheet },
   { id: "/goals", label: "Goals", icon: Target },
   { id: "/profile", label: "Settings", icon: Settings },

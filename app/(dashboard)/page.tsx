@@ -10,7 +10,7 @@ import { useProfile } from "@/context/ProfileContext";
 import NetWorthCard from "@/components/features/NetWorthCard";
 import PortfolioSummary from "@/components/features/PortfolioSummary";
 import FamilyPortfolioSummary from "@/components/features/FamilyPortfolioSummary";
-import PerformanceChart from "@/components/features/PerformanceChart";
+import BenchmarkGrowthCard from "@/components/features/BenchmarkGrowthCard";
 import GoalCard from "@/components/features/GoalCard";
 import TopHoldingsCard from "@/components/features/TopHoldingsCard";
 import Button from "@/components/ui/Button";
@@ -42,7 +42,6 @@ export default function HomePage() {
   const [summary, setSummary] = useState<any>(null);
   const [familySummary, setFamilySummary] = useState<any>(null);
   const [marketCapData, setMarketCapData] = useState<any>(null);
-  const [perfData, setPerfData] = useState<any>(null);
   const [goals, setGoals] = useState<any[]>([]);
   const [topHoldings, setTopHoldings] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]); // New State
@@ -109,7 +108,7 @@ export default function HomePage() {
         setBenchmark(null);
 
         // 2. Fetch Fresh Family Data directly from API
-        const [famData, g, up, ps, history, topH, xirrData, mcData] = await Promise.all([
+        const [famData, g, up, ps, topH, xirrData, mcData] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
             return null;
@@ -125,10 +124,6 @@ export default function HomePage() {
           api.getPortfolioSummary().catch((err) => {
             console.error("Portfolio summary (family) error:", err);
             return null;
-          }),
-          api.getPortfolioHistory().catch((err) => {
-            console.error("Portfolio history (family) error:", err);
-            return [];
           }),
           api.getFamilyTopHoldings(5).catch((err) => {
             console.error("Top holdings error:", err);
@@ -165,7 +160,6 @@ export default function HomePage() {
             stock_lifetime_xirr: xirrData?.stock_lifetime_xirr ?? ps.stock_lifetime_xirr,
           });
         }
-        if (history) setPerfData(history);
         if (topH) setTopHoldings(topH.holdings || []);
         if (up) {
           setUserProfile(up);
@@ -182,7 +176,7 @@ export default function HomePage() {
         setTopHoldings([]);
 
         // 2. Fetch Fresh Data directly from API
-        const [nw, ps, g, xirrData, history, ins, bm, up, mcData] = await Promise.all([
+        const [nw, ps, g, xirrData, ins, bm, up, mcData] = await Promise.all([
           api.getNetWorth().catch((err) => {
             console.error("Net worth error:", err);
             return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -212,10 +206,6 @@ export default function HomePage() {
               stock_xirr: 0,
               stock_lifetime_xirr: 0,
             };
-          }),
-          api.getPortfolioHistory().catch((err) => {
-            console.error("History error:", err);
-            return [];
           }),
           api.getInsights().catch((err) => {
             console.error("Insights error:", err);
@@ -247,7 +237,6 @@ export default function HomePage() {
           stock_lifetime_xirr: xirrData?.stock_lifetime_xirr || 0,
         });
         setGoals(g || []);
-        setPerfData(history || []);
         setInsights(ins || []);
         setBenchmark(bm);
         if (up) {
@@ -427,14 +416,12 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Portfolio Growth Chart */}
-        {perfData && perfData.length > 0 && (
-          <section>
-            <PerformanceChart
-              data={perfData}
-              investedAmount={summary?.invested || 0}
-              mfInvested={summary?.mf_invested || 0}
-              stockInvested={summary?.stock_invested || 0}
+        {/* Benchmark Growth vs Market Indices */}
+        {familySummary && familySummary.net_worth > 0 && (
+          <section className="animate-fade-in">
+            <BenchmarkGrowthCard
+              title="Portfolio Performance vs Benchmarks"
+              subtitle="Track alpha generation and comparative growth vs Nifty 50 & Nifty 500"
             />
           </section>
         )}
@@ -758,15 +745,15 @@ export default function HomePage() {
               <MarketCapAllocationCard data={marketCapData} isLoading={loading} />
             </section>
           )}
-          {/* Performance Chart */}
-          <section>
-            <PerformanceChart
-              data={perfData}
-              investedAmount={summary?.invested || 0}
-              mfInvested={summary?.mf_invested || 0}
-              stockInvested={summary?.stock_invested || 0}
-            />
-          </section>
+          {/* Benchmark Growth vs Market Indices */}
+          {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
+            <section className="animate-fade-in">
+              <BenchmarkGrowthCard
+                title="Portfolio Performance vs Benchmarks"
+                subtitle="Track alpha generation and comparative growth vs Nifty 50 & Nifty 500"
+              />
+            </section>
+          )}
 
           {/* Asset Allocation Chart */}
           {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
