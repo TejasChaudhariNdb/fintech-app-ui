@@ -527,6 +527,16 @@ export const api = {
     api.fetch(`/portfolio/mf-journey?range=${range}`),
 
   getBenchmark: () => api.fetch("/portfolio/benchmark"),
+  getBenchmarkGrowth: (range: string = "1Y", baseAmount: number = 10000, profileId?: string) => {
+    const params = new URLSearchParams({
+      range,
+      base_amount: String(baseAmount),
+    });
+    if (profileId && profileId !== "all") {
+      params.append("profile_id", profileId);
+    }
+    return api.fetch(`/portfolio/benchmark-growth?${params.toString()}`);
+  },
 
   // Schemesy: "portfolio-history" }),
   getInsights: () => api.fetch("/portfolio/insights", { cacheKey: "insights" }),

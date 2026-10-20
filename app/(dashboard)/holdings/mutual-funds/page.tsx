@@ -16,6 +16,7 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import MutualFundJourneyChart from "@/components/features/MutualFundJourneyChart";
+import BenchmarkGrowthCard from "@/components/features/BenchmarkGrowthCard";
 
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
@@ -442,6 +443,11 @@ export default function MutualFundsPage() {
 
       {holdingViewTab === "analytics" && (
         <>
+          <BenchmarkGrowthCard
+            title="Mutual Fund Portfolio vs Benchmarks"
+            subtitle="Alpha generation and comparative growth vs Nifty 50 and Nifty 500"
+          />
+
           <MutualFundJourneyChart
             data={journeyHistory || undefined}
             coverageStart={journeyMeta?.coverage_start || null}
