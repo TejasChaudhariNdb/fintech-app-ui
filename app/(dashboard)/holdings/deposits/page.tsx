@@ -50,6 +50,10 @@ interface FixedIncomeItem {
   is_maturing_soon: boolean;
   status: string;
   notes?: string | null;
+  current_balance?: number | null;
+  balance_as_of_date?: string | null;
+  cumulative_deposits?: number | null;
+  planned_annual_deposit?: number | null;
   created_at?: string | null;
 }
 
@@ -441,11 +445,26 @@ export default function FixedIncomePage() {
                   <div className="grid grid-cols-2 gap-3 py-3 border-y border-neutral-100 dark:border-white/5">
                     <div>
                       <span className="text-[10px] text-neutral-400 font-semibold block uppercase tracking-wider">
-                        Principal Deposit
+                        {item.deposit_type === "PPF"
+                          ? (item.cumulative_deposits ? "Total Invested" : "Current Balance")
+                          : "Principal Deposit"}
                       </span>
                       <span className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white tabular-nums">
-                        <PrivacyMask>₹{item.principal_amount.toLocaleString("en-IN")}</PrivacyMask>
+                        <PrivacyMask>
+                          ₹
+                          {(item.deposit_type === "PPF" && item.cumulative_deposits
+                            ? item.cumulative_deposits
+                            : item.deposit_type === "PPF" && item.current_balance
+                            ? item.current_balance
+                            : item.principal_amount
+                          ).toLocaleString("en-IN")}
+                        </PrivacyMask>
                       </span>
+                      {item.deposit_type === "PPF" && !item.cumulative_deposits && item.balance_as_of_date && (
+                        <span className="text-[10px] text-neutral-400 block truncate">
+                          as of {formatDatePretty(item.balance_as_of_date)}
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -458,6 +477,11 @@ export default function FixedIncomePage() {
                           ({item.compounding_frequency.toLowerCase().slice(0, 4)})
                         </span>
                       </span>
+                      {item.deposit_type === "PPF" && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block">
+                          Govt guaranteed
+                        </span>
+                      )}
                     </div>
 
                     <div>
@@ -467,9 +491,15 @@ export default function FixedIncomePage() {
                       <span className="text-base sm:text-lg font-extrabold text-emerald-700 dark:text-emerald-400 tabular-nums">
                         <PrivacyMask>₹{Math.round(item.current_value).toLocaleString("en-IN")}</PrivacyMask>
                       </span>
-                      <span className="text-[10px] text-emerald-600 block">
-                        +₹{Math.round(item.accrued_interest).toLocaleString("en-IN")} earned
-                      </span>
+                      {item.accrued_interest > 0 ? (
+                        <span className="text-[10px] text-emerald-600 block">
+                          +₹{Math.round(item.accrued_interest).toLocaleString("en-IN")} earned
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-neutral-400 block">
+                          Accrues yearly
+                        </span>
+                      )}
                     </div>
 
                     <div>
