@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import Card from "@/components/ui/Card";
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import { ZoomIn, ZoomOut, RotateCcw, Loader2 } from "lucide-react";
 
 type JourneyPoint = {
   date: string;
@@ -206,12 +206,21 @@ export default function MutualFundJourneyChart({
               </button>
             ))}
           </div>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Investment history is not available for this range.
-          </p>
-          <p className="text-xs text-neutral-400">
-            Try a longer time range or ensure you have uploaded transactions.
-          </p>
+          {isRefetching ? (
+            <div className="flex flex-col items-center gap-2 text-neutral-400">
+              <Loader2 size={26} className="animate-spin text-primary-500" />
+              <p className="text-sm font-medium">Loading investment history...</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Investment history is not available for this range.
+              </p>
+              <p className="text-xs text-neutral-400">
+                Try a longer time range or ensure you have uploaded transactions.
+              </p>
+            </>
+          )}
         </div>
       </Card>
     );
