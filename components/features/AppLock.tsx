@@ -34,10 +34,28 @@ export default function AppLock({ onUnlock, isEnabled }: AppLockProps) {
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
 
+      const savedCredId = localStorage.getItem("app_lock_cred_id");
+      let allowCredentials: PublicKeyCredentialDescriptor[] | undefined = undefined;
+
+      if (savedCredId) {
+        try {
+          const rawId = new Uint8Array(JSON.parse(savedCredId));
+          allowCredentials = [
+            {
+              id: rawId,
+              type: "public-key",
+            },
+          ];
+        } catch (e) {
+          console.warn("Could not parse saved passkey ID:", e);
+        }
+      }
+
       await navigator.credentials.get({
         publicKey: {
           challenge,
           userVerification: "required",
+          ...(allowCredentials && allowCredentials.length > 0 ? { allowCredentials } : {}),
         },
       });
 

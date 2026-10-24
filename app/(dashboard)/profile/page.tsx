@@ -458,19 +458,61 @@ export default function ProfilePage() {
 
     try {
       showToast("Verifying identity...", "loading");
+
+      // Check if we already have an existing enrolled passkey for this device
+      const savedCredId = localStorage.getItem("app_lock_cred_id");
+      if (savedCredId) {
+        try {
+          const credIdBytes = new Uint8Array(JSON.parse(savedCredId));
+          const challenge = new Uint8Array(32);
+          window.crypto.getRandomValues(challenge);
+
+          await navigator.credentials.get({
+            publicKey: {
+              challenge,
+              userVerification: "required",
+              allowCredentials: [
+                {
+                  id: credIdBytes,
+                  type: "public-key",
+                },
+              ],
+            },
+          });
+
+          // Existing passkey verified successfully!
+          setAppLockEnabled(true);
+          localStorage.setItem("app_lock_enabled", "true");
+          showToast("Biometric Lock Enabled", "success");
+          return;
+        } catch (existingErr: any) {
+          console.warn("Existing passkey verification skipped or not found:", existingErr);
+          // If user actively cancelled, abort setup rather than creating an unwanted duplicate
+          if (existingErr.name === "NotAllowedError" && existingErr.message?.includes("cancel")) {
+            showToast("Setup cancelled", "error");
+            return;
+          }
+          localStorage.removeItem("app_lock_cred_id");
+        }
+      }
+
+      // Create a fresh passkey with a stable user ID
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
-      const userId = new Uint8Array(16);
-      window.crypto.getRandomValues(userId);
 
-      await navigator.credentials.create({
+      const accountEmail = userProfile.email || "user@arthavi.com";
+      const accountName = userProfile.full_name || "Arthavi User";
+      // Stable user ID so authenticators overwrite/update rather than creating duplicate accounts
+      const userId = new TextEncoder().encode(accountEmail.slice(0, 64));
+
+      const cred = (await navigator.credentials.create({
         publicKey: {
           challenge,
-          rp: { name: "SMF Tracker" },
+          rp: { name: "Arthavi" },
           user: {
             id: userId,
-            name: "owner",
-            displayName: "Owner",
+            name: accountEmail,
+            displayName: accountName,
           },
           pubKeyCredParams: [
             { alg: -7, type: "public-key" },
@@ -484,7 +526,12 @@ export default function ProfilePage() {
           timeout: 60000,
           attestation: "none",
         },
-      });
+      })) as PublicKeyCredential | null;
+
+      if (cred) {
+        const rawIdArray = Array.from(new Uint8Array(cred.rawId));
+        localStorage.setItem("app_lock_cred_id", JSON.stringify(rawIdArray));
+      }
 
       setAppLockEnabled(true);
       localStorage.setItem("app_lock_enabled", "true");
