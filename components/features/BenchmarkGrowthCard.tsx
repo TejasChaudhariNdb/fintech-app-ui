@@ -20,17 +20,50 @@ import {
   Loader2,
   BarChart3,
   Zap,
+  ChevronsUpDown,
 } from "lucide-react";
+
+export type BenchmarkKey =
+  | "nifty50"
+  | "nifty100"
+  | "nifty_midcap150"
+  | "nifty_smallcap250"
+  | "nifty500";
+
+export interface BenchmarkOption {
+  key: BenchmarkKey;
+  name: string;
+  shortName: string;
+  category: string;
+  color: string;
+}
+
+export const BENCHMARKS: BenchmarkOption[] = [
+  { key: "nifty50", name: "Nifty 50", shortName: "NIFTY 50", category: "Large Cap", color: "#6366f1" },
+  { key: "nifty100", name: "Nifty 100", shortName: "NIFTY 100", category: "Top 100", color: "#3b82f6" },
+  { key: "nifty_midcap150", name: "Nifty MidCap 150", shortName: "NIFTY MIDCAP 150", category: "Mid Cap", color: "#f59e0b" },
+  { key: "nifty_smallcap250", name: "Nifty SmallCap 250", shortName: "NIFTY SMALLCAP 250", category: "Small Cap", color: "#ec4899" },
+  { key: "nifty500", name: "Nifty 500", shortName: "NIFTY 500", category: "Broad Market", color: "#a855f7" },
+];
 
 interface BenchmarkSummary {
   portfolio_return_pct: number;
   nifty50_return_pct: number;
+  nifty100_return_pct?: number;
+  nifty_midcap150_return_pct?: number;
+  nifty_smallcap250_return_pct?: number;
   nifty500_return_pct: number;
   alpha_vs_nifty50: number;
+  alpha_vs_nifty100?: number;
+  alpha_vs_nifty_midcap150?: number;
+  alpha_vs_nifty_smallcap250?: number;
   alpha_vs_nifty500: number;
   is_outperforming: boolean;
   portfolio_final_value: number;
   nifty50_final_value: number;
+  nifty100_final_value?: number;
+  nifty_midcap150_final_value?: number;
+  nifty_smallcap250_final_value?: number;
   nifty500_final_value: number;
   total_invested: number;
   total_current_value: number;
@@ -39,10 +72,16 @@ interface BenchmarkSummary {
 interface BenchmarkSeriesPoint {
   date: string;
   portfolio: number;
-  nifty50: number;
-  nifty500: number;
   portfolio_pct: number;
+  nifty50: number;
   nifty50_pct: number;
+  nifty100?: number;
+  nifty100_pct?: number;
+  nifty_midcap150?: number;
+  nifty_midcap150_pct?: number;
+  nifty_smallcap250?: number;
+  nifty_smallcap250_pct?: number;
+  nifty500: number;
   nifty500_pct: number;
 }
 
@@ -59,19 +98,40 @@ const RANGES = [
   { label: "1Y", value: "1Y" },
   { label: "3Y", value: "3Y" },
   { label: "5Y", value: "5Y" },
+  { label: "10Y", value: "10Y" },
+  { label: "15Y", value: "15Y" },
+  { label: "ALL", value: "ALL" },
 ] as const;
 
 export default function BenchmarkGrowthCard({
   title = "Performance vs Market Benchmarks",
-  subtitle = "Cumulative return comparison against Nifty 50 & Nifty 500",
+  subtitle = "Comparative return and alpha against key market indices",
 }: {
   title?: string;
   subtitle?: string;
 }) {
   const { activeProfileId } = useProfile();
   const [selectedRange, setSelectedRange] = useState<string>("1Y");
+  const [selectedBenchmark, setSelectedBenchmark] = useState<BenchmarkKey>("nifty50");
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<BenchmarkGrowthResponse | null>(null);
+
+  // Restore preferred benchmark from localStorage if available
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("preferred_benchmark") as BenchmarkKey | null;
+      if (saved && BENCHMARKS.some((b) => b.key === saved)) {
+        setSelectedBenchmark(saved);
+      }
+    }
+  }, []);
+
+  const handleBenchmarkSelect = (key: BenchmarkKey) => {
+    setSelectedBenchmark(key);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("preferred_benchmark", key);
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -107,13 +167,38 @@ export default function BenchmarkGrowthCard({
       formattedDate: new Date(pt.date).toLocaleDateString("en-IN", {
         month: "short",
         day: "numeric",
-        year: selectedRange === "3Y" || selectedRange === "5Y" ? "2-digit" : undefined,
+        year:
+          selectedRange === "3Y" ||
+          selectedRange === "5Y" ||
+          selectedRange === "10Y" ||
+          selectedRange === "15Y" ||
+          selectedRange === "ALL"
+            ? "2-digit"
+            : undefined,
       }),
     }));
   }, [data, selectedRange]);
 
   const summary = data?.summary;
-  const isOutperforming = summary ? summary.alpha_vs_nifty50 >= 0 : false;
+  const currentBenchmarkObj =
+    BENCHMARKS.find((b) => b.key === selectedBenchmark) || BENCHMARKS[0];
+
+  // Dynamically compute return and alpha vs currently selected benchmark
+  const benchmarkReturnPct = useMemo(() => {
+    if (!summary) return 0;
+    const key = `${selectedBenchmark}_return_pct` as keyof BenchmarkSummary;
+    const val = summary[key];
+    return typeof val === "number" ? val : summary.nifty50_return_pct;
+  }, [summary, selectedBenchmark]);
+
+  const benchmarkAlpha = useMemo(() => {
+    if (!summary) return 0;
+    const key = `alpha_vs_${selectedBenchmark}` as keyof BenchmarkSummary;
+    const val = summary[key];
+    return typeof val === "number" ? val : summary.alpha_vs_nifty50;
+  }, [summary, selectedBenchmark]);
+
+  const isOutperforming = benchmarkAlpha >= 0;
 
   return (
     <Card className="p-4 sm:p-6 bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/5 rounded-3xl shadow-xs space-y-5">
@@ -134,7 +219,7 @@ export default function BenchmarkGrowthCard({
         </div>
 
         {/* Time Horizon Pills */}
-        <div className="flex items-center p-0.5 bg-neutral-100 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 rounded-xl text-xs font-semibold self-start sm:self-auto">
+        <div className="flex items-center p-0.5 bg-neutral-100 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 rounded-xl text-xs font-semibold self-start sm:self-auto overflow-x-auto max-w-full">
           {RANGES.map((r) => {
             const isSelected = selectedRange === r.value;
             return (
@@ -142,7 +227,7 @@ export default function BenchmarkGrowthCard({
                 key={r.value}
                 type="button"
                 onClick={() => setSelectedRange(r.value)}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all shrink-0 ${
                   isSelected
                     ? "bg-primary-600 text-white shadow-xs font-bold"
                     : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
@@ -178,8 +263,8 @@ export default function BenchmarkGrowthCard({
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-sm sm:text-base text-neutral-900 dark:text-white">
                   {isOutperforming
-                    ? `Generating +${summary.alpha_vs_nifty50.toFixed(1)}% Alpha vs Nifty 50`
-                    : `Trailing Nifty 50 by ${summary.alpha_vs_nifty50.toFixed(1)}%`}
+                    ? `Generating +${benchmarkAlpha.toFixed(1)}% Alpha vs ${currentBenchmarkObj.name}`
+                    : `Trailing ${currentBenchmarkObj.name} by ${Math.abs(benchmarkAlpha).toFixed(1)}%`}
                 </span>
                 <span
                   className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
@@ -193,10 +278,10 @@ export default function BenchmarkGrowthCard({
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                 {isOutperforming
-                  ? `Your portfolio delivered ${(
-                      summary.portfolio_return_pct - summary.nifty50_return_pct
-                    ).toFixed(1)}% extra return above Nifty 50 over this ${selectedRange} window.`
-                  : `Nifty 50 returned ${summary.nifty50_return_pct.toFixed(
+                  ? `Your portfolio delivered ${benchmarkAlpha.toFixed(
+                      1
+                    )}% extra return above ${currentBenchmarkObj.name} over this ${selectedRange} window.`
+                  : `${currentBenchmarkObj.name} returned ${benchmarkReturnPct.toFixed(
                       1
                     )}% while your portfolio returned ${summary.portfolio_return_pct.toFixed(1)}%.`}
               </p>
@@ -223,7 +308,7 @@ export default function BenchmarkGrowthCard({
         </div>
       )}
 
-      {/* ── METRIC STRIP / LEGEND ── */}
+      {/* ── METRIC STRIP / BENCHMARK SELECTOR ── */}
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
           {/* Portfolio Metric */}
@@ -254,40 +339,59 @@ export default function BenchmarkGrowthCard({
             </div>
           </div>
 
-          {/* Nifty 50 Metric */}
-          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-1">
+          {/* Dynamic Benchmark Selector Card */}
+          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-primary-500/30 dark:border-primary-500/30 shadow-xs space-y-1 relative group">
             <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
-                Nifty 50
+              <div className="flex items-center gap-1.5 font-bold text-neutral-900 dark:text-white">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: currentBenchmarkObj.color }}
+                />
+                <div className="relative inline-flex items-center gap-1 cursor-pointer">
+                  <select
+                    value={selectedBenchmark}
+                    onChange={(e) => handleBenchmarkSelect(e.target.value as BenchmarkKey)}
+                    className="appearance-none bg-transparent pr-5 font-bold text-xs cursor-pointer outline-none text-neutral-900 dark:text-white focus:ring-0"
+                  >
+                    {BENCHMARKS.map((b) => (
+                      <option key={b.key} value={b.key} className="bg-white dark:bg-[#151922] text-neutral-900 dark:text-white">
+                        {b.shortName}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronsUpDown size={13} className="text-primary-500 absolute right-0 pointer-events-none" />
+                </div>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 px-1.5 py-0.5 rounded">
+                {currentBenchmarkObj.category}
               </span>
-              <span className="text-[11px] font-semibold text-neutral-400">Index Return</span>
             </div>
+
             <div className="flex items-baseline justify-between pt-0.5">
               <span
                 className={`text-lg sm:text-xl font-black ${
-                  summary.nifty50_return_pct >= 0
+                  benchmarkReturnPct >= 0
                     ? "text-neutral-900 dark:text-white"
                     : "text-rose-600 dark:text-rose-400"
                 }`}
               >
-                {summary.nifty50_return_pct >= 0 ? "+" : ""}
-                {summary.nifty50_return_pct.toFixed(2)}%
+                {benchmarkReturnPct >= 0 ? "+" : ""}
+                {benchmarkReturnPct.toFixed(2)}%
               </span>
               <span
                 className={`text-xs font-semibold ${
-                  summary.alpha_vs_nifty50 >= 0
+                  benchmarkAlpha >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-amber-600 dark:text-amber-400"
                 }`}
               >
-                {summary.alpha_vs_nifty50 >= 0 ? "+" : ""}
-                {summary.alpha_vs_nifty50.toFixed(1)}% Spread
+                {benchmarkAlpha >= 0 ? "+" : ""}
+                {benchmarkAlpha.toFixed(1)}% Alpha
               </span>
             </div>
           </div>
 
-          {/* Nifty 500 Metric */}
+          {/* Broad Market Reference (Nifty 500) */}
           <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
@@ -315,7 +419,7 @@ export default function BenchmarkGrowthCard({
                 }`}
               >
                 {summary.alpha_vs_nifty500 >= 0 ? "+" : ""}
-                {summary.alpha_vs_nifty500.toFixed(1)}% Spread
+                {summary.alpha_vs_nifty500.toFixed(1)}% Alpha
               </span>
             </div>
           </div>
@@ -368,16 +472,27 @@ export default function BenchmarkGrowthCard({
                   if (!active || !payload || !payload.length) return null;
                   const item = payload[0].payload as BenchmarkSeriesPoint & { formattedDate: string };
                   const pVal = `${item.portfolio_pct >= 0 ? "+" : ""}${item.portfolio_pct.toFixed(2)}%`;
-                  const n50Val = `${item.nifty50_pct >= 0 ? "+" : ""}${item.nifty50_pct.toFixed(2)}%`;
+                  
+                  // Active benchmark data
+                  const bPctKey = `${selectedBenchmark}_pct` as keyof BenchmarkSeriesPoint;
+                  const bValNum = (item[bPctKey] as number) ?? item.nifty50_pct;
+                  const bVal = `${bValNum >= 0 ? "+" : ""}${bValNum.toFixed(2)}%`;
+                  const deltaAlpha = (item.portfolio_pct - bValNum).toFixed(2);
                   const n500Val = `${item.nifty500_pct >= 0 ? "+" : ""}${item.nifty500_pct.toFixed(2)}%`;
-                  const deltaAlpha = (item.portfolio_pct - item.nifty50_pct).toFixed(2);
 
                   return (
-                    <div className="bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-2xl p-3 shadow-xl text-xs space-y-2 min-w-[210px]">
+                    <div className="bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-2xl p-3 shadow-xl text-xs space-y-2 min-w-[220px]">
                       <div className="font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/10 pb-1 flex justify-between items-center">
                         <span>{item.formattedDate}</span>
-                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${Number(deltaAlpha) >= 0 ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/15 text-rose-600 dark:text-rose-400"}`}>
-                          {Number(deltaAlpha) >= 0 ? "+" : ""}{deltaAlpha}% Alpha
+                        <span
+                          className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                            Number(deltaAlpha) >= 0
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                              : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                          }`}
+                        >
+                          {Number(deltaAlpha) >= 0 ? "+" : ""}
+                          {deltaAlpha}% Alpha
                         </span>
                       </div>
                       <div className="space-y-1.5 pt-0.5">
@@ -392,22 +507,27 @@ export default function BenchmarkGrowthCard({
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="flex items-center gap-1.5 font-medium text-neutral-600 dark:text-neutral-400">
-                            <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                            Nifty 50:
+                            <span
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: currentBenchmarkObj.color }}
+                            />
+                            {currentBenchmarkObj.name}:
                           </span>
                           <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">
-                            {n50Val}
+                            {bVal}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 font-medium text-neutral-600 dark:text-neutral-400">
-                            <span className="w-2 h-2 rounded-full bg-purple-500" />
-                            Nifty 500:
-                          </span>
-                          <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">
-                            {n500Val}
-                          </span>
-                        </div>
+                        {selectedBenchmark !== "nifty500" && (
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="flex items-center gap-1.5 font-medium text-neutral-600 dark:text-neutral-400">
+                              <span className="w-2 h-2 rounded-full bg-purple-500" />
+                              Nifty 500:
+                            </span>
+                            <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">
+                              {n500Val}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -424,22 +544,23 @@ export default function BenchmarkGrowthCard({
               />
               <Line
                 type="monotone"
-                dataKey="nifty50_pct"
-                stroke="#6366f1"
-                strokeWidth={2}
+                dataKey={`${selectedBenchmark}_pct`}
+                stroke={currentBenchmarkObj.color}
+                strokeWidth={2.2}
                 dot={false}
-                strokeDasharray="4 4"
-                name="Nifty 50"
+                name={currentBenchmarkObj.name}
               />
-              <Line
-                type="monotone"
-                dataKey="nifty500_pct"
-                stroke="#a855f7"
-                strokeWidth={1.5}
-                dot={false}
-                strokeDasharray="2 2"
-                name="Nifty 500"
-              />
+              {selectedBenchmark !== "nifty500" && (
+                <Line
+                  type="monotone"
+                  dataKey="nifty500_pct"
+                  stroke="#a855f7"
+                  strokeWidth={1.5}
+                  dot={false}
+                  strokeDasharray="3 3"
+                  name="Nifty 500"
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         )}

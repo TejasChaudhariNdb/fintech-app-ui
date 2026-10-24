@@ -30,7 +30,7 @@ interface MutualFundJourneyChartProps {
   isRefetching?: boolean;
 }
 
-const ranges = ["1W", "1M", "6M", "1Y", "ALL"] as const;
+const ranges = ["1W", "1M", "6M", "1Y", "3Y", "5Y", "10Y", "ALL"] as const;
 
 export default function MutualFundJourneyChart({
   data,

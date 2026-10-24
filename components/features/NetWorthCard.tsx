@@ -238,15 +238,23 @@ export default function NetWorthCard({
                 className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
                 title="Tap to toggle between XIRR and Lifetime XIRR">
                 <span className="flex items-center gap-1.5 truncate">
-                  <ArrowDownUp size={11} className="text-emerald-300 shrink-0 group-hover/btn:rotate-180 transition-transform duration-300" />
+                  <ArrowDownUp size={11} className={`${(() => {
+                    const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
+                    return val !== undefined && val < 0 ? "text-rose-300" : "text-emerald-300";
+                  })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
                   <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
                 </span>
-                <span className="font-bold text-emerald-300 shrink-0 tabular-nums">
-                  {mfXirrMode === "xirr" 
-                    ? (mfXirr !== undefined ? `${mfXirr.toFixed(2)}%` : "--")
-                    : ((mfLifetimeXirr ?? mfXirr) !== undefined ? `${(mfLifetimeXirr ?? mfXirr)!.toFixed(2)}%` : "--")
-                  }
-                </span>
+                {(() => {
+                  const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
+                  const isNeg = val !== undefined && val !== null && val < 0;
+                  const isPos = val !== undefined && val !== null && val > 0;
+                  const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
+                  return (
+                    <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+                      {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                    </span>
+                  );
+                })()}
               </button>
             </div>
           </div>
@@ -292,15 +300,23 @@ export default function NetWorthCard({
                 className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
                 title="Tap to toggle between XIRR and Lifetime XIRR">
                 <span className="flex items-center gap-1.5 truncate">
-                  <ArrowDownUp size={11} className="text-blue-300 shrink-0 group-hover/btn:rotate-180 transition-transform duration-300" />
+                  <ArrowDownUp size={11} className={`${(() => {
+                    const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
+                    return val !== undefined && val < 0 ? "text-rose-300" : "text-blue-300";
+                  })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
                   <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
                 </span>
-                <span className="font-bold text-blue-300 shrink-0 tabular-nums">
-                  {stockXirrMode === "xirr" 
-                    ? (stockXirr !== undefined ? `${stockXirr.toFixed(2)}%` : "--")
-                    : ((stockLifetimeXirr ?? stockXirr) !== undefined ? `${(stockLifetimeXirr ?? stockXirr)!.toFixed(2)}%` : "--")
-                  }
-                </span>
+                {(() => {
+                  const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
+                  const isNeg = val !== undefined && val !== null && val < 0;
+                  const isPos = val !== undefined && val !== null && val > 0;
+                  const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
+                  return (
+                    <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+                      {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                    </span>
+                  );
+                })()}
               </button>
             </div>
           </div>

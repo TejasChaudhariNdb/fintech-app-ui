@@ -565,10 +565,10 @@ export default function RealEstateHoldingsPage() {
                   <div className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
                     <span className="flex items-center gap-1.5 font-semibold">
                       <Key size={14} className="text-emerald-600 dark:text-emerald-400" />
-                      Rented · ₹{prop.monthly_rental_income.toLocaleString("en-IN")}/mo
+                      Rental Yield · ₹{prop.monthly_rental_income.toLocaleString("en-IN")}/mo
                     </span>
                     <span className="font-mono font-bold">
-                      {prop.rental_yield_pct.toFixed(2)}% Gross Yield ({prop.total_return_xirr_pct.toFixed(1)}% XIRR)
+                      {prop.rental_yield_pct.toFixed(2)}% (Current)
                     </span>
                   </div>
                 ) : (
