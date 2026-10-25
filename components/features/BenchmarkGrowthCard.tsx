@@ -60,6 +60,8 @@ interface BenchmarkSummary {
   alpha_vs_nifty500: number;
   is_outperforming: boolean;
   portfolio_final_value: number;
+  portfolio_start_value?: number;
+  portfolio_value_delta?: number;
   nifty50_final_value: number;
   nifty100_final_value?: number;
   nifty_midcap150_final_value?: number;
@@ -291,17 +293,17 @@ export default function BenchmarkGrowthCard({
           <div className="flex items-center gap-3 shrink-0 sm:border-l sm:border-neutral-200 dark:sm:border-white/10 sm:pl-4">
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-neutral-400">
-                Alpha vs Nifty 500
+                Alpha vs {currentBenchmarkObj.shortName}
               </span>
               <div
                 className={`font-black text-sm sm:text-base ${
-                  summary.alpha_vs_nifty500 >= 0
+                  benchmarkAlpha >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-amber-600 dark:text-amber-400"
                 }`}
               >
-                {summary.alpha_vs_nifty500 >= 0 ? "+" : ""}
-                {summary.alpha_vs_nifty500.toFixed(1)}%
+                {benchmarkAlpha >= 0 ? "+" : ""}
+                {benchmarkAlpha.toFixed(1)}%
               </div>
             </div>
           </div>
@@ -310,19 +312,21 @@ export default function BenchmarkGrowthCard({
 
       {/* ── METRIC STRIP / BENCHMARK SELECTOR ── */}
       {summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Portfolio Metric */}
-          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-1">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                 My Portfolio
               </span>
-              <span className="text-[11px] font-semibold text-neutral-400">Return</span>
+              <span className="text-[11px] font-semibold text-neutral-400">
+                {selectedRange === "ALL" ? "All-Time Return" : `${selectedRange} Return`}
+              </span>
             </div>
             <div className="flex items-baseline justify-between pt-0.5">
               <span
-                className={`text-lg sm:text-xl font-black ${
+                className={`text-xl sm:text-2xl font-black ${
                   summary.portfolio_return_pct >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-rose-600 dark:text-rose-400"
@@ -331,45 +335,61 @@ export default function BenchmarkGrowthCard({
                 {summary.portfolio_return_pct >= 0 ? "+" : ""}
                 {summary.portfolio_return_pct.toFixed(2)}%
               </span>
-              {summary.total_current_value > 0 && (
-                <span className="text-xs text-neutral-500 font-medium">
-                  ₹{Math.round(summary.total_current_value).toLocaleString("en-IN")} Value
-                </span>
-              )}
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                {selectedRange === "ALL" ? (
+                  summary.total_current_value > 0 ? (
+                    `₹${Math.round(summary.total_current_value).toLocaleString("en-IN")} Value`
+                  ) : null
+                ) : summary.portfolio_value_delta !== undefined ? (
+                  `${summary.portfolio_value_delta >= 0 ? "+" : ""}₹${Math.round(Math.abs(summary.portfolio_value_delta)).toLocaleString("en-IN")} (${selectedRange})`
+                ) : summary.total_current_value > 0 ? (
+                  `₹${Math.round(summary.total_current_value).toLocaleString("en-IN")} Value`
+                ) : null}
+              </span>
             </div>
           </div>
 
           {/* Dynamic Benchmark Selector Card */}
-          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-primary-500/30 dark:border-primary-500/30 shadow-xs space-y-1 relative group">
-            <div className="flex items-center justify-between text-xs">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-primary-500/30 dark:border-primary-500/30 shadow-xs space-y-1.5 relative group">
+            <div className="flex items-center justify-between text-xs gap-2">
               <div className="flex items-center gap-1.5 font-bold text-neutral-900 dark:text-white">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: currentBenchmarkObj.color }}
                 />
-                <div className="relative inline-flex items-center gap-1 cursor-pointer">
-                  <select
-                    value={selectedBenchmark}
-                    onChange={(e) => handleBenchmarkSelect(e.target.value as BenchmarkKey)}
-                    className="appearance-none bg-transparent pr-5 font-bold text-xs cursor-pointer outline-none text-neutral-900 dark:text-white focus:ring-0"
-                  >
-                    {BENCHMARKS.map((b) => (
-                      <option key={b.key} value={b.key} className="bg-white dark:bg-[#151922] text-neutral-900 dark:text-white">
-                        {b.shortName}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronsUpDown size={13} className="text-primary-500 absolute right-0 pointer-events-none" />
-                </div>
+                <span className="font-bold text-xs sm:text-sm text-neutral-900 dark:text-white">
+                  {currentBenchmarkObj.shortName}
+                </span>
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 px-1.5 py-0.5 rounded">
-                {currentBenchmarkObj.category}
-              </span>
+
+              {/* Corner: Category badge + clean visible switch icon */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 px-1.5 py-0.5 rounded">
+                  {currentBenchmarkObj.category}
+                </span>
+                <ChevronsUpDown size={15} className="text-primary-500 dark:text-primary-400 transition-colors" />
+                <select
+                  value={selectedBenchmark}
+                  onChange={(e) => handleBenchmarkSelect(e.target.value as BenchmarkKey)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  title="Switch Benchmark Index"
+                >
+                  {BENCHMARKS.map((b) => (
+                    <option
+                      key={b.key}
+                      value={b.key}
+                      className="bg-white dark:bg-[#151922] text-neutral-900 dark:text-white py-1"
+                    >
+                      {b.shortName} ({b.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex items-baseline justify-between pt-0.5">
               <span
-                className={`text-lg sm:text-xl font-black ${
+                className={`text-xl sm:text-2xl font-black ${
                   benchmarkReturnPct >= 0
                     ? "text-neutral-900 dark:text-white"
                     : "text-rose-600 dark:text-rose-400"
@@ -387,39 +407,6 @@ export default function BenchmarkGrowthCard({
               >
                 {benchmarkAlpha >= 0 ? "+" : ""}
                 {benchmarkAlpha.toFixed(1)}% Alpha
-              </span>
-            </div>
-          </div>
-
-          {/* Broad Market Reference (Nifty 500) */}
-          <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shrink-0" />
-                Nifty 500
-              </span>
-              <span className="text-[11px] font-semibold text-neutral-400">Broad Market</span>
-            </div>
-            <div className="flex items-baseline justify-between pt-0.5">
-              <span
-                className={`text-lg sm:text-xl font-black ${
-                  summary.nifty500_return_pct >= 0
-                    ? "text-neutral-900 dark:text-white"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {summary.nifty500_return_pct >= 0 ? "+" : ""}
-                {summary.nifty500_return_pct.toFixed(2)}%
-              </span>
-              <span
-                className={`text-xs font-semibold ${
-                  summary.alpha_vs_nifty500 >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-amber-600 dark:text-amber-400"
-                }`}
-              >
-                {summary.alpha_vs_nifty500 >= 0 ? "+" : ""}
-                {summary.alpha_vs_nifty500.toFixed(1)}% Alpha
               </span>
             </div>
           </div>
@@ -478,10 +465,9 @@ export default function BenchmarkGrowthCard({
                   const bValNum = (item[bPctKey] as number) ?? item.nifty50_pct;
                   const bVal = `${bValNum >= 0 ? "+" : ""}${bValNum.toFixed(2)}%`;
                   const deltaAlpha = (item.portfolio_pct - bValNum).toFixed(2);
-                  const n500Val = `${item.nifty500_pct >= 0 ? "+" : ""}${item.nifty500_pct.toFixed(2)}%`;
 
                   return (
-                    <div className="bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-2xl p-3 shadow-xl text-xs space-y-2 min-w-[220px]">
+                    <div className="bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-2xl p-3 shadow-xl text-xs space-y-2 min-w-[200px]">
                       <div className="font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/10 pb-1 flex justify-between items-center">
                         <span>{item.formattedDate}</span>
                         <span
@@ -517,17 +503,6 @@ export default function BenchmarkGrowthCard({
                             {bVal}
                           </span>
                         </div>
-                        {selectedBenchmark !== "nifty500" && (
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="flex items-center gap-1.5 font-medium text-neutral-600 dark:text-neutral-400">
-                              <span className="w-2 h-2 rounded-full bg-purple-500" />
-                              Nifty 500:
-                            </span>
-                            <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">
-                              {n500Val}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -550,17 +525,6 @@ export default function BenchmarkGrowthCard({
                 dot={false}
                 name={currentBenchmarkObj.name}
               />
-              {selectedBenchmark !== "nifty500" && (
-                <Line
-                  type="monotone"
-                  dataKey="nifty500_pct"
-                  stroke="#a855f7"
-                  strokeWidth={1.5}
-                  dot={false}
-                  strokeDasharray="3 3"
-                  name="Nifty 500"
-                />
-              )}
             </AreaChart>
           </ResponsiveContainer>
         )}

@@ -421,7 +421,7 @@ export default function HomePage() {
           <section className="animate-fade-in">
             <BenchmarkGrowthCard
               title="Portfolio Performance vs Benchmarks"
-              subtitle="Track alpha generation and comparative growth vs Nifty 50 & Nifty 500"
+              subtitle="Track alpha generation and comparative growth vs market benchmarks"
             />
           </section>
         )}
@@ -750,7 +750,7 @@ export default function HomePage() {
             <section className="animate-fade-in">
               <BenchmarkGrowthCard
                 title="Portfolio Performance vs Benchmarks"
-                subtitle="Track alpha generation and comparative growth vs Nifty 50 & Nifty 500"
+                subtitle="Track alpha generation and comparative growth vs market benchmarks"
               />
             </section>
           )}
