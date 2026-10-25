@@ -1,18 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
 import Card from "@/components/ui/Card";
 import { useProfile } from "@/context/ProfileContext";
+import { useTheme } from "next-themes";
 import { api } from "@/lib/api";
 import {
   TrendingUp,
@@ -22,6 +13,9 @@ import {
   Zap,
   ChevronsUpDown,
 } from "lucide-react";
+import TradingViewBenchmarkChart, {
+  ChartDataPoint,
+} from "@/components/features/TradingViewBenchmarkChart";
 
 export type BenchmarkKey =
   | "nifty50"
@@ -113,10 +107,17 @@ export default function BenchmarkGrowthCard({
   subtitle?: string;
 }) {
   const { activeProfileId } = useProfile();
+  const { resolvedTheme } = useTheme();
   const [selectedRange, setSelectedRange] = useState<string>("1Y");
   const [selectedBenchmark, setSelectedBenchmark] = useState<BenchmarkKey>("nifty50");
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<BenchmarkGrowthResponse | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    date: string;
+    portfolioPct: number;
+    benchmarkPct: number;
+    alpha: number;
+  } | null>(null);
 
   // Restore preferred benchmark from localStorage if available
   useEffect(() => {
@@ -162,24 +163,36 @@ export default function BenchmarkGrowthCard({
     };
   }, [selectedRange, activeProfileId]);
 
-  const chartData = useMemo(() => {
+  // Clean date helper to guarantee YYYY-MM-DD for TradingView lightweight charts
+  const toCleanDateStr = (raw: string) => {
+    if (!raw) return "";
+    const clean = raw.includes("T") ? raw.split("T")[0] : raw;
+    return clean;
+  };
+
+  const portfolioSeriesData = useMemo<ChartDataPoint[]>(() => {
     if (!data?.series) return [];
-    return data.series.map((pt) => ({
-      ...pt,
-      formattedDate: new Date(pt.date).toLocaleDateString("en-IN", {
-        month: "short",
-        day: "numeric",
-        year:
-          selectedRange === "3Y" ||
-          selectedRange === "5Y" ||
-          selectedRange === "10Y" ||
-          selectedRange === "15Y" ||
-          selectedRange === "ALL"
-            ? "2-digit"
-            : undefined,
-      }),
-    }));
-  }, [data, selectedRange]);
+    return data.series
+      .filter((pt) => pt.date)
+      .map((pt) => ({
+        time: toCleanDateStr(pt.date),
+        value: Number((pt.portfolio_pct ?? 0).toFixed(2)),
+      }));
+  }, [data]);
+
+  const benchmarkSeriesData = useMemo<ChartDataPoint[]>(() => {
+    if (!data?.series) return [];
+    const bPctKey = `${selectedBenchmark}_pct` as keyof BenchmarkSeriesPoint;
+    return data.series
+      .filter((pt) => pt.date)
+      .map((pt) => {
+        const val = (pt[bPctKey] as number) ?? pt.nifty50_pct ?? 0;
+        return {
+          time: toCleanDateStr(pt.date),
+          value: Number(val.toFixed(2)),
+        };
+      });
+  }, [data, selectedBenchmark]);
 
   const summary = data?.summary;
   const currentBenchmarkObj =
@@ -414,119 +427,85 @@ export default function BenchmarkGrowthCard({
       )}
 
       {/* ── CHART ── */}
-      <div className="h-64 sm:h-80 w-full relative">
+      <div className="w-full relative">
         {isLoading ? (
-          <div className="h-full w-full flex flex-col items-center justify-center gap-2 text-neutral-400">
+          <div className="h-72 w-full flex flex-col items-center justify-center gap-2 text-neutral-400">
             <Loader2 size={28} className="animate-spin text-primary-500" />
             <span className="text-xs">Fetching benchmark index histories...</span>
           </div>
-        ) : chartData.length === 0 ? (
-          <div className="h-full w-full flex items-center justify-center text-xs text-neutral-400">
+        ) : portfolioSeriesData.length === 0 ? (
+          <div className="h-72 w-full flex items-center justify-center text-xs text-neutral-400">
             No historical benchmark data available for this range
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-              <defs>
-                <linearGradient id="portfolioGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="currentColor"
-                className="text-neutral-200 dark:text-white/[0.05]"
-              />
-              <XAxis
-                dataKey="formattedDate"
-                tickLine={false}
-                axisLine={false}
-                tick={{ fontSize: 11, fill: "#888888" }}
-                dy={8}
-                minTickGap={25}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tick={{ fontSize: 11, fill: "#888888" }}
-                domain={["auto", "auto"]}
-                tickFormatter={(val) => `${val >= 0 ? "+" : ""}${val.toFixed(0)}%`}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload || !payload.length) return null;
-                  const item = payload[0].payload as BenchmarkSeriesPoint & { formattedDate: string };
-                  const pVal = `${item.portfolio_pct >= 0 ? "+" : ""}${item.portfolio_pct.toFixed(2)}%`;
-                  
-                  // Active benchmark data
-                  const bPctKey = `${selectedBenchmark}_pct` as keyof BenchmarkSeriesPoint;
-                  const bValNum = (item[bPctKey] as number) ?? item.nifty50_pct;
-                  const bVal = `${bValNum >= 0 ? "+" : ""}${bValNum.toFixed(2)}%`;
-                  const deltaAlpha = (item.portfolio_pct - bValNum).toFixed(2);
+          <div className="space-y-2">
+            {/* Live Hover HUD / Series Legend Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-neutral-100/80 dark:bg-white/[0.04] border border-neutral-200/80 dark:border-white/10 text-xs min-h-[36px]">
+              {hoveredPoint ? (
+                <>
+                  <span className="font-semibold text-neutral-700 dark:text-neutral-200">
+                    {hoveredPoint.date}
+                  </span>
+                  <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                    <span className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      Portfolio: {hoveredPoint.portfolioPct >= 0 ? "+" : ""}
+                      {hoveredPoint.portfolioPct.toFixed(2)}%
+                    </span>
+                    <span className="flex items-center gap-1.5 font-medium text-neutral-700 dark:text-neutral-300">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: currentBenchmarkObj.color }}
+                      />
+                      {currentBenchmarkObj.shortName}:{" "}
+                      {hoveredPoint.benchmarkPct >= 0 ? "+" : ""}
+                      {hoveredPoint.benchmarkPct.toFixed(2)}%
+                    </span>
+                    <span
+                      className={`font-bold px-1.5 py-0.5 rounded text-[10px] tracking-wide uppercase ${
+                        hoveredPoint.alpha >= 0
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                      }`}
+                    >
+                      {hoveredPoint.alpha >= 0 ? "+" : ""}
+                      {hoveredPoint.alpha.toFixed(2)}% Alpha
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between w-full text-neutral-500 dark:text-neutral-400 text-[11px]">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      My Portfolio
+                    </span>
+                    <span className="flex items-center gap-1.5 font-medium text-neutral-700 dark:text-neutral-300">
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: currentBenchmarkObj.color }}
+                      />
+                      {currentBenchmarkObj.name}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-neutral-400 hidden sm:inline">
+                    Move cursor over chart for crosshair details
+                  </span>
+                </div>
+              )}
+            </div>
 
-                  return (
-                    <div className="bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-neutral-200 dark:border-white/10 rounded-2xl p-3 shadow-xl text-xs space-y-2 min-w-[200px]">
-                      <div className="font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/10 pb-1 flex justify-between items-center">
-                        <span>{item.formattedDate}</span>
-                        <span
-                          className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                            Number(deltaAlpha) >= 0
-                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                              : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-                          }`}
-                        >
-                          {Number(deltaAlpha) >= 0 ? "+" : ""}
-                          {deltaAlpha}% Alpha
-                        </span>
-                      </div>
-                      <div className="space-y-1.5 pt-0.5">
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            My Portfolio:
-                          </span>
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            {pVal}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 font-medium text-neutral-600 dark:text-neutral-400">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: currentBenchmarkObj.color }}
-                            />
-                            {currentBenchmarkObj.name}:
-                          </span>
-                          <span className="font-mono font-medium text-neutral-800 dark:text-neutral-200">
-                            {bVal}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Area
-                type="monotone"
-                dataKey="portfolio_pct"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                fillOpacity={1}
-                fill="url(#portfolioGradient)"
-                name="My Portfolio"
-              />
-              <Line
-                type="monotone"
-                dataKey={`${selectedBenchmark}_pct`}
-                stroke={currentBenchmarkObj.color}
-                strokeWidth={2.2}
-                dot={false}
-                name={currentBenchmarkObj.name}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+            {/* TradingView Lightweight Chart */}
+            <TradingViewBenchmarkChart
+              portfolioData={portfolioSeriesData}
+              benchmarkData={benchmarkSeriesData}
+              benchmarkName={currentBenchmarkObj.name}
+              benchmarkColor={currentBenchmarkObj.color}
+              isDark={resolvedTheme === "dark"}
+              height={320}
+              onHoverPoint={setHoveredPoint}
+            />
+          </div>
         )}
       </div>
 
