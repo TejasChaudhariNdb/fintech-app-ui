@@ -56,6 +56,8 @@ interface BenchmarkSummary {
   portfolio_final_value: number;
   portfolio_start_value?: number;
   portfolio_value_delta?: number;
+  portfolio_gain_amount?: number;
+  inception_date?: string;
   nifty50_final_value: number;
   nifty100_final_value?: number;
   nifty_midcap150_final_value?: number;
@@ -295,10 +297,12 @@ export default function BenchmarkGrowthCard({
                 {isOutperforming
                   ? `Your portfolio delivered ${benchmarkAlpha.toFixed(
                       1
-                    )}% extra return above ${currentBenchmarkObj.name} over this ${selectedRange} window.`
+                    )}% extra return above ${currentBenchmarkObj.name} over this ${selectedRange === "ALL" && summary.inception_date ? "investment" : selectedRange} window.`
                   : `${currentBenchmarkObj.name} returned ${benchmarkReturnPct.toFixed(
                       1
-                    )}% while your portfolio returned ${summary.portfolio_return_pct.toFixed(1)}%.`}
+                    )}% while your portfolio returned ${summary.portfolio_return_pct.toFixed(1)}%${
+                      selectedRange === "ALL" && summary.inception_date ? ` (matching your holding period since ${summary.inception_date})` : ""
+                    }.`}
               </p>
             </div>
           </div>
@@ -327,38 +331,51 @@ export default function BenchmarkGrowthCard({
       {summary && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Portfolio Metric */}
-          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-1.5">
+          <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/5 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                 My Portfolio
               </span>
-              <span className="text-[11px] font-semibold text-neutral-400">
-                {selectedRange === "ALL" ? "All-Time Return" : `${selectedRange} Return`}
-              </span>
+              {summary.total_current_value > 0 && (
+                <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                  Current Value: <span className="font-bold text-neutral-900 dark:text-white">₹{Math.round(summary.total_current_value).toLocaleString("en-IN")}</span>
+                </span>
+              )}
             </div>
             <div className="flex items-baseline justify-between pt-0.5">
-              <span
-                className={`text-xl sm:text-2xl font-black ${
-                  summary.portfolio_return_pct >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {summary.portfolio_return_pct >= 0 ? "+" : ""}
-                {summary.portfolio_return_pct.toFixed(2)}%
-              </span>
-              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+              <div className="flex items-baseline gap-2">
+                <span
+                  className={`text-xl sm:text-2xl font-black ${
+                    summary.portfolio_return_pct >= 0
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {summary.portfolio_return_pct >= 0 ? "+" : ""}
+                  {summary.portfolio_return_pct.toFixed(2)}%
+                </span>
+                <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+                  {selectedRange === "ALL" ? "All-Time Return" : `${selectedRange} Return`}
+                </span>
+              </div>
+              <div className="text-right">
                 {selectedRange === "ALL" ? (
-                  summary.total_current_value > 0 ? (
-                    `₹${Math.round(summary.total_current_value).toLocaleString("en-IN")} Value`
+                  summary.portfolio_gain_amount !== undefined ? (
+                    <span className={`text-xs font-bold ${
+                      summary.portfolio_gain_amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                    }`}>
+                      {summary.portfolio_gain_amount >= 0 ? "+" : ""}₹{Math.round(Math.abs(summary.portfolio_gain_amount)).toLocaleString("en-IN")} Gain
+                    </span>
                   ) : null
                 ) : summary.portfolio_value_delta !== undefined ? (
-                  `${summary.portfolio_value_delta >= 0 ? "+" : ""}₹${Math.round(Math.abs(summary.portfolio_value_delta)).toLocaleString("en-IN")} (${selectedRange})`
-                ) : summary.total_current_value > 0 ? (
-                  `₹${Math.round(summary.total_current_value).toLocaleString("en-IN")} Value`
+                  <span className={`text-xs font-bold ${
+                    summary.portfolio_value_delta >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  }`}>
+                    {summary.portfolio_value_delta >= 0 ? "+" : ""}₹{Math.round(Math.abs(summary.portfolio_value_delta)).toLocaleString("en-IN")} Gain
+                  </span>
                 ) : null}
-              </span>
+              </div>
             </div>
           </div>
 

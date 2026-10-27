@@ -104,6 +104,142 @@ export default function ChatWidget() {
     return () => window.removeEventListener("open-ai-chat", handleOpen);
   }, []);
 
+  // Floating Draggable Trigger Button State
+  const [btnPosition, setBtnPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isBtnDragging, setIsBtnDragging] = useState(false);
+  const dragStartRef = useRef<{
+    pointerStartX: number;
+    pointerStartY: number;
+    buttonStartX: number;
+    buttonStartY: number;
+  } | null>(null);
+  const hasMovedRef = useRef(false);
+  const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // Initialize and restore saved position from localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const saved = localStorage.getItem("ask_ai_btn_pos");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          const btnWidth = 110;
+          const btnHeight = 48;
+          const clampedX = Math.max(8, Math.min(window.innerWidth - btnWidth - 8, parsed.x));
+          const clampedY = Math.max(12, Math.min(window.innerHeight - btnHeight - 80, parsed.y));
+          setBtnPosition({ x: clampedX, y: clampedY });
+          return;
+        }
+      } catch {}
+    }
+
+    // Default position: bottom-right above mobile navigation bar
+    const isMobile = window.innerWidth < 1024;
+    const defaultX = Math.max(12, window.innerWidth - (isMobile ? 120 : 135));
+    const defaultY = Math.max(12, window.innerHeight - (isMobile ? 140 : 90));
+    setBtnPosition({ x: defaultX, y: defaultY });
+  }, []);
+
+  // Keep button within screen bounds on resize
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleResize = () => {
+      setBtnPosition((prev) => {
+        if (!prev) return prev;
+        const btnWidth = triggerButtonRef.current?.offsetWidth || 110;
+        const btnHeight = triggerButtonRef.current?.offsetHeight || 48;
+        const clampedX = Math.max(8, Math.min(window.innerWidth - btnWidth - 8, prev.x));
+        const clampedY = Math.max(12, Math.min(window.innerHeight - btnHeight - 80, prev.y));
+        return { x: clampedX, y: clampedY };
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return; // Only primary mouse/touch
+    const btn = triggerButtonRef.current;
+    if (!btn) return;
+
+    const rect = btn.getBoundingClientRect();
+    dragStartRef.current = {
+      pointerStartX: e.clientX,
+      pointerStartY: e.clientY,
+      buttonStartX: rect.left,
+      buttonStartY: rect.top,
+    };
+    hasMovedRef.current = false;
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = moveEvent.clientX - dragStartRef.current.pointerStartX;
+      const dy = moveEvent.clientY - dragStartRef.current.pointerStartY;
+
+      if (!hasMovedRef.current && Math.sqrt(dx * dx + dy * dy) > 6) {
+        hasMovedRef.current = true;
+        setIsBtnDragging(true);
+      }
+
+      if (hasMovedRef.current) {
+        const btnWidth = btn.offsetWidth || 110;
+        const btnHeight = btn.offsetHeight || 48;
+        const rawX = dragStartRef.current.buttonStartX + dx;
+        const rawY = dragStartRef.current.buttonStartY + dy;
+
+        const clampedX = Math.max(8, Math.min(window.innerWidth - btnWidth - 8, rawX));
+        const clampedY = Math.max(12, Math.min(window.innerHeight - btnHeight - 12, rawY));
+
+        setBtnPosition({ x: clampedX, y: clampedY });
+      }
+    };
+
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+
+      try {
+        if (triggerButtonRef.current) {
+          triggerButtonRef.current.releasePointerCapture(upEvent.pointerId);
+        }
+      } catch {}
+
+      if (hasMovedRef.current) {
+        setIsBtnDragging(false);
+        setBtnPosition((currentPos) => {
+          if (currentPos && typeof window !== "undefined") {
+            try {
+              localStorage.setItem("ask_ai_btn_pos", JSON.stringify(currentPos));
+            } catch {}
+          }
+          return currentPos;
+        });
+      }
+
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+  };
+
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    if (hasMovedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    setIsOpen(true);
+  };
+
   const suggestionCards = [
     {
       title: "Your Portfolio Insights",
@@ -904,19 +1040,39 @@ export default function ChatWidget() {
         </div>
       )}
 
-      {/* Floating Trigger Button (Positioned comfortably above mobile bottom nav with safe-area spacing) */}
+      {/* Floating Draggable Trigger Button */}
       {!isOpen && (
         <button
+          ref={triggerButtonRef}
           id="tour-ai-chat"
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] lg:bottom-8 right-4 sm:right-6 z-40 group h-11 sm:h-12 shadow-[0_8px_25px_rgba(99,102,241,0.35)] dark:shadow-[0_8px_30px_rgba(99,102,241,0.45)] flex items-center gap-2 transition-all duration-200 border border-white/25 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 hover:shadow-indigo-500/40 text-white rounded-full px-4 sm:px-5 hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl font-sans"
-          aria-label="Open Arthavi AI Assistant"
+          onPointerDown={handlePointerDown}
+          onClick={handleTriggerClick}
+          style={
+            btnPosition
+              ? {
+                  left: `${btnPosition.x}px`,
+                  top: `${btnPosition.y}px`,
+                  touchAction: "none",
+                }
+              : {
+                  right: "1rem",
+                  bottom: "5.5rem",
+                  touchAction: "none",
+                }
+          }
+          className={`fixed z-40 group h-11 sm:h-12 shadow-[0_8px_25px_rgba(99,102,241,0.35)] dark:shadow-[0_8px_30px_rgba(99,102,241,0.45)] flex items-center gap-2 border border-white/25 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 hover:shadow-indigo-500/40 text-white rounded-full px-4 sm:px-5 cursor-grab active:cursor-grabbing backdrop-blur-xl font-sans select-none ${
+            isBtnDragging
+              ? "scale-105 shadow-2xl opacity-95 transition-none ring-2 ring-primary-400/50"
+              : "transition-transform hover:scale-105 active:scale-95 duration-150"
+          }`}
+          aria-label="Open Arthavi AI Assistant (Hold and drag to reposition)"
+          title="Drag to reposition anywhere on screen"
         >
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center pointer-events-none">
             <Sparkles size={17} className="relative z-10 animate-pulse" />
             <div className="absolute inset-0 bg-white/40 blur-md rounded-full" />
           </div>
-          <span className="font-bold text-xs sm:text-sm tracking-tight">Ask AI</span>
+          <span className="font-bold text-xs sm:text-sm tracking-tight pointer-events-none">Ask AI</span>
         </button>
       )}
 
