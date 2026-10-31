@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import RealEstateModal from "@/components/features/RealEstateModal";
+import PropertyCashFlowModal from "@/components/features/PropertyCashFlowModal";
 import { RealEstateFormData } from "@/components/features/RealEstateForm";
 import {
   Building2,
@@ -22,13 +22,14 @@ import {
   Edit2,
   RefreshCw,
   Loader2,
-  AlertCircle,
   Calendar,
-  Sparkles,
-  Percent,
   CheckCircle2,
   IndianRupee,
   Key,
+  ArrowUpRight,
+  ArrowDownRight,
+  Receipt,
+  Wallet,
 } from "lucide-react";
 
 interface RealEstateItem {
@@ -56,7 +57,14 @@ interface RealEstateItem {
   monthly_rental_income: number;
   annual_rental_income: number;
   rental_yield_pct: number;
+  net_rental_yield_pct?: number;
   total_return_xirr_pct: number;
+  real_xirr_pct?: number;
+  has_transactions?: boolean;
+  transactions_count?: number;
+  total_inflow?: number;
+  total_outflow?: number;
+  net_cash_flow?: number;
   notes?: string | null;
   created_at?: string | null;
 }
@@ -70,6 +78,9 @@ interface RealEstateSummary {
   total_annual_rental_income: number;
   portfolio_rental_yield_pct: number;
   rented_properties_count: number;
+  total_inflows?: number;
+  total_outflows?: number;
+  total_net_cash_flow?: number;
   type_counts: Record<string, number>;
 }
 
@@ -142,9 +153,14 @@ export default function RealEstateHoldingsPage() {
   // Filter
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
 
-  // Modal State
+  // Modal State for Property Add/Edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RealEstateItem | null>(null);
+
+  // Modal State for Cash Flow & Transactions
+  const [cashFlowModalOpen, setCashFlowModalOpen] = useState(false);
+  const [selectedPropertyForCashFlow, setSelectedPropertyForCashFlow] = useState<RealEstateItem | null>(null);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -195,6 +211,11 @@ export default function RealEstateHoldingsPage() {
     setModalOpen(true);
   };
 
+  const handleOpenCashFlow = (item: RealEstateItem) => {
+    setSelectedPropertyForCashFlow(item);
+    setCashFlowModalOpen(true);
+  };
+
   const handleSaveHolding = async (payload: RealEstateFormData) => {
     if (editingItem) {
       await api.updateRealEstateHolding(editingItem.id, payload as any);
@@ -207,7 +228,7 @@ export default function RealEstateHoldingsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to remove this property from your portfolio?")) return;
+    if (!confirm("Are you sure you want to remove this property and all its cash flow transactions?")) return;
     try {
       await api.deleteRealEstateHolding(id);
       showToast("Property removed from portfolio");
@@ -251,30 +272,31 @@ export default function RealEstateHoldingsPage() {
           <button
             onClick={handleRefresh}
             disabled={refreshing || loading}
-            className="p-2 sm:p-2.5 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-50"
+            className="p-2 sm:px-3 sm:py-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-xl border border-neutral-200/80 dark:border-white/10 transition-colors flex items-center gap-1.5 text-xs font-semibold"
             title="Refresh Real Estate"
           >
-            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={refreshing ? "animate-spin text-indigo-500" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm transition-all shadow-sm shadow-indigo-500/20 active:scale-95"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all active:scale-95"
           >
             <Plus size={15} />
-            <span>Add<span className="hidden xs:inline sm:inline"> Property</span></span>
+            <span>Add Property</span>
           </button>
         </div>
       </div>
 
-      {/* ── SUMMARY STATS BANNER (Only when properties exist) ── */}
-      {summary && holdings.length > 0 && (
+      {/* ── SUMMARY STATS BANNER ── */}
+      {summary && summary.total_properties_count > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Total Valuation */}
+          {/* Current Portfolio Value */}
           <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
             <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Valuation</span>
-              <Building size={15} className="text-indigo-500" />
+              <span>Market Value</span>
+              <Building2 size={15} className="text-indigo-500" />
             </div>
             <div className="mt-2.5">
               <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
@@ -297,7 +319,7 @@ export default function RealEstateHoldingsPage() {
                 <PrivacyMask>{formatINRShort(summary.total_invested)}</PrivacyMask>
               </div>
               <div className="text-[11px] text-neutral-400 mt-0.5">
-                Purchase + additions
+                Purchase + stamp duty & capex
               </div>
             </div>
           </Card>
@@ -305,7 +327,7 @@ export default function RealEstateHoldingsPage() {
           {/* Unrealized Capital Gain */}
           <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
             <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Net Gain</span>
+              <span>Capital Gain</span>
               {summary.total_gain_loss >= 0 ? (
                 <TrendingUp size={15} className="text-emerald-500" />
               ) : (
@@ -327,34 +349,46 @@ export default function RealEstateHoldingsPage() {
               </div>
               <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {summary.total_gain_pct >= 0 ? "+" : ""}
-                {summary.total_gain_pct.toFixed(1)}% Return
+                {summary.total_gain_pct.toFixed(1)}% Appreciation
               </div>
             </div>
           </Card>
 
-          {/* Annual Rental Income & Yield */}
+          {/* Cash Flow P&L / Rental Yield */}
           <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
             <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Rental Income</span>
-              <Key size={15} className="text-amber-500" />
+              <span>Net Cash Flow (P&L)</span>
+              <Wallet size={15} className="text-amber-500" />
             </div>
             <div className="mt-2.5">
-              <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
-                <PrivacyMask>{formatINRShort(summary.total_annual_rental_income)}</PrivacyMask>
-                <span className="text-xs font-bold text-neutral-400 ml-1">/yr</span>
+              <div
+                className={`text-lg sm:text-2xl font-black font-mono tracking-tight ${
+                  (summary.total_net_cash_flow ?? 0) >= 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-rose-600 dark:text-rose-400"
+                }`}
+              >
+                <PrivacyMask>
+                  {(summary.total_net_cash_flow ?? 0) >= 0 ? "+" : ""}
+                  {formatINRShort(summary.total_net_cash_flow ?? 0)}
+                </PrivacyMask>
               </div>
-              <div className="text-[11px] text-neutral-500 mt-0.5">
-                <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                  {summary.portfolio_rental_yield_pct.toFixed(2)}%
-                </strong>{" "}
-                yield ({summary.rented_properties_count} rented)
+              <div className="text-[11px] text-neutral-500 mt-0.5 flex items-center gap-1.5">
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  +{formatINRShort(summary.total_inflows ?? 0)}
+                </span>
+                <span>/</span>
+                <span className="text-rose-500 font-bold">
+                  -{formatINRShort(summary.total_outflows ?? 0)}
+                </span>
+                <span>({summary.rented_properties_count} rented)</span>
               </div>
             </div>
           </Card>
         </div>
       )}
 
-      {/* ── FILTER CHIPS (Only when properties exist) ── */}
+      {/* ── FILTER CHIPS ── */}
       {holdings.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {[
@@ -372,7 +406,7 @@ export default function RealEstateHoldingsPage() {
                 onClick={() => setActiveFilter(f.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   isActive
-                    ? "bg-neutral-900 dark:bg-white text-white dark:text-black shadow-sm"
+                    ? "bg-neutral-900 dark:bg-white text-white dark:text-black shadow-xs"
                     : "bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300"
                 }`}
               >
@@ -390,7 +424,7 @@ export default function RealEstateHoldingsPage() {
           <p className="text-sm font-semibold text-neutral-500">Loading properties...</p>
         </div>
       ) : holdings.length === 0 ? (
-        /* Empty State when 0 properties in vault */
+        /* Empty State */
         <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto shadow-xs">
           <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
             <Building2 size={32} />
@@ -400,7 +434,7 @@ export default function RealEstateHoldingsPage() {
               No Properties Added Yet
             </h3>
             <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1.5 max-w-sm mx-auto">
-              Add your flats, houses, commercial units, or land to track capital appreciation, holding period CAGR, and rental cashflow.
+              Add your flats, houses, commercial units, or land to track capital appreciation, rental income, Airbnb earnings, and cash-flow-adjusted XIRR.
             </p>
           </div>
 
@@ -413,24 +447,8 @@ export default function RealEstateHoldingsPage() {
               <span>Add First Property</span>
             </button>
           </div>
-
-          {/* Highlights */}
-          <div className="flex items-center justify-center gap-3 pt-3 text-[11px] text-neutral-400 flex-wrap">
-            <span className="flex items-center gap-1">
-              <TrendingUp size={13} className="text-indigo-500" /> Capital Appreciation
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Key size={13} className="text-amber-500" /> Rental Yields
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Sparkles size={13} className="text-emerald-500" /> XIRR Returns
-            </span>
-          </div>
         </div>
       ) : filteredHoldings.length === 0 ? (
-        /* Filter matched 0 properties */
         <Card className="py-12 px-6 text-center border-dashed">
           <div className="w-12 h-12 rounded-2xl bg-neutral-100 dark:bg-white/5 text-neutral-400 flex items-center justify-center mx-auto mb-3">
             <Building2 size={24} />
@@ -454,6 +472,10 @@ export default function RealEstateHoldingsPage() {
             const typeInfo = TYPE_CONFIG[prop.property_type] || TYPE_CONFIG.RESIDENTIAL_APARTMENT;
             const TypeIcon = typeInfo.icon;
             const isGain = prop.gain_loss >= 0;
+            const txCount = prop.transactions_count ?? 0;
+            const netFlow = prop.net_cash_flow ?? 0;
+            const isNetProfit = netFlow >= 0;
+            const displayXirr = prop.real_xirr_pct !== undefined ? prop.real_xirr_pct : prop.cagr_pct;
 
             return (
               <Card
@@ -488,7 +510,7 @@ export default function RealEstateHoldingsPage() {
                       <button
                         onClick={() => handleOpenEdit(prop)}
                         className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
-                        title="Edit Property"
+                        title="Edit Property Details"
                       >
                         <Edit2 size={15} />
                       </button>
@@ -553,42 +575,72 @@ export default function RealEstateHoldingsPage() {
                   </div>
 
                   <div>
-                    <div className="text-[10px] uppercase font-semibold text-neutral-400">CAGR (Annual)</div>
+                    <div className="text-[10px] uppercase font-semibold text-neutral-400">
+                      {prop.has_transactions ? "XIRR Return" : "CAGR"}
+                    </div>
                     <div className="text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">
-                      {prop.cagr_pct.toFixed(1)}% p.a.
+                      {displayXirr.toFixed(1)}% p.a.
                     </div>
                   </div>
                 </div>
 
-                {/* Rental Inflow Row (If rented) */}
-                {prop.is_rented ? (
-                  <div className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <Key size={14} className="text-emerald-600 dark:text-emerald-400" />
-                      Rental Yield · ₹{prop.monthly_rental_income.toLocaleString("en-IN")}/mo
-                    </span>
-                    <span className="font-mono font-bold">
-                      {prop.rental_yield_pct.toFixed(2)}% (Current)
-                    </span>
+                {/* ── CASH FLOW LEDGER STRIP & ACTION BUTTON ── */}
+                <div className="pt-1 border-t border-neutral-100 dark:border-white/5 space-y-2">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    {/* Left: Cash Flow status */}
+                    <div className="flex items-center gap-1.5 truncate">
+                      {txCount > 0 ? (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold ${
+                            isNetProfit
+                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                              : "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                          }`}
+                        >
+                          {isNetProfit ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+                          Net Cash: {isNetProfit ? "+" : ""}
+                          {formatINRShort(netFlow)}
+                        </span>
+                      ) : prop.is_rented ? (
+                        <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                          <Key size={13} />
+                          Rent: ₹{prop.monthly_rental_income.toLocaleString("en-IN")}/mo
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">Self-occupied / No rent logged</span>
+                      )}
+                    </div>
+
+                    {/* Right: Cash flow ledger button */}
+                    <button
+                      onClick={() => handleOpenCashFlow(prop)}
+                      className="px-3 py-1.5 rounded-xl bg-neutral-900 dark:bg-white hover:bg-neutral-800 text-white dark:text-black font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs active:scale-95 shrink-0"
+                    >
+                      <Receipt size={13} />
+                      <span>{txCount > 0 ? `Ledger (${txCount})` : "Track Cash Flow"}</span>
+                    </button>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between text-xs px-3 py-1.5 text-neutral-400">
-                    <span>Self-occupied / Non-rented</span>
-                    <span className="font-mono font-semibold">{prop.cagr_pct.toFixed(1)}% Total Return</span>
-                  </div>
-                )}
+                </div>
               </Card>
             );
           })}
         </div>
       )}
 
-      {/* ── MODAL ── */}
+      {/* ── PROPERTY ADD / EDIT MODAL ── */}
       <RealEstateModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSave={handleSaveHolding}
         initialData={editingItem}
+      />
+
+      {/* ── CASH FLOW TRANSACTIONS & LEDGER MODAL ── */}
+      <PropertyCashFlowModal
+        isOpen={cashFlowModalOpen}
+        onClose={() => setCashFlowModalOpen(false)}
+        property={selectedPropertyForCashFlow}
+        onDataChanged={loadData}
       />
     </div>
   );

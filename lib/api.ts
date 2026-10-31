@@ -553,22 +553,37 @@ export const api = {
   },
 
   // Goals
-  // Goals
-  getGoals: () => api.fetch("/goals/", { cacheKey: "goals" }),
-  createGoal: (data: Record<string, unknown>) =>
-    api.fetch("/goals/", {
+  getGoals: (profileId?: string) => {
+    const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const query = activeProf ? `?profile_id=${activeProf}` : "";
+    return api.fetch(`/goals/${query}`, { cacheKey: "goals" });
+  },
+  createGoal: async (data: Record<string, unknown>) => {
+    const res = await api.fetch("/goals/", {
       method: "POST",
       body: JSON.stringify(data),
-    }),
-  updateGoal: (id: number, data: Record<string, unknown>) =>
-    api.fetch(`/goals/${id}`, {
+    });
+    api.clearPortfolioCache();
+    api.clearCache(["goals"]);
+    return res;
+  },
+  updateGoal: async (id: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/goals/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
-    }),
-  deleteGoal: (id: number) =>
-    api.fetch(`/goals/${id}`, {
+    });
+    api.clearPortfolioCache();
+    api.clearCache(["goals"]);
+    return res;
+  },
+  deleteGoal: async (id: number) => {
+    const res = await api.fetch(`/goals/${id}`, {
       method: "DELETE",
-    }),
+    });
+    api.clearPortfolioCache();
+    api.clearCache(["goals"]);
+    return res;
+  },
 
   // Gold & Commodities
   getGoldRates: () => api.fetch("/gold/rates"),
@@ -685,6 +700,40 @@ export const api = {
   },
   deleteRealEstateHolding: async (id: number) => {
     const res = await api.fetch(`/real-estate/holdings/${id}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  getPropertyTransactions: (holdingId: number) => {
+    return api.fetch(`/real-estate/holdings/${holdingId}/transactions`);
+  },
+  addPropertyTransaction: async (holdingId: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  generateRecurringPropertyTransactions: async (holdingId: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions/recurring`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  updatePropertyTransaction: async (holdingId: number, transactionId: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions/${transactionId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deletePropertyTransaction: async (holdingId: number, transactionId: number) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions/${transactionId}`, {
       method: "DELETE",
     });
     api.clearPortfolioCache();

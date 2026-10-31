@@ -24,8 +24,8 @@ export default function GoalsPage() {
   const loadGoals = async () => {
     setLoading(true);
     try {
-      const data = await api.getGoals();
-      setGoals(data);
+      const data = await api.getGoals(activeProfileId);
+      setGoals(data || []);
     } catch (err) {
       console.error(err);
     } finally {

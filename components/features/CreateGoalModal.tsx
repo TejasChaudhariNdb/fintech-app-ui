@@ -4,7 +4,7 @@ import Modal from "../ui/Modal";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { api } from "@/lib/api";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 
 interface CreateGoalModalProps {
@@ -25,6 +25,7 @@ export default function CreateGoalModal({
   const [goalType, setGoalType] = useState<"PERSONAL" | "FAMILY">("PERSONAL");
   const [selectedProfileId, setSelectedProfileId] = useState<string>("");
   const [prevTargetId, setPrevTargetId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -112,15 +113,15 @@ export default function CreateGoalModal({
       if (targetId) {
         loadData(targetId);
         
-        // Only clear if the scope actually changed from the previous loaded scope
-        if (prevTargetId && prevTargetId !== targetId) {
+        // Only clear if the user manually switched scope after modal opened
+        if (prevTargetId !== null && String(prevTargetId) !== String(targetId)) {
           setFormData((prev) => ({
             ...prev,
             linked_schemes: [],
             linked_equities: [],
           }));
         }
-        setPrevTargetId(targetId);
+        setPrevTargetId(String(targetId));
       }
     }
   }, [goalType, selectedProfileId, isOpen]);
@@ -291,16 +292,27 @@ export default function CreateGoalModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     setLoading(true);
 
     try {
+      const finalProfileId = goalType === "PERSONAL"
+        ? (selectedProfileId ? Number(selectedProfileId) : (profiles[0]?.id ? Number(profiles[0].id) : null))
+        : null;
+
+      if (goalType === "PERSONAL" && !finalProfileId) {
+        setErrorMessage("Please select a profile owner for this personal goal");
+        setLoading(false);
+        return;
+      }
+
       const payload = {
-        name: formData.name,
+        name: formData.name.trim(),
         target_amount: formData.target_amount ? parseFloat(formData.target_amount) : null,
         target_year: formData.target_year ? parseInt(formData.target_year) : null,
         icon: formData.icon,
         goal_type: goalType,
-        profile_id: goalType === "PERSONAL" ? (selectedProfileId ? Number(selectedProfileId) : null) : null,
+        profile_id: finalProfileId,
         linked_schemes: formData.linked_schemes.map((l) => ({
           scheme_id: Number(l.scheme_id),
           contribution_amount: parseFloat(l.contribution_amount) || 0,
@@ -319,9 +331,7 @@ export default function CreateGoalModal({
       onClose();
     } catch (err: any) {
       console.error(err);
-      if (err.message !== "This action is disabled in demo mode.") {
-        alert("Failed to save goal");
-      }
+      setErrorMessage(err?.message || "Failed to save goal");
     } finally {
       setLoading(false);
     }
@@ -343,6 +353,12 @@ export default function CreateGoalModal({
       onClose={onClose}
       title={goalToEdit ? "Edit Goal" : "Establish New Goal"}>
       <form onSubmit={handleSubmit} className="space-y-6">
+        {errorMessage && (
+          <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 rounded-xl text-xs font-semibold animate-in fade-in">
+            <AlertCircle size={16} className="shrink-0 text-rose-500" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
         {/* Goal Details */}
         <div className="space-y-4">
           {/* Goal Scope Selection */}
@@ -354,7 +370,12 @@ export default function CreateGoalModal({
               <div className="flex rounded-xl bg-neutral-100 dark:bg-white/5 p-1">
                 <button
                   type="button"
-                  onClick={() => setGoalType("PERSONAL")}
+                  onClick={() => {
+                    setGoalType("PERSONAL");
+                    if (!selectedProfileId && profiles.length > 0) {
+                      setSelectedProfileId(String(profiles[0].id));
+                    }
+                  }}
                   className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
                     goalType === "PERSONAL"
                       ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
