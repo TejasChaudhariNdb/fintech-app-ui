@@ -94,6 +94,11 @@ const INFLOW_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentT
     icon: ShieldAlert,
     desc: "Non-refundable portion retained for repainting, repairs, or unpaid dues",
   },
+  PROPERTY_SALE_PROCEEDS: {
+    label: "Property Sale Proceeds (Full / Partial)",
+    icon: Building,
+    desc: "Capital received from selling property, plot, or commercial unit",
+  },
   OTHER_INCOME: {
     label: "Other Income / Profit / Gain",
     icon: ArrowUpRight,
@@ -102,15 +107,20 @@ const INFLOW_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentT
 };
 
 const OUTFLOW_TYPE_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ size?: number; className?: string }>; desc: string }> = {
-  HOME_LOAN_INTEREST: {
-    label: "Home Loan Interest (Expense)",
-    icon: Landmark,
-    desc: "Interest component of mortgage (direct loss/cost)",
-  },
   HOME_LOAN_EMI: {
-    label: "Home Loan EMI (Full Payment)",
+    label: "Home Loan EMI (Principal + Interest)",
     icon: CreditCard,
-    desc: "Total monthly installment (Principal + Interest)",
+    desc: "Full monthly installment. Includes both principal & interest",
+  },
+  LOAN_REPAYMENT: {
+    label: "Additional Loan Principal Repayment (Lump Sum)",
+    icon: Landmark,
+    desc: "Lump sum principal prepayment, part-payment, or loan closure amount",
+  },
+  HOME_LOAN_INTEREST: {
+    label: "Pre-EMI / Interest-Only Loan Payment",
+    icon: Receipt,
+    desc: "For under-construction or interest-only overdraft loans. Do NOT log if logging EMI",
   },
   MAINTENANCE: {
     label: "Society / HOA Maintenance",
@@ -620,6 +630,7 @@ export default function PropertyCashFlowModal({
                 <div className="space-y-2">
                   {filteredTransactions.map((tx) => {
                     const isInflow = tx.category === "INFLOW";
+                    const isLoanRepayment = tx.transaction_type === "LOAN_REPAYMENT";
                     const config = isInflow
                       ? INFLOW_TYPE_CONFIG[tx.transaction_type] || INFLOW_TYPE_CONFIG.OTHER_INCOME
                       : OUTFLOW_TYPE_CONFIG[tx.transaction_type] || OUTFLOW_TYPE_CONFIG.OTHER_EXPENSE;
@@ -635,6 +646,8 @@ export default function PropertyCashFlowModal({
                             className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                               isInflow
                                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : isLoanRepayment
+                                ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                                 : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
                             }`}
                           >
@@ -650,10 +663,12 @@ export default function PropertyCashFlowModal({
                                 className={`text-[10px] font-bold px-1.5 py-0.2 rounded-md ${
                                   isInflow
                                     ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                    : isLoanRepayment
+                                    ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
                                     : "bg-rose-500/10 text-rose-700 dark:text-rose-300"
                                 }`}
                               >
-                                {isInflow ? "Income" : "Expense"}
+                                {isInflow ? "Income" : isLoanRepayment ? "Loan Repayment" : "Expense"}
                               </span>
                             </div>
 
@@ -730,7 +745,7 @@ export default function PropertyCashFlowModal({
                     }`}
                   >
                     <ArrowUpRight size={15} />
-                    <span>Inflow / Income / Profit (+)</span>
+                    <span>Inflow / Income (+)</span>
                   </button>
 
                   <button
@@ -743,7 +758,7 @@ export default function PropertyCashFlowModal({
                     }`}
                   >
                     <ArrowDownRight size={15} />
-                    <span>Outflow / Expense / Loss (-)</span>
+                    <span>Outflow / Payments (-)</span>
                   </button>
                 </div>
               </div>
@@ -782,6 +797,16 @@ export default function PropertyCashFlowModal({
                     }
                   )}
                 </div>
+
+                {/* Double-counting advisory banner for Interest */}
+                {txType === "HOME_LOAN_INTEREST" && (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] flex items-start gap-2">
+                    <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-500" />
+                    <span>
+                      <strong>Double-counting tip:</strong> Only log this for pre-construction interest or interest-only overdraft loans. If you already log your monthly <strong>Home Loan EMI</strong> (which already includes interest), do not log this separately.
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Amount Input with Quick Chips */}
@@ -799,24 +824,41 @@ export default function PropertyCashFlowModal({
                     required
                     value={amountStr}
                     onChange={(e) => setAmountStr(e.target.value)}
-                    placeholder="e.g. 35000"
+                    placeholder={
+                      txType === "LOAN_REPAYMENT"
+                        ? "e.g. 200000 (Lump sum repayment)"
+                        : txType === "PROPERTY_SALE_PROCEEDS"
+                        ? "e.g. 5000000 (Sale proceeds)"
+                        : "e.g. 35000"
+                    }
                     className="w-full pl-8 pr-4 py-2.5 bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-sm font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 {/* Quick Chips */}
                 <div className="flex items-center gap-1.5 mt-2 overflow-x-auto no-scrollbar">
-                  {[10000, 25000, 35000, 50000, 100000].map((amt) => (
+                  {(txType === "LOAN_REPAYMENT"
+                    ? [50000, 100000, 200000, 500000, 1000000, 2500000]
+                    : txType === "PROPERTY_SALE_PROCEEDS"
+                    ? [1000000, 2500000, 5000000, 10000000, 20000000]
+                    : [10000, 25000, 35000, 50000, 100000]
+                  ).map((amt) => (
                     <button
                       key={amt}
                       type="button"
                       onClick={() => setAmountStr(String(amt))}
-                      className="px-2.5 py-1 text-xs rounded-lg bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 font-mono font-medium text-neutral-600 dark:text-neutral-300 whitespace-nowrap"
+                      className={`px-2.5 py-1 text-xs rounded-lg font-mono font-medium transition-colors whitespace-nowrap ${
+                        txType === "LOAN_REPAYMENT"
+                          ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 font-bold border border-indigo-200 dark:border-indigo-500/20"
+                          : txType === "PROPERTY_SALE_PROCEEDS"
+                          ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 font-bold border border-emerald-200 dark:border-emerald-500/20"
+                          : "bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300"
+                      }`}
                     >
-                      ₹{(amt / 1000).toFixed(0)}k
+                      {amt >= 10000000 ? `₹${amt / 10000000}Cr` : amt >= 100000 ? `₹${amt / 100000}L` : `₹${amt / 1000}k`}
                     </button>
                   ))}
-                  {property.monthly_rental_income && property.monthly_rental_income > 0 && (
+                  {property.monthly_rental_income && property.monthly_rental_income > 0 && txType !== "LOAN_REPAYMENT" && txType !== "PROPERTY_SALE_PROCEEDS" && (
                     <button
                       type="button"
                       onClick={() => setAmountStr(String(property.monthly_rental_income))}
@@ -852,7 +894,11 @@ export default function PropertyCashFlowModal({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
-                    category === "INFLOW"
+                    txType === "LOAN_REPAYMENT"
+                      ? "e.g. Lump sum principal repayment, bonus prepayment, part-closure"
+                      : txType === "PROPERTY_SALE_PROCEEDS"
+                      ? "e.g. Sale of flat, token advance, or final registry payout"
+                      : category === "INFLOW"
                       ? "e.g. October Airbnb payout (18 nights booked)"
                       : "e.g. Annual property tax, Plumbing repair"
                   }
@@ -868,6 +914,8 @@ export default function PropertyCashFlowModal({
                   className={`w-full py-3 rounded-2xl text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
                     category === "INFLOW"
                       ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20"
+                      : txType === "LOAN_REPAYMENT"
+                      ? "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
                       : "bg-rose-600 hover:bg-rose-700 shadow-rose-500/20"
                   }`}
                 >
@@ -877,7 +925,14 @@ export default function PropertyCashFlowModal({
                     <>
                       <Plus size={18} />
                       <span>
-                        Save {category === "INFLOW" ? "Income Entry (+)" : "Expense Entry (-)"}
+                        Save{" "}
+                        {category === "INFLOW"
+                          ? txType === "PROPERTY_SALE_PROCEEDS"
+                            ? "Sale Proceeds (+)"
+                            : "Income Entry (+)"
+                          : txType === "LOAN_REPAYMENT"
+                          ? "Loan Repayment (-)"
+                          : "Expense Entry (-)"}
                       </span>
                     </>
                   )}
