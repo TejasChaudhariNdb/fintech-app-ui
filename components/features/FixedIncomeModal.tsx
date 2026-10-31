@@ -26,8 +26,10 @@ export default function FixedIncomeModal({
       title={isEditing ? "Edit Deposit Holding" : "Add Fixed Income / Deposit"}
     >
       <div className="pb-4">
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 -mt-1">
-          Track Bank FDs, Corporate FDs, RDs, or PPF with automated interest accrual &amp; maturity dates.
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3 -mt-1">
+          {isEditing
+            ? "Update your deposit details and interest rates."
+            : "Log Bank FDs, Post Office, Bonds, or PPF with automated compounding."}
         </p>
         <FixedIncomeForm
           initialData={initialData}

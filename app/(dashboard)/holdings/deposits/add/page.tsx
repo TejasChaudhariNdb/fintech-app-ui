@@ -38,7 +38,7 @@ export default function AddDepositPage() {
             Add Fixed Income / Deposit
           </h1>
           <p className="text-xs text-neutral-500 dark:text-neutral-400">
-            Log Bank FDs, Corporate FDs, RDs, or PPF with automated interest accrual
+            Log Bank FDs, Corporate FDs, Post Office schemes, RBI Bonds, Tax-Free Bonds, PPF, or RDs
           </p>
         </div>
       </div>

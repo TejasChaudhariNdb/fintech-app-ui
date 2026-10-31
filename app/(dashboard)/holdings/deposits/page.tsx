@@ -83,6 +83,27 @@ function formatINRShort(val: number): string {
   return `₹${val.toLocaleString("en-IN")}`;
 }
 
+function getDepositTypeBadge(type: string): { label: string; color: string } {
+  switch (type) {
+    case "BANK_FD":
+      return { label: "Bank FD", color: "bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/20" };
+    case "CORPORATE_FD":
+      return { label: "Corporate FD", color: "bg-purple-50 dark:bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/20" };
+    case "POST_OFFICE":
+      return { label: "Post Office", color: "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/20" };
+    case "RBI_BOND":
+      return { label: "RBI Bond", color: "bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/20" };
+    case "TAX_FREE_BOND":
+      return { label: "Tax-Free Bond", color: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/20" };
+    case "PPF":
+      return { label: "PPF", color: "bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/20" };
+    case "RD":
+      return { label: "Recurring Deposit", color: "bg-neutral-100 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-white/10" };
+    default:
+      return { label: type?.replace(/_/g, " ") || "Deposit", color: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/20" };
+  }
+}
+
 function formatDatePretty(dateStr?: string | null): string {
   if (!dateStr) return "--";
   try {
@@ -186,9 +207,12 @@ export default function FixedIncomePage() {
   const filteredHoldings = holdings.filter((item) => {
     if (activeFilter === "ALL") return true;
     if (activeFilter === "BANK_FD") return item.deposit_type === "BANK_FD";
-    if (activeFilter === "RD") return item.deposit_type === "RD";
-    if (activeFilter === "PPF") return item.deposit_type === "PPF";
     if (activeFilter === "CORPORATE_FD") return item.deposit_type === "CORPORATE_FD";
+    if (activeFilter === "POST_OFFICE") return item.deposit_type === "POST_OFFICE" || item.deposit_type?.startsWith("PO_");
+    if (activeFilter === "RBI_BOND") return item.deposit_type === "RBI_BOND";
+    if (activeFilter === "TAX_FREE_BOND") return item.deposit_type === "TAX_FREE_BOND";
+    if (activeFilter === "PPF") return item.deposit_type === "PPF" || item.deposit_type === "EPF";
+    if (activeFilter === "RD") return item.deposit_type === "RD";
     return true;
   });
 
@@ -204,7 +228,7 @@ export default function FixedIncomePage() {
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-            Track bank FDs, corporate deposits, RDs, and PPF with automated interest compounding
+            Track bank FDs, corporate deposits, Post Office schemes, RBI Bonds, Tax-Free Bonds, and PPF with automated interest compounding
           </p>
         </div>
 
@@ -317,11 +341,14 @@ export default function FixedIncomePage() {
       {/* ── FILTER TABS ── */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {[
-          { id: "ALL", label: `All Deposits (${holdings.length})` },
+          { id: "ALL", label: `All (${holdings.length})` },
           { id: "BANK_FD", label: "Bank FDs" },
           { id: "CORPORATE_FD", label: "Corporate FDs" },
-          { id: "RD", label: "Recurring Deposits (RD)" },
-          { id: "PPF", label: "PPF & Post Office" },
+          { id: "POST_OFFICE", label: "Post Office" },
+          { id: "RBI_BOND", label: "RBI Bonds" },
+          { id: "TAX_FREE_BOND", label: "Tax-Free Bonds" },
+          { id: "PPF", label: "PPF" },
+          { id: "RD", label: "RDs" },
         ].map((f) => (
           <button
             key={f.id}
@@ -394,14 +421,23 @@ export default function FixedIncomePage() {
 
                       {/* Tags */}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
-                          {item.deposit_type.replace("_", " ")}
-                        </span>
-                        {item.is_tax_saving && (
+                        {(() => {
+                          const badge = getDepositTypeBadge(item.deposit_type);
+                          return (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold border ${badge.color}`}>
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
+                        {item.deposit_type === "TAX_FREE_BOND" ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 flex items-center gap-0.5">
+                            <ShieldCheck size={11} /> 100% Tax-Free (Sec 10)
+                          </span>
+                        ) : item.is_tax_saving ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/20 flex items-center gap-0.5">
                             <ShieldCheck size={11} /> 80C Tax Saver
                           </span>
-                        )}
+                        ) : null}
                         <span className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-neutral-100 dark:bg-white/5 text-neutral-500">
                           {item.profile_name}
                         </span>

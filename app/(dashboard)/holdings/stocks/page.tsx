@@ -149,9 +149,9 @@ export default function StocksPage() {
   // Data State
   const [manualStocks, setManualStocks] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"value" | "symbol" | "pnl" | "quantity">(
-    "value",
-  );
+  const [sortBy, setSortBy] = useState<
+    "value" | "symbol" | "pnl" | "quantity" | "day_change_pct" | "day_change"
+  >("value");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [holdingViewTab, setHoldingViewTab] = useState<"holdings" | "analytics">("holdings");
 
@@ -378,6 +378,16 @@ export default function StocksPage() {
       }
       if (sortBy === "pnl") {
         return ((a.pnl_pct || 0) - (b.pnl_pct || 0)) * direction;
+      }
+      if (sortBy === "day_change_pct") {
+        const aVal = a.day_change_pct !== null && a.day_change_pct !== undefined ? Number(a.day_change_pct) : -Infinity;
+        const bVal = b.day_change_pct !== null && b.day_change_pct !== undefined ? Number(b.day_change_pct) : -Infinity;
+        return (aVal - bVal) * direction;
+      }
+      if (sortBy === "day_change") {
+        const aVal = a.day_change !== null && a.day_change !== undefined ? Number(a.day_change) : -Infinity;
+        const bVal = b.day_change !== null && b.day_change !== undefined ? Number(b.day_change) : -Infinity;
+        return (aVal - bVal) * direction;
       }
 
       return ((a.value || 0) - (b.value || 0)) * direction;
@@ -858,15 +868,23 @@ export default function StocksPage() {
                 value={sortBy}
                 onChange={(e) =>
                   setSortBy(
-                    e.target.value as "value" | "symbol" | "pnl" | "quantity",
+                    e.target.value as
+                      | "value"
+                      | "symbol"
+                      | "pnl"
+                      | "quantity"
+                      | "day_change_pct"
+                      | "day_change",
                   )
                 }
                 aria-label="Sort stocks"
                 className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none">
                 <option value="value">Sort: Value</option>
-                <option value="symbol">Sort: Symbol</option>
-                <option value="pnl">Sort: P&L %</option>
+                <option value="day_change_pct">Sort: Daily Change (%)</option>
+                <option value="day_change">Sort: Daily P&amp;L (₹)</option>
+                <option value="pnl">Sort: Overall P&amp;L (%)</option>
                 <option value="quantity">Sort: Quantity</option>
+                <option value="symbol">Sort: Symbol (A-Z)</option>
               </select>
               <select
                 value={sortOrder}

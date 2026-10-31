@@ -77,10 +77,11 @@ export default function MutualFundsPage() {
   const [sortBy, setSortBy] = useState<
     | "xirr"
     | "cagr"
+    | "dayChangePct"
+    | "dayChange"
     | "gains"
     | "profit"
     | "value"
-    | "dayChange"
     | "name"
     | "rank"
     | "categoryRank"
@@ -319,6 +320,8 @@ export default function MutualFundsPage() {
         comparison = b.current - a.current;
       } else if (sortBy === "profit") {
         comparison = (b.profit ?? 0) - (a.profit ?? 0);
+      } else if (sortBy === "dayChangePct") {
+        comparison = (b.day_change_pct ?? 0) - (a.day_change_pct ?? 0);
       } else if (sortBy === "dayChange") {
         comparison = (b.day_change ?? 0) - (a.day_change ?? 0);
       } else if (sortBy === "categoryRank" || (sortBy as string) === "rank") {
@@ -774,10 +777,11 @@ export default function MutualFundsPage() {
                     e.target.value as
                       | "xirr"
                       | "cagr"
+                      | "dayChangePct"
+                      | "dayChange"
                       | "gains"
                       | "profit"
                       | "value"
-                      | "dayChange"
                       | "name"
                       | "categoryRank"
                       | "overallRank",
@@ -787,10 +791,11 @@ export default function MutualFundsPage() {
                 className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none cursor-pointer">
                 <option value="xirr">Sort: XIRR (%)</option>
                 <option value="cagr">Sort: CAGR (%)</option>
+                <option value="dayChangePct">Sort: Daily Change (%)</option>
+                <option value="dayChange">Sort: Daily P&amp;L (₹)</option>
                 <option value="gains">Sort: Overall Return (%)</option>
                 <option value="profit">Sort: Overall Profit (₹)</option>
                 <option value="value">Sort: Current Value</option>
-                <option value="dayChange">Sort: Daily Change</option>
                 <option value="name">Sort: Name (A-Z)</option>
                 <option value="categoryRank">Sort: Category Rank</option>
                 <option value="overallRank">Sort: Overall Rank</option>

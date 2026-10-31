@@ -41,14 +41,65 @@ interface FixedIncomeFormProps {
   isSubmitting?: boolean;
 }
 
-const PRESET_INSTITUTIONS = [
-  { name: "HDFC Bank", rate: 7.25 },
-  { name: "State Bank of India (SBI)", rate: 6.80 },
-  { name: "ICICI Bank", rate: 7.20 },
-  { name: "Post Office TD/PPF", rate: 7.50 },
-  { name: "Bajaj Finance", rate: 8.10 },
-  { name: "Axis Bank", rate: 7.25 },
-  { name: "Kotak Mahindra Bank", rate: 7.40 },
+const PRESETS_BY_TYPE: Record<
+  string,
+  { label: string; name: string; rate: number; freq?: string; tenureMonths?: number; is80C?: boolean }[]
+> = {
+  BANK_FD: [
+    { label: "SBI (6.8%)", name: "State Bank of India (SBI)", rate: 6.80, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "HDFC (7.25%)", name: "HDFC Bank", rate: 7.25, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "ICICI (7.2%)", name: "ICICI Bank", rate: 7.20, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "Axis (7.25%)", name: "Axis Bank", rate: 7.25, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "PNB (6.8%)", name: "Punjab National Bank (PNB)", rate: 6.80, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "Kotak (7.4%)", name: "Kotak Mahindra Bank", rate: 7.40, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "KVB (7.5%)", name: "Karur Vysya Bank (KVB)", rate: 7.50, freq: "QUARTERLY", tenureMonths: 12 },
+  ],
+  CORPORATE_FD: [
+    { label: "Bajaj Finance (8.1%)", name: "Bajaj Finance", rate: 8.10, freq: "QUARTERLY", tenureMonths: 24 },
+    { label: "Shriram (8.5%)", name: "Shriram Finance (SRTF)", rate: 8.50, freq: "QUARTERLY", tenureMonths: 24 },
+    { label: "M&M Finance (8.05%)", name: "Mahindra Finance (M & M)", rate: 8.05, freq: "QUARTERLY", tenureMonths: 24 },
+    { label: "Tata Capital (7.9%)", name: "Tata Capital", rate: 7.90, freq: "QUARTERLY", tenureMonths: 24 },
+    { label: "HDFC Ltd (7.5%)", name: "HDFC Ltd (Legacy)", rate: 7.50, freq: "QUARTERLY", tenureMonths: 24 },
+  ],
+  POST_OFFICE: [
+    { label: "PO-TD: 1-5 Yr (7.5%)", name: "Post Office Time Deposit (PO-TD)", rate: 7.50, freq: "QUARTERLY", tenureMonths: 60, is80C: true },
+    { label: "PO-MIS: Monthly (7.4%)", name: "Post Office Monthly Income (PO-MIS)", rate: 7.40, freq: "MONTHLY", tenureMonths: 60 },
+    { label: "PO-SCSS: Senior (8.2%)", name: "Senior Citizen Savings (PO-SCSS)", rate: 8.20, freq: "QUARTERLY", tenureMonths: 60, is80C: true },
+    { label: "NSC: 5-Yr (7.7%)", name: "National Savings Certificate (NSC)", rate: 7.70, freq: "ANNUALLY", tenureMonths: 60, is80C: true },
+    { label: "KVP (7.5%)", name: "Kisan Vikas Patra (KVP)", rate: 7.50, freq: "ANNUALLY", tenureMonths: 115 },
+  ],
+  RBI_BOND: [
+    { label: "RBI FRSB (8.05%)", name: "RBI Floating Rate Savings Bonds (FRSB)", rate: 8.05, freq: "HALF_YEARLY", tenureMonths: 84 },
+    { label: "Sovereign G-Sec (7.1%)", name: "RBI Retail Direct Sovereign G-Sec", rate: 7.10, freq: "HALF_YEARLY", tenureMonths: 120 },
+  ],
+  TAX_FREE_BOND: [
+    { label: "HUDCO (8.2%)", name: "HUDCO Tax-Free Bond", rate: 8.20, freq: "ANNUALLY", tenureMonths: 120, is80C: true },
+    { label: "NHAI (8.3%)", name: "NHAI Tax-Free Bond", rate: 8.30, freq: "ANNUALLY", tenureMonths: 120, is80C: true },
+    { label: "NTPC (8.41%)", name: "NTPC Tax-Free Bond", rate: 8.41, freq: "ANNUALLY", tenureMonths: 120, is80C: true },
+    { label: "REC (8.12%)", name: "REC Tax-Free Bond", rate: 8.12, freq: "ANNUALLY", tenureMonths: 120, is80C: true },
+    { label: "PFC / IRFC (8.0%)", name: "PFC / IRFC Tax-Free Bond", rate: 8.00, freq: "ANNUALLY", tenureMonths: 120, is80C: true },
+  ],
+  PPF: [
+    { label: "SBI PPF (7.1%)", name: "State Bank of India PPF", rate: 7.10, freq: "ANNUALLY", tenureMonths: 180, is80C: true },
+    { label: "Post Office PPF (7.1%)", name: "Post Office PPF", rate: 7.10, freq: "ANNUALLY", tenureMonths: 180, is80C: true },
+    { label: "HDFC PPF (7.1%)", name: "HDFC Bank PPF", rate: 7.10, freq: "ANNUALLY", tenureMonths: 180, is80C: true },
+    { label: "ICICI PPF (7.1%)", name: "ICICI Bank PPF", rate: 7.10, freq: "ANNUALLY", tenureMonths: 180, is80C: true },
+  ],
+  RD: [
+    { label: "SBI RD (6.8%)", name: "State Bank of India RD", rate: 6.80, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "HDFC RD (7.1%)", name: "HDFC Bank RD", rate: 7.10, freq: "QUARTERLY", tenureMonths: 12 },
+    { label: "PO 5-Yr RD (6.7%)", name: "Post Office 5-Year RD", rate: 6.70, freq: "QUARTERLY", tenureMonths: 60 },
+  ],
+};
+
+const ASSET_TYPES = [
+  { id: "BANK_FD", label: "Bank FD" },
+  { id: "CORPORATE_FD", label: "Corporate FD" },
+  { id: "POST_OFFICE", label: "Post Office" },
+  { id: "RBI_BOND", label: "RBI Bonds" },
+  { id: "TAX_FREE_BOND", label: "Tax-Free Bonds" },
+  { id: "PPF", label: "PPF" },
+  { id: "RD", label: "Recurring (RD)" },
 ];
 
 const PRINCIPAL_CHIPS = [
@@ -65,7 +116,9 @@ const TENURE_PRESETS = [
   { label: "1 Year", months: 12 },
   { label: "2 Years", months: 24 },
   { label: "3 Years", months: 36 },
-  { label: "5 Years (80C)", months: 60, is80C: true },
+  { label: "5 Years", months: 60 },
+  { label: "7 Years (RBI)", months: 84 },
+  { label: "10 Years (Tax-Free)", months: 120 },
 ];
 
 const PPF_TENURE_PRESETS = [
@@ -243,10 +296,53 @@ export default function FixedIncomeForm({
     if (is80c) setIsTaxSaving(true);
   };
 
-  const handleSelectInstitution = (name: string, defaultRate: number) => {
-    setInstitution(name);
-    if (!rateStr || rateStr === "7.25") {
-      setRateStr(String(defaultRate));
+  const handleSelectPreset = (preset: {
+    name: string;
+    rate: number;
+    freq?: string;
+    tenureMonths?: number;
+    is80C?: boolean;
+  }) => {
+    setInstitution(preset.name);
+    setRateStr(String(preset.rate));
+    if (preset.freq) setFrequency(preset.freq);
+    if (preset.is80C !== undefined) setIsTaxSaving(preset.is80C);
+    if (preset.tenureMonths && startDate) {
+      const st = new Date(startDate);
+      st.setMonth(st.getMonth() + preset.tenureMonths);
+      setMaturityDate(st.toISOString().split("T")[0]);
+    }
+  };
+
+  const handleTypeChange = (typeId: string) => {
+    setDepositType(typeId);
+    const presets = PRESETS_BY_TYPE[typeId] || [];
+    if (presets.length > 0) {
+      const first = presets[0];
+      setInstitution(first.name);
+      setRateStr(String(first.rate));
+      if (first.freq) setFrequency(first.freq);
+      if (first.is80C !== undefined) setIsTaxSaving(first.is80C);
+      if (first.tenureMonths && startDate) {
+        const st = new Date(startDate);
+        st.setMonth(st.getMonth() + first.tenureMonths);
+        setMaturityDate(st.toISOString().split("T")[0]);
+      }
+    }
+    if (typeId === "PPF") {
+      setRateStr("7.10");
+      setFrequency("ANNUALLY");
+      setIsTaxSaving(true);
+      if (startDate) {
+        const st = new Date(startDate);
+        st.setFullYear(st.getFullYear() + 15);
+        setMaturityDate(st.toISOString().split("T")[0]);
+      }
+    } else if (typeId === "TAX_FREE_BOND") {
+      setFrequency("ANNUALLY");
+      setIsTaxSaving(true);
+    } else if (typeId === "RBI_BOND") {
+      setFrequency("HALF_YEARLY");
     }
   };
 
@@ -337,48 +433,67 @@ export default function FixedIncomeForm({
         <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
           Asset Type
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { id: "BANK_FD", label: "Bank FD" },
-            { id: "CORPORATE_FD", label: "Corporate FD" },
-            { id: "RD", label: "Recurring (RD)" },
-            { id: "PPF", label: "PPF / Post Office" },
-          ].map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setDepositType(item.id);
-                if (item.id === "PPF") {
-                  setRateStr("7.10");
-                  setFrequency("ANNUALLY");
-                  if (!institution) setInstitution("Post Office / SBI PPF");
-                  setIsTaxSaving(true);
-                  // Default 15 years from start date
-                  if (startDate) {
-                    const st = new Date(startDate);
-                    st.setFullYear(st.getFullYear() + 15);
-                    setMaturityDate(st.toISOString().split("T")[0]);
-                  }
-                }
-              }}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                depositType === item.id
-                  ? "bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-900 dark:text-emerald-300 ring-2 ring-emerald-500/20 shadow-xs"
-                  : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          {ASSET_TYPES.map((item) => {
+            const isSelected = depositType === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleTypeChange(item.id)}
+                className={`px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap cursor-pointer select-none ${
+                  isSelected
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-xs ring-2 ring-emerald-500/25 font-bold"
+                    : "bg-neutral-50 dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 hover:border-neutral-300"
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* ── CATEGORY HIGHLIGHT BANNER ── */}
+      {depositType === "TAX_FREE_BOND" && (
+        <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+          <ShieldCheck size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span>
+            <strong>100% Tax-Free Coupon:</strong> Annual interest received from PSU Tax-Free Bonds (HUDCO, NHAI, NTPC, etc.) is completely exempt from income tax under Section 10(15)(iv)(h).
+          </span>
+        </div>
+      )}
+      {depositType === "POST_OFFICE" && (
+        <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+          <Building2 size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            <strong>Post Office Small Savings Schemes:</strong> Backed directly by the Government of India. Supports PO-TD (Time Deposit), PO-MIS (Monthly Income), PO-SCSS (Senior Citizens), and NSC/KVP.
+          </span>
+        </div>
+      )}
+      {depositType === "RBI_BOND" && (
+        <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+          <ShieldCheck size={16} className="shrink-0 text-blue-600 dark:text-blue-400" />
+          <span>
+            <strong>Sovereign RBI Bonds:</strong> RBI Floating Rate Savings Bonds (FRSB) pay semi-annual interest (pegged to NSC rate + 0.35%) with sovereign safety.
+          </span>
+        </div>
+      )}
 
       {/* ── INSTITUTION / BANK NAME ── */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-            {isPPF ? "Bank / Post Office Branch" : "Bank / Institution"} <span className="text-red-500">*</span>
+            {depositType === "POST_OFFICE"
+              ? "Post Office Scheme / Branch"
+              : depositType === "RBI_BOND"
+              ? "Bond Name / Issuing Bank"
+              : depositType === "TAX_FREE_BOND"
+              ? "Tax-Free PSU Issuer (e.g. HUDCO, NHAI)"
+              : isPPF
+              ? "Bank / Post Office Branch"
+              : "Bank / Institution"}{" "}
+            <span className="text-red-500">*</span>
           </label>
         </div>
 
@@ -389,23 +504,42 @@ export default function FixedIncomeForm({
           />
           <input
             type="text"
-            placeholder={isPPF ? "e.g. SBI PPF, Post Office, HDFC Bank PPF" : "e.g. HDFC Bank, SBI, Bajaj Finance"}
+            placeholder={
+              depositType === "POST_OFFICE"
+                ? "e.g. Post Office (PO-MIS), Post Office (PO-TD)"
+                : depositType === "RBI_BOND"
+                ? "e.g. RBI Floating Rate Savings Bond, Sovereign G-Sec"
+                : depositType === "TAX_FREE_BOND"
+                ? "e.g. HUDCO, NHAI, NTPC Tax-Free Bond"
+                : depositType === "CORPORATE_FD"
+                ? "e.g. Bajaj Finance, Shriram Finance, Mahindra Finance"
+                : isPPF
+                ? "e.g. SBI PPF, Post Office PPF, HDFC Bank PPF"
+                : "e.g. HDFC Bank, State Bank of India, Axis Bank"
+            }
             value={institution}
             onChange={(e) => setInstitution(e.target.value)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl pl-10 pr-4 py-2.5 text-sm font-semibold text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
           />
         </div>
 
-        {!isPPF && (
+        {PRESETS_BY_TYPE[depositType] && PRESETS_BY_TYPE[depositType].length > 0 && (
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            {PRESET_INSTITUTIONS.map((bank) => (
+            <span className="text-[10px] text-neutral-400 uppercase font-semibold mr-0.5">
+              Presets:
+            </span>
+            {PRESETS_BY_TYPE[depositType].map((preset) => (
               <button
-                key={bank.name}
+                key={preset.name}
                 type="button"
-                onClick={() => handleSelectInstitution(bank.name, bank.rate)}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 font-medium transition-colors"
+                onClick={() => handleSelectPreset(preset)}
+                className={`text-[11px] px-2.5 py-1 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer ${
+                  institution === preset.name
+                    ? "bg-emerald-600 text-white shadow-2xs font-semibold ring-1 ring-emerald-500"
+                    : "bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300"
+                }`}
               >
-                {bank.name}
+                {preset.label || preset.name}
               </button>
             ))}
           </div>
@@ -606,11 +740,11 @@ export default function FixedIncomeForm({
             onChange={(e) => setFrequency(e.target.value)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-semibold text-neutral-900 dark:text-white outline-none disabled:opacity-60"
           >
-            <option value="ANNUALLY">Annually (PPF / Govt Bonds)</option>
-            <option value="QUARTERLY">Quarterly (Bank FD Standard)</option>
-            <option value="MONTHLY">Monthly Payout / Compounding</option>
-            <option value="HALF_YEARLY">Half-Yearly Compounding</option>
-            <option value="SIMPLE">Simple Interest (At Maturity)</option>
+            <option value="QUARTERLY">Quarterly (Standard FD)</option>
+            <option value="MONTHLY">Monthly (e.g. PO-MIS)</option>
+            <option value="HALF_YEARLY">Half-Yearly (RBI Bonds)</option>
+            <option value="ANNUALLY">Annually (PPF / Tax-Free)</option>
+            <option value="SIMPLE">Simple Interest</option>
           </select>
         </div>
       </div>
@@ -680,8 +814,8 @@ export default function FixedIncomeForm({
         <input
           type="checkbox"
           id="tax_saving_checkbox"
-          checked={isPPF ? true : isTaxSaving}
-          disabled={isPPF}
+          checked={isPPF || depositType === "TAX_FREE_BOND" ? true : isTaxSaving}
+          disabled={isPPF || depositType === "TAX_FREE_BOND"}
           onChange={(e) => setIsTaxSaving(e.target.checked)}
           className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
         />
@@ -690,7 +824,13 @@ export default function FixedIncomeForm({
           className="text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer font-medium flex items-center gap-1.5"
         >
           <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400" />
-          <span>Tax Saving Deposit {isPPF ? "(PPF is fully exempt under Section 80C)" : "(5-Year Lock-in under Section 80C)"}</span>
+          <span>
+            {isPPF
+              ? "Tax Free / 80C (PPF is fully exempt under Section 80C & EEE)"
+              : depositType === "TAX_FREE_BOND"
+              ? "100% Tax-Free Coupon (Exempt under Section 10(15)(iv)(h))"
+              : "Tax Saving Deposit (5-Year Lock-in under Section 80C)"}
+          </span>
         </label>
       </div>
 
