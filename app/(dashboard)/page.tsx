@@ -26,6 +26,7 @@ import {
   LineChart,
   Users,
   Plus,
+  ShieldCheck,
 } from "lucide-react";
 
 import InsightsCard from "@/components/features/InsightsCard";
@@ -34,6 +35,11 @@ import BenchmarkCard from "@/components/features/BenchmarkCard";
 import MarketPredictionCard from "@/components/features/MarketPredictionCard";
 import AssetAllocationCard from "@/components/features/AssetAllocationCard";
 import MarketCapAllocationCard from "@/components/features/MarketCapAllocationCard";
+import CustomizeAssetsModal from "@/components/features/CustomizeAssetsModal";
+import {
+  useAssetPreferences,
+  countActiveAssets,
+} from "@/lib/assetPreferences";
 
 export default function HomePage() {
   const router = useRouter();
@@ -48,6 +54,9 @@ export default function HomePage() {
   const [userProfile, setUserProfile] = useState<any>(null); // New State
 
   const [benchmark, setBenchmark] = useState<any>(null); // New State
+  const [insuranceData, setInsuranceData] = useState<any>(null);
+  const [showCustomizeModal, setShowCustomizeModal] = useState(false);
+  const { preferences: assetPrefs, updatePreferences: setAssetPrefs } = useAssetPreferences();
   const [loading, setLoading] = useState(true);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -108,7 +117,7 @@ export default function HomePage() {
         setBenchmark(null);
 
         // 2. Fetch Fresh Family Data directly from API
-        const [famData, g, up, ps, topH, xirrData, mcData] = await Promise.all([
+        const [famData, g, up, ps, topH, xirrData, mcData, insPolicies] = await Promise.all([
           api.getFamilySummary().catch((err) => {
             console.error("Family summary error:", err);
             return null;
@@ -144,10 +153,15 @@ export default function HomePage() {
             console.error("Market cap allocation (family) error:", err);
             return null;
           }),
+          api.getInsurancePolicies().catch((err) => {
+            console.error("Insurance policies (family) error:", err);
+            return null;
+          }),
         ]);
 
         if (famData) setFamilySummary(famData);
         if (mcData) setMarketCapData(mcData);
+        if (insPolicies) setInsuranceData(insPolicies);
         setGoals(g || []);
         if (ps) {
           setSummary({
@@ -176,7 +190,7 @@ export default function HomePage() {
         setTopHoldings([]);
 
         // 2. Fetch Fresh Data directly from API
-        const [nw, ps, g, xirrData, ins, bm, up, mcData] = await Promise.all([
+        const [nw, ps, g, xirrData, ins, bm, up, mcData, insPolicies] = await Promise.all([
           api.getNetWorth().catch((err) => {
             console.error("Net worth error:", err);
             return { net_worth: 0, mutual_funds: 0, stocks: 0 };
@@ -223,10 +237,15 @@ export default function HomePage() {
             console.error("Market cap allocation error:", err);
             return null;
           }),
+          api.getInsurancePolicies(activeProfileId).catch((err) => {
+            console.error("Insurance policies error:", err);
+            return null;
+          }),
         ]);
 
         setNetWorth(nw);
         if (mcData) setMarketCapData(mcData);
+        if (insPolicies) setInsuranceData(insPolicies);
         setSummary({
           ...ps,
           xirr: xirrData?.xirr || 0,
@@ -330,8 +349,65 @@ export default function HomePage() {
     const familyGoals = goals.filter((g) => g.goal_type === "FAMILY");
     const personalGoals = goals.filter((g) => g.goal_type === "PERSONAL");
 
+    // Dynamic calculations based on enabled asset preferences
+    const famAlloc = familySummary.allocation || {};
+    const famInvAlloc = familySummary.invested_allocation || {};
 
+    let effectiveFamNetWorth = 0;
+    let effectiveFamInvested = 0;
+    if (assetPrefs.mutual_funds) {
+      effectiveFamNetWorth += famAlloc.mutual_funds || 0;
+      effectiveFamInvested += famInvAlloc.mutual_funds || 0;
+    }
+    if (assetPrefs.stocks) {
+      effectiveFamNetWorth += famAlloc.stocks || 0;
+      effectiveFamInvested += famInvAlloc.stocks || 0;
+    }
+    if (assetPrefs.fixed_income) {
+      effectiveFamNetWorth += famAlloc.fixed_income || 0;
+      effectiveFamInvested += famInvAlloc.fixed_income || 0;
+    }
+    if (assetPrefs.gold) {
+      effectiveFamNetWorth += famAlloc.gold || 0;
+      effectiveFamInvested += famInvAlloc.gold || 0;
+    }
+    if (assetPrefs.real_estate) {
+      effectiveFamNetWorth += famAlloc.real_estate || 0;
+      effectiveFamInvested += famInvAlloc.real_estate || 0;
+    }
 
+    const effectiveFamGain = effectiveFamNetWorth - effectiveFamInvested;
+    const effectiveFamReturnPct = effectiveFamInvested > 0 ? (effectiveFamGain / effectiveFamInvested) * 100 : 0;
+
+    const familyAssetAllocationData = [
+      assetPrefs.mutual_funds && {
+        category: "Mutual Funds",
+        value: famAlloc.mutual_funds || 0,
+      },
+      assetPrefs.stocks && {
+        category: "Stocks",
+        value: famAlloc.stocks || 0,
+      },
+      assetPrefs.fixed_income && {
+        category: "Fixed Income",
+        value: famAlloc.fixed_income || 0,
+      },
+      assetPrefs.gold && {
+        category: "Gold",
+        value: famAlloc.gold || 0,
+      },
+      assetPrefs.real_estate && {
+        category: "Real Estate",
+        value: famAlloc.real_estate || 0,
+      },
+    ]
+      .filter((item): item is { category: string; value: number } => Boolean(item))
+      .map((item) => ({
+        ...item,
+        percentage: effectiveFamNetWorth > 0
+          ? Math.round((item.value / effectiveFamNetWorth) * 100)
+          : 0,
+      }));
 
     return (
       <div className="px-4 pt-8 pb-32 animate-fade-in space-y-6">
@@ -356,12 +432,20 @@ export default function HomePage() {
 
         {/* Aggregate Net Worth Card */}
         <NetWorthCard
-          netWorth={familySummary.net_worth}
+          netWorth={effectiveFamNetWorth}
           mfValue={familySummary.allocation?.mutual_funds || 0}
           stockValue={familySummary.allocation?.stocks || 0}
           fixedIncomeValue={familySummary.allocation?.fixed_income || 0}
           goldValue={familySummary.allocation?.gold || 0}
           realEstateValue={familySummary.allocation?.real_estate || 0}
+          showMF={assetPrefs.mutual_funds}
+          showStock={assetPrefs.stocks}
+          showFixedIncome={assetPrefs.fixed_income}
+          showGold={assetPrefs.gold}
+          showRealEstate={assetPrefs.real_estate}
+          onOpenCustomize={() => setShowCustomizeModal(true)}
+          activeAssetsCount={countActiveAssets(assetPrefs).active}
+          totalAssetsCount={countActiveAssets(assetPrefs).total}
           onRefresh={handleRefreshNAVs}
           isRefreshing={refreshing}
           dayChangePct={summary?.day_change_pct || 0}
@@ -383,14 +467,57 @@ export default function HomePage() {
           onAddRealEstate={() => router.push("/holdings/real-estate")}
         />
 
+        {/* Family Protection & Insurance Cover Banner (if toggled on) */}
+        {assetPrefs.show_insurance_cover && (
+          <section className="animate-fade-in">
+            <div className="glass-card rounded-2xl border border-indigo-200/60 dark:border-indigo-500/20 bg-linear-to-r from-indigo-50/70 via-purple-50/50 to-white/70 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-neutral-900/40 p-4 sm:p-5 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                    <ShieldCheck size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                        Family Protection &amp; Insurance Cover
+                      </h4>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                        {insuranceData?.summary?.active_policies_count || 0} Active Polic{insuranceData?.summary?.active_policies_count === 1 ? "y" : "ies"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Life protection cover &amp; health emergency corpus safeguarding your family
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 sm:self-center self-start">
+                  <div className="text-left sm:text-right">
+                    <p className="text-[10px] text-neutral-400 uppercase font-semibold">Total Protection Cover</p>
+                    <p className="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                      ₹{(((insuranceData?.summary?.total_life_cover || 0) + (insuranceData?.summary?.total_health_cover || 0))).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => router.push("/insurance")}
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs cursor-pointer select-none"
+                  >
+                    Policy Vault →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Family Portfolio Summary — per-profile breakdown */}
-        {(familySummary.net_worth > 0 || (summary && summary.invested > 0)) && (
+        {(effectiveFamNetWorth > 0 || (summary && summary.invested > 0)) && (
           <section id="tour-portfolio-summary">
             <FamilyPortfolioSummary
-              invested={familySummary?.total_invested ?? (summary?.invested || 0)}
-              current={familySummary?.net_worth ?? (summary?.current || 0)}
-              profit={familySummary?.total_gain ?? (summary?.profit || 0)}
-              returnPct={familySummary?.return_pct ?? (summary?.return_pct || 0)}
+              invested={effectiveFamInvested}
+              current={effectiveFamNetWorth}
+              profit={effectiveFamGain}
+              returnPct={effectiveFamReturnPct}
               dayChange={summary?.day_change || familySummary?.day_change || 0}
               dayChangePct={summary?.day_change_pct || familySummary?.day_change_pct || 0}
               mfDayChange={summary?.mf_day_change}
@@ -413,6 +540,7 @@ export default function HomePage() {
               goldCurrent={familySummary?.allocation?.gold ?? (summary?.gold_current || 0)}
               reCurrent={familySummary?.allocation?.real_estate ?? (summary?.re_current || 0)}
               profileBreakdown={familySummary?.profile_breakdown || []}
+              assetPrefs={assetPrefs}
             />
           </section>
         )}
@@ -443,45 +571,9 @@ export default function HomePage() {
 
         {/* Global Asset Allocation */}
         <section className="grid gap-6 md:grid-cols-2">
-          {familySummary.net_worth > 0 && (
+          {effectiveFamNetWorth > 0 && familyAssetAllocationData.length > 0 && (
             <AssetAllocationCard
-              data={[
-                {
-                  category: "Mutual Funds",
-                  value: familySummary.allocation?.mutual_funds || 0,
-                  percentage: familySummary.net_worth > 0
-                    ? Math.round(((familySummary.allocation?.mutual_funds || 0) / familySummary.net_worth) * 100)
-                    : 0,
-                },
-                {
-                  category: "Stocks",
-                  value: familySummary.allocation?.stocks || 0,
-                  percentage: familySummary.net_worth > 0
-                    ? Math.round(((familySummary.allocation?.stocks || 0) / familySummary.net_worth) * 100)
-                    : 0,
-                },
-                {
-                  category: "Fixed Income",
-                  value: familySummary.allocation?.fixed_income || 0,
-                  percentage: familySummary.net_worth > 0
-                    ? Math.round(((familySummary.allocation?.fixed_income || 0) / familySummary.net_worth) * 100)
-                    : 0,
-                },
-                {
-                  category: "Gold",
-                  value: familySummary.allocation?.gold || 0,
-                  percentage: familySummary.net_worth > 0
-                    ? Math.round(((familySummary.allocation?.gold || 0) / familySummary.net_worth) * 100)
-                    : 0,
-                },
-                {
-                  category: "Real Estate",
-                  value: familySummary.allocation?.real_estate || 0,
-                  percentage: familySummary.net_worth > 0
-                    ? Math.round(((familySummary.allocation?.real_estate || 0) / familySummary.net_worth) * 100)
-                    : 0,
-                },
-              ]}
+              data={familyAssetAllocationData}
             />
           )}
 
@@ -665,6 +757,22 @@ export default function HomePage() {
           type={toast.type}
           onClose={() => setToast((prev) => ({ ...prev, show: false }))}
         />
+        <CustomizeAssetsModal
+          isOpen={showCustomizeModal}
+          onClose={() => setShowCustomizeModal(false)}
+          preferences={assetPrefs}
+          onSave={(newPrefs) => setAssetPrefs(newPrefs)}
+          values={{
+            mutual_funds: familySummary?.allocation?.mutual_funds || 0,
+            stocks: familySummary?.allocation?.stocks || 0,
+            fixed_income: familySummary?.allocation?.fixed_income || 0,
+            gold: familySummary?.allocation?.gold || 0,
+            real_estate: familySummary?.allocation?.real_estate || 0,
+            insurance_cover:
+              (insuranceData?.summary?.total_life_cover || 0) +
+              (insuranceData?.summary?.total_health_cover || 0),
+          }}
+        />
         {renderFamilyDashboard()}
       </>
     );
@@ -689,6 +797,37 @@ export default function HomePage() {
     );
   }
 
+  // Dynamic calculations for individual view based on active asset preferences
+  let effectiveIndNetWorth = 0;
+  if (assetPrefs.mutual_funds) effectiveIndNetWorth += netWorth?.mutual_funds || 0;
+  if (assetPrefs.stocks) effectiveIndNetWorth += netWorth?.stocks || 0;
+  if (assetPrefs.fixed_income) effectiveIndNetWorth += netWorth?.fixed_income || 0;
+  if (assetPrefs.gold) effectiveIndNetWorth += netWorth?.gold || 0;
+  if (assetPrefs.real_estate) effectiveIndNetWorth += netWorth?.real_estate || 0;
+
+  let effectiveIndInvested = 0;
+  if (assetPrefs.mutual_funds) effectiveIndInvested += summary?.mf_invested || 0;
+  if (assetPrefs.stocks) effectiveIndInvested += summary?.stock_invested || 0;
+  if (assetPrefs.fixed_income) effectiveIndInvested += summary?.fi_invested || 0;
+  if (assetPrefs.gold) effectiveIndInvested += summary?.gold_invested || 0;
+  if (assetPrefs.real_estate) effectiveIndInvested += summary?.re_invested || 0;
+
+  const effectiveIndProfit = effectiveIndNetWorth - effectiveIndInvested;
+  const effectiveIndReturnPct = effectiveIndInvested > 0 ? (effectiveIndProfit / effectiveIndInvested) * 100 : 0;
+
+  const individualAssetAllocationData = [
+    assetPrefs.mutual_funds && { category: "Mutual Funds", value: netWorth?.mutual_funds || 0 },
+    assetPrefs.stocks && { category: "Stocks", value: netWorth?.stocks || 0 },
+    assetPrefs.fixed_income && { category: "Fixed Income", value: netWorth?.fixed_income || 0 },
+    assetPrefs.gold && { category: "Gold", value: netWorth?.gold || 0 },
+    assetPrefs.real_estate && { category: "Real Estate", value: netWorth?.real_estate || 0 },
+  ]
+    .filter((item): item is { category: string; value: number } => Boolean(item))
+    .map((item) => ({
+      ...item,
+      percentage: effectiveIndNetWorth > 0 ? Math.round((item.value / effectiveIndNetWorth) * 100) : 0,
+    }));
+
   return (
     <>
       {/* Toast Notification - Moved outside to escape 'transform' context */}
@@ -697,6 +836,23 @@ export default function HomePage() {
         message={toast.message}
         type={toast.type}
         onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
+
+      <CustomizeAssetsModal
+        isOpen={showCustomizeModal}
+        onClose={() => setShowCustomizeModal(false)}
+        preferences={assetPrefs}
+        onSave={(newPrefs) => setAssetPrefs(newPrefs)}
+        values={{
+          mutual_funds: netWorth?.mutual_funds || 0,
+          stocks: netWorth?.stocks || 0,
+          fixed_income: netWorth?.fixed_income || 0,
+          gold: netWorth?.gold || 0,
+          real_estate: netWorth?.real_estate || 0,
+          insurance_cover:
+            (insuranceData?.summary?.total_life_cover || 0) +
+            (insuranceData?.summary?.total_health_cover || 0),
+        }}
       />
 
       {/* Background Refreshing Snackbar */}
@@ -710,136 +866,152 @@ export default function HomePage() {
       )}
 
       <div className="px-4 pt-8 pb-32 animate-fade-in relative">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white mb-2">
-            Welcome back, {userProfile?.full_name ? userProfile.full_name.split(' ')[0] : 'Investor'}
-            <span className="text-primary-600 dark:text-primary-500">.</span>
-          </h1>
-          <p className="text-neutral-500 dark:text-neutral-400">
-            {new Date().toLocaleDateString("en-IN", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white mb-2">
+                Welcome back, {userProfile?.full_name ? userProfile.full_name.split(' ')[0] : 'Investor'}
+                <span className="text-primary-600 dark:text-primary-500">.</span>
+              </h1>
+              <p className="text-neutral-500 dark:text-neutral-400">
+                {new Date().toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
 
-        <div className="space-y-6">
-          {/* Net Worth Card */}
-          <section>
-            <NetWorthCard
-              netWorth={netWorth?.net_worth || 0}
-              mfValue={netWorth?.mutual_funds || 0}
-              stockValue={netWorth?.stocks || 0}
-              fixedIncomeValue={netWorth?.fixed_income || 0}
-              goldValue={netWorth?.gold || 0}
-              realEstateValue={netWorth?.real_estate || 0}
-              onRefresh={handleRefreshNAVs}
-              isRefreshing={refreshing}
-              dayChangePct={summary?.day_change_pct || 0}
-              mfDayChange={summary?.mf_day_change}
-              mfDayChangePct={summary?.mf_day_change_pct}
-              stockDayChange={summary?.stock_day_change}
-              stockDayChangePct={summary?.stock_day_change_pct}
-              lastUpdated={netWorth?.last_updated}
-              xirr={summary?.xirr}
-              lifetimeXirr={summary?.lifetime_xirr}
-              mfXirr={summary?.mf_xirr}
-              mfLifetimeXirr={summary?.mf_lifetime_xirr}
-              stockXirr={summary?.stock_xirr}
-              stockLifetimeXirr={summary?.stock_lifetime_xirr}
-              onAddMF={() => router.push("/holdings/mutual-funds")}
-              onAddStock={() => router.push("/holdings/stocks")}
-              onAddFD={() => router.push("/holdings/fixed-income")}
-              onAddGold={() => router.push("/holdings/gold")}
-              onAddRealEstate={() => router.push("/holdings/real-estate")}
-            />
-          </section>
-          {/* Portfolio Summary */}
-          {summary && (
-            <section id="tour-portfolio-summary">
-              <PortfolioSummary
-                invested={summary.invested || 0}
-                current={summary.current || 0}
-                profit={summary.profit || 0}
-                returnPct={summary.return_pct || 0}
-                dayChange={summary.day_change || 0}
-                dayChangePct={summary.day_change_pct || 0}
-                mfDayChange={summary.mf_day_change}
-                mfDayChangePct={summary.mf_day_change_pct}
-                stockDayChange={summary.stock_day_change}
-                stockDayChangePct={summary.stock_day_change_pct}
-                xirr={summary.xirr}
-                mfXirr={summary.mf_xirr || 0}
-                stockXirr={summary.stock_xirr || 0}
-                mfProfit={summary.mf_profit || 0}
-                stockProfit={summary.stock_profit || 0}
-                mfInvested={summary.mf_invested || 0}
-                stockInvested={summary.stock_invested || 0}
-              />
-            </section>
-          )}
-          {/* Market Cap Allocation Card */}
-          {marketCapData && marketCapData.total_equity_value > 0 && (
-            <section className="animate-fade-in">
-              <MarketCapAllocationCard data={marketCapData} isLoading={loading} />
-            </section>
-          )}
-          {/* Benchmark Growth vs Market Indices */}
-          {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
-            <section className="animate-fade-in">
-              <BenchmarkGrowthCard
-                title="Portfolio Performance vs Benchmarks"
-                subtitle="Track alpha generation and comparative growth vs market benchmarks"
-              />
-            </section>
-          )}
+            <div className="space-y-6">
+              {/* Net Worth Card */}
+              <section>
+                <NetWorthCard
+                  netWorth={effectiveIndNetWorth}
+                  mfValue={netWorth?.mutual_funds || 0}
+                  stockValue={netWorth?.stocks || 0}
+                  fixedIncomeValue={netWorth?.fixed_income || 0}
+                  goldValue={netWorth?.gold || 0}
+                  realEstateValue={netWorth?.real_estate || 0}
+                  showMF={assetPrefs.mutual_funds}
+                  showStock={assetPrefs.stocks}
+                  showFixedIncome={assetPrefs.fixed_income}
+                  showGold={assetPrefs.gold}
+                  showRealEstate={assetPrefs.real_estate}
+                  onOpenCustomize={() => setShowCustomizeModal(true)}
+                  activeAssetsCount={countActiveAssets(assetPrefs).active}
+                  totalAssetsCount={countActiveAssets(assetPrefs).total}
+                  onRefresh={handleRefreshNAVs}
+                  isRefreshing={refreshing}
+                  dayChangePct={summary?.day_change_pct || 0}
+                  mfDayChange={summary?.mf_day_change}
+                  mfDayChangePct={summary?.mf_day_change_pct}
+                  stockDayChange={summary?.stock_day_change}
+                  stockDayChangePct={summary?.stock_day_change_pct}
+                  lastUpdated={netWorth?.last_updated}
+                  xirr={summary?.xirr}
+                  lifetimeXirr={summary?.lifetime_xirr}
+                  mfXirr={summary?.mf_xirr}
+                  mfLifetimeXirr={summary?.mf_lifetime_xirr}
+                  stockXirr={summary?.stock_xirr}
+                  stockLifetimeXirr={summary?.stock_lifetime_xirr}
+                  onAddMF={() => router.push("/holdings/mutual-funds")}
+                  onAddStock={() => router.push("/holdings/stocks")}
+                  onAddFD={() => router.push("/holdings/fixed-income")}
+                  onAddGold={() => router.push("/holdings/gold")}
+                  onAddRealEstate={() => router.push("/holdings/real-estate")}
+                />
+              </section>
 
-          {/* Asset Allocation Chart */}
-          {netWorth && (netWorth.net_worth > 0) && (
-            <section className="animate-fade-in">
-              <AssetAllocationCard
-                data={[
-                  {
-                    category: "Mutual Funds",
-                    value: netWorth.mutual_funds || 0,
-                    percentage: netWorth.net_worth > 0
-                      ? Math.round(((netWorth.mutual_funds || 0) / netWorth.net_worth) * 100)
-                      : 0,
-                  },
-                  {
-                    category: "Stocks",
-                    value: netWorth.stocks || 0,
-                    percentage: netWorth.net_worth > 0
-                      ? Math.round(((netWorth.stocks || 0) / netWorth.net_worth) * 100)
-                      : 0,
-                  },
-                  {
-                    category: "Fixed Income",
-                    value: netWorth.fixed_income || 0,
-                    percentage: netWorth.net_worth > 0
-                      ? Math.round(((netWorth.fixed_income || 0) / netWorth.net_worth) * 100)
-                      : 0,
-                  },
-                  {
-                    category: "Gold",
-                    value: netWorth.gold || 0,
-                    percentage: netWorth.net_worth > 0
-                      ? Math.round(((netWorth.gold || 0) / netWorth.net_worth) * 100)
-                      : 0,
-                  },
-                  {
-                    category: "Real Estate",
-                    value: netWorth.real_estate || 0,
-                    percentage: netWorth.net_worth > 0
-                      ? Math.round(((netWorth.real_estate || 0) / netWorth.net_worth) * 100)
-                      : 0,
-                  },
-                ]}
-              />
-            </section>
-          )}
+              {/* Family Protection & Insurance Cover Banner (if toggled on) */}
+              {assetPrefs.show_insurance_cover && (
+                <section className="animate-fade-in">
+                  <div className="glass-card rounded-2xl border border-indigo-200/60 dark:border-indigo-500/20 bg-linear-to-r from-indigo-50/70 via-purple-50/50 to-white/70 dark:from-indigo-950/30 dark:via-purple-950/20 dark:to-neutral-900/40 p-4 sm:p-5 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0">
+                          <ShieldCheck size={22} />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                              Family Protection &amp; Insurance Cover
+                            </h4>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                              {insuranceData?.summary?.active_policies_count || 0} Active Polic{insuranceData?.summary?.active_policies_count === 1 ? "y" : "ies"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                            Life protection cover &amp; health emergency corpus safeguarding your family
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 sm:self-center self-start">
+                        <div className="text-left sm:text-right">
+                          <p className="text-[10px] text-neutral-400 uppercase font-semibold">Total Protection Cover</p>
+                          <p className="text-base sm:text-lg font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                            ₹{(((insuranceData?.summary?.total_life_cover || 0) + (insuranceData?.summary?.total_health_cover || 0))).toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => router.push("/insurance")}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs cursor-pointer select-none"
+                        >
+                          Policy Vault →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {/* Portfolio Summary */}
+              {summary && (
+                <section id="tour-portfolio-summary">
+                  <PortfolioSummary
+                    invested={effectiveIndInvested}
+                    current={effectiveIndNetWorth}
+                    profit={effectiveIndProfit}
+                    returnPct={effectiveIndReturnPct}
+                    dayChange={summary.day_change || 0}
+                    dayChangePct={summary.day_change_pct || 0}
+                    mfDayChange={summary.mf_day_change}
+                    mfDayChangePct={summary.mf_day_change_pct}
+                    stockDayChange={summary.stock_day_change}
+                    stockDayChangePct={summary.stock_day_change_pct}
+                    xirr={summary.xirr}
+                    mfXirr={summary.mf_xirr || 0}
+                    stockXirr={summary.stock_xirr || 0}
+                    mfProfit={summary.mf_profit || 0}
+                    stockProfit={summary.stock_profit || 0}
+                    mfInvested={summary.mf_invested || 0}
+                    stockInvested={summary.stock_invested || 0}
+                  />
+                </section>
+              )}
+              {/* Market Cap Allocation Card */}
+              {marketCapData && marketCapData.total_equity_value > 0 && (
+                <section className="animate-fade-in">
+                  <MarketCapAllocationCard data={marketCapData} isLoading={loading} />
+                </section>
+              )}
+              {/* Benchmark Growth vs Market Indices */}
+              {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
+                <section className="animate-fade-in">
+                  <BenchmarkGrowthCard
+                    title="Portfolio Performance vs Benchmarks"
+                    subtitle="Track alpha generation and comparative growth vs market benchmarks"
+                  />
+                </section>
+              )}
+
+              {/* Asset Allocation Chart */}
+              {effectiveIndNetWorth > 0 && individualAssetAllocationData.length > 0 && (
+                <section className="animate-fade-in">
+                  <AssetAllocationCard
+                    data={individualAssetAllocationData}
+                  />
+                </section>
+              )}
 
           {/* Daily Prediction Card */}
           <section className="animate-fade-in">

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Card from "../ui/Card";
 import PrivacyMask from "../ui/PrivacyMask";
 import { ChevronDown, TrendingUp, TrendingDown, Users, ArrowDownUp } from "lucide-react";
+import { NetWorthAssetPreferences } from "@/lib/assetPreferences";
 
 interface ProfileBreakdown {
   id: number;
@@ -76,6 +77,7 @@ interface FamilyPortfolioSummaryProps {
   goldCurrent?: number;
   reCurrent?: number;
   profileBreakdown?: ProfileBreakdown[];
+  assetPrefs?: NetWorthAssetPreferences;
 }
 
 function fmt(n: number | undefined | null, decimals = 0): string {
@@ -99,7 +101,15 @@ const COLOR_MAP: Record<string, { border: string; bg: string; text: string; grad
   indigo: { border: "border-indigo-500/20", bg: "bg-indigo-500/5 dark:bg-indigo-500/10", text: "text-indigo-600 dark:text-indigo-400", gradient: "from-indigo-500 to-violet-500", bar: "bg-indigo-500" },
 };
 
-function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamilyValue: number }) {
+function ProfileCard({
+  p,
+  totalFamilyValue,
+  assetPrefs,
+}: {
+  p: ProfileBreakdown;
+  totalFamilyValue: number;
+  assetPrefs?: NetWorthAssetPreferences;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [headerXirrMode, setHeaderXirrMode] = useState<"xirr" | "lifetime">("xirr");
   const [mfMetricMode, setMfMetricMode] = useState<"xirr" | "lifetime" | "absolute">("xirr");
@@ -107,10 +117,12 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
 
   const colors = COLOR_MAP[p.color] || COLOR_MAP.indigo;
 
-  const totalValue    = Number(p.total_value)    || 0;
-  const totalInvested = Number(p.total_invested) || 0;
-  const totalGain     = Number(p.total_gain)     || (totalValue - totalInvested);
-  const returnPct     = isFinite(Number(p.return_pct)) ? Number(p.return_pct) : (totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0);
+  const showMf = assetPrefs?.mutual_funds ?? true;
+  const showStock = assetPrefs?.stocks ?? true;
+  const showFi = assetPrefs?.fixed_income ?? true;
+  const showGold = assetPrefs?.gold ?? true;
+  const showRe = assetPrefs?.real_estate ?? true;
+
   const mfValue       = Number(p.mutual_fund_value) || 0;
   const stockValue    = Number(p.stock_value)    || 0;
   const mfInvested    = Number(p.mf_invested)    || 0;
@@ -133,11 +145,37 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
   const goldReturnPct = goldInvested > 0 ? (goldGain / goldInvested) * 100 : 0;
   const reReturnPct   = reInvested > 0 ? (reGain / reInvested) * 100 : 0;
 
-  const hasMf    = mfValue > 0 || mfInvested > 0;
-  const hasStock = stockValue > 0 || stockInvested > 0;
-  const hasFi    = fiValue > 0 || fiInvested > 0;
-  const hasGold  = goldValue > 0 || goldInvested > 0;
-  const hasRe    = reValue > 0 || reInvested > 0;
+  // Dynamically calculate effective totals for this profile based on active asset preferences
+  let totalValue = 0;
+  let totalInvested = 0;
+  if (showMf) {
+    totalValue += mfValue;
+    totalInvested += mfInvested;
+  }
+  if (showStock) {
+    totalValue += stockValue;
+    totalInvested += stockInvested;
+  }
+  if (showFi) {
+    totalValue += fiValue;
+    totalInvested += fiInvested;
+  }
+  if (showGold) {
+    totalValue += goldValue;
+    totalInvested += goldInvested;
+  }
+  if (showRe) {
+    totalValue += reValue;
+    totalInvested += reInvested;
+  }
+  const totalGain = totalValue - totalInvested;
+  const returnPct = isFinite(Number(p.return_pct)) ? Number(p.return_pct) : (totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0);
+
+  const hasMf    = showMf && (mfValue > 0 || mfInvested > 0);
+  const hasStock = showStock && (stockValue > 0 || stockInvested > 0);
+  const hasFi    = showFi && (fiValue > 0 || fiInvested > 0);
+  const hasGold  = showGold && (goldValue > 0 || goldInvested > 0);
+  const hasRe    = showRe && (reValue > 0 || reInvested > 0);
   const hasAnyAlternative = hasFi || hasGold || hasRe;
 
   const dayChangePctToDisplay = p.day_change_pct !== undefined ? p.day_change_pct : returnPct;
@@ -322,7 +360,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
             hasAnyAlternative ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-2"
           }`}>
             {/* Mutual Funds */}
-            {(hasMf || !hasAnyAlternative) && (
+            {(showMf && (hasMf || (!hasStock && !hasFi && !hasGold && !hasRe))) && (
               <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
@@ -378,7 +416,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
             )}
 
             {/* Stocks */}
-            {(hasStock || !hasAnyAlternative) && (
+            {(showStock && (hasStock || (!hasMf && !hasFi && !hasGold && !hasRe))) && (
               <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
@@ -433,7 +471,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
             )}
 
             {/* Fixed Income / FDs */}
-            {hasFi && (
+            {(showFi && hasFi) && (
               <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
@@ -471,7 +509,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
             )}
 
             {/* Gold & Bullion */}
-            {hasGold && (
+            {(showGold && hasGold) && (
               <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
@@ -509,7 +547,7 @@ function ProfileCard({ p, totalFamilyValue }: { p: ProfileBreakdown; totalFamily
             )}
 
             {/* Real Estate */}
-            {hasRe && (
+            {(showRe && hasRe) && (
               <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2.5">
@@ -604,12 +642,19 @@ export default function FamilyPortfolioSummary({
   stockDayChange,
   stockDayChangePct,
   profileBreakdown = [],
+  assetPrefs,
 }: FamilyPortfolioSummaryProps) {
   const [investedExpanded, setInvestedExpanded] = useState(false);
   const [currentExpanded, setCurrentExpanded] = useState(false);
   const [dayChangeExpanded, setDayChangeExpanded] = useState(false);
   const isGain    = profit >= 0;
   const isDayGain = dayChange >= 0;
+
+  const showMf = assetPrefs?.mutual_funds ?? true;
+  const showStock = assetPrefs?.stocks ?? true;
+  const showFi = assetPrefs?.fixed_income ?? true;
+  const showGold = assetPrefs?.gold ?? true;
+  const showRe = assetPrefs?.real_estate ?? true;
 
   const mfCurrentVal = mfCurrent ?? (mfInvested + mfProfit);
   const stockCurrentVal = stockCurrent ?? (stockInvested + stockProfit);
@@ -660,25 +705,29 @@ export default function FamilyPortfolioSummary({
           {/* Expanded: Multi-Asset Invested */}
           {investedExpanded && (
             <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Mutual Funds
-                </span>
-                <PrivacyMask>
-                  <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(mfInvested)}</span>
-                </PrivacyMask>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  Stocks
-                </span>
-                <PrivacyMask>
-                  <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(stockInvested)}</span>
-                </PrivacyMask>
-              </div>
-              {fiInvested > 0 && (
+              {showMf && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Mutual Funds
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(mfInvested)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {showStock && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    Stocks
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(stockInvested)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {showFi && fiInvested > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
@@ -689,7 +738,7 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
-              {goldInvested > 0 && (
+              {showGold && goldInvested > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -700,7 +749,7 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
-              {reInvested > 0 && (
+              {showRe && reInvested > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -737,25 +786,29 @@ export default function FamilyPortfolioSummary({
           {/* Expanded: Multi-Asset current value */}
           {currentExpanded && (
             <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Mutual Funds
-                </span>
-                <PrivacyMask>
-                  <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(mfCurrentVal)}</span>
-                </PrivacyMask>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  Stocks
-                </span>
-                <PrivacyMask>
-                  <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(stockCurrentVal)}</span>
-                </PrivacyMask>
-              </div>
-              {fiCurrentVal > 0 && (
+              {showMf && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Mutual Funds
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(mfCurrentVal)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {showStock && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    Stocks
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(stockCurrentVal)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {showFi && fiCurrentVal > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
@@ -766,7 +819,7 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
-              {goldCurrentVal > 0 && (
+              {showGold && goldCurrentVal > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -777,7 +830,7 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
-              {reCurrentVal > 0 && (
+              {showRe && reCurrentVal > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -885,41 +938,45 @@ export default function FamilyPortfolioSummary({
 
           {/* Multi-asset breakdown */}
           <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-white/10 px-1 text-xs sm:text-sm">
-            <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                Mutual Funds
-              </span>
-              <div className="flex items-baseline gap-1.5">
-                <PrivacyMask blurStrength="sm">
-                  <span className={`font-semibold ${mfProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
-                    {mfProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(mfProfit))}
-                  </span>
-                </PrivacyMask>
-                <span className={`text-xs ${mfProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
-                  ({mfProfit >= 0 ? "+" : ""}{fmtPct(mfReturnPct)}%)
+            {showMf && (
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  Mutual Funds
                 </span>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                Stocks
-              </span>
-              <div className="flex items-baseline gap-1.5">
-                <PrivacyMask blurStrength="sm">
-                  <span className={`font-semibold ${stockProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
-                    {stockProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(stockProfit))}
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask blurStrength="sm">
+                    <span className={`font-semibold ${mfProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {mfProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(mfProfit))}
+                    </span>
+                  </PrivacyMask>
+                  <span className={`text-xs ${mfProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                    ({mfProfit >= 0 ? "+" : ""}{fmtPct(mfReturnPct)}%)
                   </span>
-                </PrivacyMask>
-                <span className={`text-xs ${stockProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
-                  ({stockProfit >= 0 ? "+" : ""}{fmtPct(stockReturnPct)}%)
-                </span>
+                </div>
               </div>
-            </div>
+            )}
 
-            {(fiProfit !== 0 || fiInvested > 0) && (
+            {showStock && (
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                  Stocks
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask blurStrength="sm">
+                    <span className={`font-semibold ${stockProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {stockProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(stockProfit))}
+                    </span>
+                  </PrivacyMask>
+                  <span className={`text-xs ${stockProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                    ({stockProfit >= 0 ? "+" : ""}{fmtPct(stockReturnPct)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {showFi && (fiProfit !== 0 || fiInvested > 0) && (
               <div className="flex justify-between items-center">
                 <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0" />
@@ -938,7 +995,7 @@ export default function FamilyPortfolioSummary({
               </div>
             )}
 
-            {(goldProfit !== 0 || goldInvested > 0) && (
+            {showGold && (goldProfit !== 0 || goldInvested > 0) && (
               <div className="flex justify-between items-center">
                 <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
@@ -957,7 +1014,7 @@ export default function FamilyPortfolioSummary({
               </div>
             )}
 
-            {(reProfit !== 0 || reInvested > 0) && (
+            {showRe && (reProfit !== 0 || reInvested > 0) && (
               <div className="flex justify-between items-center">
                 <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
@@ -988,7 +1045,7 @@ export default function FamilyPortfolioSummary({
           </p>
           <div className="space-y-2.5 sm:space-y-3">
             {profileBreakdown.map((p) => (
-              <ProfileCard key={p.id} p={p} totalFamilyValue={current} />
+              <ProfileCard key={p.id} p={p} totalFamilyValue={current} assetPrefs={assetPrefs} />
             ))}
           </div>
         </>

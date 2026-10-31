@@ -2,7 +2,7 @@
 
 import React from "react";
 import Card from "../ui/Card";
-import { RefreshCw, Loader2, Clock, ArrowDownUp } from "lucide-react";
+import { RefreshCw, Loader2, Clock, ArrowDownUp, SlidersHorizontal } from "lucide-react";
 import PrivacyMask from "../ui/PrivacyMask";
 
 interface NetWorthCardProps {
@@ -31,6 +31,14 @@ interface NetWorthCardProps {
   onAddFD?: () => void;
   onAddGold?: () => void;
   onAddRealEstate?: () => void;
+  onOpenCustomize?: () => void;
+  activeAssetsCount?: number;
+  totalAssetsCount?: number;
+  showMF?: boolean;
+  showStock?: boolean;
+  showFixedIncome?: boolean;
+  showGold?: boolean;
+  showRealEstate?: boolean;
 }
 
 export default function NetWorthCard({
@@ -59,6 +67,14 @@ export default function NetWorthCard({
   onAddFD,
   onAddGold,
   onAddRealEstate,
+  onOpenCustomize,
+  activeAssetsCount,
+  totalAssetsCount,
+  showMF = true,
+  showStock = true,
+  showFixedIncome = true,
+  showGold = true,
+  showRealEstate = true,
 }: NetWorthCardProps) {
   const isPositive = dayChangePct >= 0;
 
@@ -145,19 +161,36 @@ export default function NetWorthCard({
           <p className="text-xs sm:text-sm font-semibold tracking-wide text-primary-100 uppercase">
             Total Net Worth
           </p>
-          {onRefresh && (
-            <button
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-medium transition-all border border-white/15 disabled:opacity-50 cursor-pointer">
-              {isRefreshing ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <RefreshCw size={13} />
-              )}
-              <span>{isRefreshing ? "Updating..." : "Refresh"}</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {onOpenCustomize && (
+              <button
+                type="button"
+                onClick={onOpenCustomize}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-medium transition-all border border-white/15 cursor-pointer select-none"
+                title="Customize asset classes included in Net Worth">
+                <SlidersHorizontal size={12} />
+                <span>Customize</span>
+                {activeAssetsCount !== undefined && totalAssetsCount !== undefined && activeAssetsCount < totalAssetsCount && (
+                  <span className="px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-400 text-neutral-900 shadow-2xs">
+                    {activeAssetsCount}/{totalAssetsCount}
+                  </span>
+                )}
+              </button>
+            )}
+            {onRefresh && (
+              <button
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-medium transition-all border border-white/15 disabled:opacity-50 cursor-pointer">
+                {isRefreshing ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={13} />
+                )}
+                <span>{isRefreshing ? "Updating..." : "Refresh"}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Amount & Badges */}
@@ -210,136 +243,158 @@ export default function NetWorthCard({
         {/* Multi-Asset Subcards Grid */}
         {(() => {
           const hasOtherAssets = (fixedIncomeValue && fixedIncomeValue > 0) || (goldValue && goldValue > 0) || (realEstateValue && realEstateValue > 0);
+          const showMfCard = showMF;
+          const showStockCard = showStock;
+          const showFiCard = showFixedIncome && (fixedIncomeValue !== undefined && (fixedIncomeValue > 0 || hasOtherAssets));
+          const showGoldCard = showGold && (goldValue !== undefined && (goldValue > 0 || hasOtherAssets));
+          const showReCard = showRealEstate && (realEstateValue !== undefined && (realEstateValue > 0 || hasOtherAssets));
+
+          const visibleCount = [showMfCard, showStockCard, showFiCard, showGoldCard, showReCard].filter(Boolean).length;
+          if (visibleCount === 0) return null;
+
+          const gridColsClass =
+            visibleCount === 1
+              ? "grid-cols-1 sm:max-w-xs"
+              : visibleCount === 2
+              ? "grid-cols-2"
+              : visibleCount === 3
+              ? "grid-cols-2 md:grid-cols-3"
+              : visibleCount === 4
+              ? "grid-cols-2 md:grid-cols-4"
+              : "grid-cols-2 md:grid-cols-3 xl:grid-cols-5";
+
           return (
-            <div className={`grid gap-2.5 sm:gap-3.5 ${
-              hasOtherAssets ? "grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-2"
-            }`}>
+            <div className={`grid gap-2.5 sm:gap-3.5 ${gridColsClass}`}>
               {/* Mutual Funds */}
-              <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                      <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
-                        Mutual Funds
-                      </p>
+              {showMfCard && (
+                <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                        <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                          Mutual Funds
+                        </p>
+                      </div>
+                      {mfValue === 0 && onAddMF && (
+                        <span
+                          onClick={onAddMF}
+                          className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                          + Add
+                        </span>
+                      )}
                     </div>
-                    {mfValue === 0 && onAddMF && (
-                      <span
-                        onClick={onAddMF}
-                        className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
-                        + Add
-                      </span>
+                    <p
+                      className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${mfValue === 0 ? "opacity-50" : ""}`}>
+                      <PrivacyMask>₹{Math.round(mfValue).toLocaleString("en-IN")}</PrivacyMask>
+                    </p>
+                    {mfDayChange !== undefined && (
+                      <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 font-semibold ${mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                          {mfDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(mfDayChange)).toLocaleString("en-IN")}
+                          {mfDayChangePct !== undefined && ` (${mfDayChangePct >= 0 ? "+" : ""}${mfDayChangePct.toFixed(2)}%)`}
+                        </span>
+                        <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
+                      </div>
                     )}
                   </div>
-                  <p
-                    className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${mfValue === 0 ? "opacity-50" : ""}`}>
-                    <PrivacyMask>₹{Math.round(mfValue).toLocaleString("en-IN")}</PrivacyMask>
-                  </p>
-                  {mfDayChange !== undefined && (
-                    <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
-                      <span className={`inline-flex items-center gap-0.5 font-semibold ${mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                        {mfDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(mfDayChange)).toLocaleString("en-IN")}
-                        {mfDayChangePct !== undefined && ` (${mfDayChangePct >= 0 ? "+" : ""}${mfDayChangePct.toFixed(2)}%)`}
-                      </span>
-                      <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
-                    </div>
-                  )}
-                </div>
 
-                {/* XIRR Toggle Switch */}
-                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setMfXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
-                    className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
-                    title="Tap to toggle between XIRR and Lifetime XIRR">
-                    <span className="flex items-center gap-1.5 truncate">
-                      <ArrowDownUp size={11} className={`${(() => {
+                  {/* XIRR Toggle Switch */}
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setMfXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
+                      className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
+                      title="Tap to toggle between XIRR and Lifetime XIRR">
+                      <span className="flex items-center gap-1.5 truncate">
+                        <ArrowDownUp size={11} className={`${(() => {
+                          const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
+                          return val !== undefined && val < 0 ? "text-rose-300" : "text-emerald-300";
+                        })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
+                        <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
+                      </span>
+                      {(() => {
                         const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                        return val !== undefined && val < 0 ? "text-rose-300" : "text-emerald-300";
-                      })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
-                      <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
-                    </span>
-                    {(() => {
-                      const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                      const isNeg = val !== undefined && val !== null && val < 0;
-                      const isPos = val !== undefined && val !== null && val > 0;
-                      const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
-                      return (
-                        <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                          {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
-                        </span>
-                      );
-                    })()}
-                  </button>
+                        const isNeg = val !== undefined && val !== null && val < 0;
+                        const isPos = val !== undefined && val !== null && val > 0;
+                        const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
+                        return (
+                          <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+                            {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                          </span>
+                        );
+                      })()}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Stocks */}
-              <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                      <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
-                        Stocks
-                      </p>
+              {showStockCard && (
+                <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                        <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                          Stocks
+                        </p>
+                      </div>
+                      {stockValue === 0 && onAddStock && (
+                        <span
+                          onClick={onAddStock}
+                          className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                          + Add
+                        </span>
+                      )}
                     </div>
-                    {stockValue === 0 && onAddStock && (
-                      <span
-                        onClick={onAddStock}
-                        className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
-                        + Add
-                      </span>
+                    <p
+                      className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${stockValue === 0 ? "opacity-50" : ""}`}>
+                      <PrivacyMask>₹{Math.round(stockValue).toLocaleString("en-IN")}</PrivacyMask>
+                    </p>
+                    {stockDayChange !== undefined && (
+                      <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 font-semibold ${stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                          {stockDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(stockDayChange)).toLocaleString("en-IN")}
+                          {stockDayChangePct !== undefined && ` (${stockDayChangePct >= 0 ? "+" : ""}${stockDayChangePct.toFixed(2)}%)`}
+                        </span>
+                        <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
+                      </div>
                     )}
                   </div>
-                  <p
-                    className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${stockValue === 0 ? "opacity-50" : ""}`}>
-                    <PrivacyMask>₹{Math.round(stockValue).toLocaleString("en-IN")}</PrivacyMask>
-                  </p>
-                  {stockDayChange !== undefined && (
-                    <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
-                      <span className={`inline-flex items-center gap-0.5 font-semibold ${stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                        {stockDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(stockDayChange)).toLocaleString("en-IN")}
-                        {stockDayChangePct !== undefined && ` (${stockDayChangePct >= 0 ? "+" : ""}${stockDayChangePct.toFixed(2)}%)`}
-                      </span>
-                      <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
-                    </div>
-                  )}
-                </div>
 
-                {/* XIRR Toggle Switch */}
-                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setStockXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
-                    className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
-                    title="Tap to toggle between XIRR and Lifetime XIRR">
-                    <span className="flex items-center gap-1.5 truncate">
-                      <ArrowDownUp size={11} className={`${(() => {
+                  {/* XIRR Toggle Switch */}
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setStockXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
+                      className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
+                      title="Tap to toggle between XIRR and Lifetime XIRR">
+                      <span className="flex items-center gap-1.5 truncate">
+                        <ArrowDownUp size={11} className={`${(() => {
+                          const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
+                          return val !== undefined && val < 0 ? "text-rose-300" : "text-blue-300";
+                        })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
+                        <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
+                      </span>
+                      {(() => {
                         const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                        return val !== undefined && val < 0 ? "text-rose-300" : "text-blue-300";
-                      })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
-                      <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
-                    </span>
-                    {(() => {
-                      const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                      const isNeg = val !== undefined && val !== null && val < 0;
-                      const isPos = val !== undefined && val !== null && val > 0;
-                      const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
-                      return (
-                        <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                          {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
-                        </span>
-                      );
-                    })()}
-                  </button>
+                        const isNeg = val !== undefined && val !== null && val < 0;
+                        const isPos = val !== undefined && val !== null && val > 0;
+                        const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
+                        return (
+                          <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+                            {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                          </span>
+                        );
+                      })()}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Fixed Income / FDs */}
-              {(fixedIncomeValue !== undefined && (fixedIncomeValue > 0 || hasOtherAssets)) && (
+              {showFiCard && (
                 <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
                   <div>
                     <div className="flex justify-between items-center mb-1">
@@ -372,7 +427,7 @@ export default function NetWorthCard({
               )}
 
               {/* Gold & Precious Metals */}
-              {(goldValue !== undefined && (goldValue > 0 || hasOtherAssets)) && (
+              {showGoldCard && (
                 <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
                   <div>
                     <div className="flex justify-between items-center mb-1">
@@ -405,7 +460,7 @@ export default function NetWorthCard({
               )}
 
               {/* Real Estate */}
-              {(realEstateValue !== undefined && (realEstateValue > 0 || hasOtherAssets)) && (
+              {showReCard && (
                 <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
                   <div>
                     <div className="flex justify-between items-center mb-1">

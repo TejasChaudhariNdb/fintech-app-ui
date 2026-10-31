@@ -40,6 +40,7 @@ import {
   Camera,
   Loader2,
   Compass,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -47,6 +48,11 @@ import useFcmToken from "@/hooks/useFcmToken";
 import { useProfile } from "@/context/ProfileContext";
 import Toast from "@/components/ui/Toast";
 import NotificationSettingsModal from "@/components/NotificationSettingsModal";
+import CustomizeAssetsModal from "@/components/features/CustomizeAssetsModal";
+import {
+  useAssetPreferences,
+  countActiveAssets,
+} from "@/lib/assetPreferences";
 
 const getAvatarUrl = (url?: string | null) => {
   if (!url) return null;
@@ -197,6 +203,8 @@ export default function ProfilePage() {
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [showCustomizeAssetsModal, setShowCustomizeAssetsModal] = useState(false);
+  const { preferences: assetPrefs, updatePreferences: setAssetPrefs } = useAssetPreferences();
   const [expandedSections, setExpandedSections] = useState({
     account: true,
     familyProfiles: true,
@@ -1330,6 +1338,29 @@ export default function ProfilePage() {
           </p>
           <div className="bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-xs divide-y divide-neutral-100 dark:divide-white/5">
             <button
+              onClick={() => setShowCustomizeAssetsModal(true)}
+              className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-400">
+                  <SlidersHorizontal size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">Net Worth Assets &amp; Visibility</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    Customize which asset classes count towards your Net Worth
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20 px-2 py-0.5 rounded-full font-bold">
+                  {countActiveAssets(assetPrefs).active}/5 Active
+                </span>
+                <ChevronRight className="text-neutral-300 dark:text-neutral-600" size={18} />
+              </div>
+            </button>
+
+            <button
               onClick={() => router.push("/profile/whats-new")}
               className="flex w-full items-center justify-between p-4 text-left hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
@@ -2333,6 +2364,17 @@ export default function ProfilePage() {
         isOpen={showNotificationModal}
         onClose={() => setShowNotificationModal(false)}
         onToast={(msg) => showToast(msg, "success")}
+      />
+
+      {/* Net Worth Assets & Visibility Customization Modal */}
+      <CustomizeAssetsModal
+        isOpen={showCustomizeAssetsModal}
+        onClose={() => setShowCustomizeAssetsModal(false)}
+        preferences={assetPrefs}
+        onSave={(newPrefs) => {
+          setAssetPrefs(newPrefs);
+          showToast("Asset preferences updated successfully", "success");
+        }}
       />
     </div>
   );
