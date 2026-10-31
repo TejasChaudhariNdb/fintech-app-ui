@@ -19,6 +19,8 @@ const COLORS = {
   Hybrid: "#10B981", // Emerald-500
   Stocks: "#3B82F6", // Blue-500
   "Mutual Funds": "#10B981", // Emerald-500
+  "Fixed Income": "#06B6D4", // Cyan-500
+  "Real Estate": "#EC4899", // Pink-500
   Other: "#9CA3AF", // Gray-400
 };
 

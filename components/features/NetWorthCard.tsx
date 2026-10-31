@@ -9,6 +9,9 @@ interface NetWorthCardProps {
   netWorth: number;
   mfValue: number;
   stockValue: number;
+  fixedIncomeValue?: number;
+  goldValue?: number;
+  realEstateValue?: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   dayChangePct?: number;
@@ -25,12 +28,18 @@ interface NetWorthCardProps {
   stockLifetimeXirr?: number;
   onAddMF?: () => void;
   onAddStock?: () => void;
+  onAddFD?: () => void;
+  onAddGold?: () => void;
+  onAddRealEstate?: () => void;
 }
 
 export default function NetWorthCard({
   netWorth,
   mfValue,
   stockValue,
+  fixedIncomeValue,
+  goldValue,
+  realEstateValue,
   onRefresh,
   isRefreshing = false,
   dayChangePct = 0,
@@ -47,6 +56,9 @@ export default function NetWorthCard({
   stockLifetimeXirr,
   onAddMF,
   onAddStock,
+  onAddFD,
+  onAddGold,
+  onAddRealEstate,
 }: NetWorthCardProps) {
   const isPositive = dayChangePct >= 0;
 
@@ -195,132 +207,238 @@ export default function NetWorthCard({
           </p>
         </div>
 
-        {/* 2-Column Asset Subcards */}
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5">
-          {/* Mutual Funds */}
-          <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                  <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
-                    Mutual Funds
+        {/* Multi-Asset Subcards Grid */}
+        {(() => {
+          const hasOtherAssets = (fixedIncomeValue && fixedIncomeValue > 0) || (goldValue && goldValue > 0) || (realEstateValue && realEstateValue > 0);
+          return (
+            <div className={`grid gap-2.5 sm:gap-3.5 ${
+              hasOtherAssets ? "grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-2"
+            }`}>
+              {/* Mutual Funds */}
+              <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                        Mutual Funds
+                      </p>
+                    </div>
+                    {mfValue === 0 && onAddMF && (
+                      <span
+                        onClick={onAddMF}
+                        className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                        + Add
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${mfValue === 0 ? "opacity-50" : ""}`}>
+                    <PrivacyMask>₹{Math.round(mfValue).toLocaleString("en-IN")}</PrivacyMask>
                   </p>
+                  {mfDayChange !== undefined && (
+                    <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
+                      <span className={`inline-flex items-center gap-0.5 font-semibold ${mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                        {mfDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(mfDayChange)).toLocaleString("en-IN")}
+                        {mfDayChangePct !== undefined && ` (${mfDayChangePct >= 0 ? "+" : ""}${mfDayChangePct.toFixed(2)}%)`}
+                      </span>
+                      <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
+                    </div>
+                  )}
                 </div>
-                {mfValue === 0 && (
-                  <span
-                    onClick={onAddMF}
-                    className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
-                    + Add
-                  </span>
-                )}
+
+                {/* XIRR Toggle Switch */}
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setMfXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
+                    className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
+                    title="Tap to toggle between XIRR and Lifetime XIRR">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <ArrowDownUp size={11} className={`${(() => {
+                        const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
+                        return val !== undefined && val < 0 ? "text-rose-300" : "text-emerald-300";
+                      })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
+                      <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
+                    </span>
+                    {(() => {
+                      const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
+                      const isNeg = val !== undefined && val !== null && val < 0;
+                      const isPos = val !== undefined && val !== null && val > 0;
+                      const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
+                      return (
+                        <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+                          {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                        </span>
+                      );
+                    })()}
+                  </button>
+                </div>
               </div>
-              <p
-                className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${mfValue === 0 ? "opacity-50" : ""}`}>
-                <PrivacyMask>₹{Math.round(mfValue).toLocaleString("en-IN")}</PrivacyMask>
-              </p>
-              {mfDayChange !== undefined && (
-                <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
-                  <span className={`inline-flex items-center gap-0.5 font-semibold ${mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                    {mfDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(mfDayChange)).toLocaleString("en-IN")}
-                    {mfDayChangePct !== undefined && ` (${mfDayChangePct >= 0 ? "+" : ""}${mfDayChangePct.toFixed(2)}%)`}
-                  </span>
-                  <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
+
+              {/* Stocks */}
+              <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+                      <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                        Stocks
+                      </p>
+                    </div>
+                    {stockValue === 0 && onAddStock && (
+                      <span
+                        onClick={onAddStock}
+                        className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                        + Add
+                      </span>
+                    )}
+                  </div>
+                  <p
+                    className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${stockValue === 0 ? "opacity-50" : ""}`}>
+                    <PrivacyMask>₹{Math.round(stockValue).toLocaleString("en-IN")}</PrivacyMask>
+                  </p>
+                  {stockDayChange !== undefined && (
+                    <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
+                      <span className={`inline-flex items-center gap-0.5 font-semibold ${stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                        {stockDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(stockDayChange)).toLocaleString("en-IN")}
+                        {stockDayChangePct !== undefined && ` (${stockDayChangePct >= 0 ? "+" : ""}${stockDayChangePct.toFixed(2)}%)`}
+                      </span>
+                      <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* XIRR Toggle Switch */}
+                <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setStockXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
+                    className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
+                    title="Tap to toggle between XIRR and Lifetime XIRR">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <ArrowDownUp size={11} className={`${(() => {
+                        const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
+                        return val !== undefined && val < 0 ? "text-rose-300" : "text-blue-300";
+                      })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
+                      <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
+                    </span>
+                    {(() => {
+                      const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
+                      const isNeg = val !== undefined && val !== null && val < 0;
+                      const isPos = val !== undefined && val !== null && val > 0;
+                      const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
+                      return (
+                        <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+                          {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                        </span>
+                      );
+                    })()}
+                  </button>
+                </div>
+              </div>
+
+              {/* Fixed Income / FDs */}
+              {(fixedIncomeValue !== undefined && (fixedIncomeValue > 0 || hasOtherAssets)) && (
+                <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                        <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                          Fixed Income
+                        </p>
+                      </div>
+                      {fixedIncomeValue === 0 && onAddFD && (
+                        <span
+                          onClick={onAddFD}
+                          className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                          + Add
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${fixedIncomeValue === 0 ? "opacity-50" : ""}`}>
+                      <PrivacyMask>₹{Math.round(fixedIncomeValue || 0).toLocaleString("en-IN")}</PrivacyMask>
+                    </p>
+                    <div className="text-[10px] text-cyan-200/80 font-medium mt-1.5 truncate">
+                      FDs · PPF · EPF · Bonds
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/80">
+                    <span className="text-[10px] text-white/60">Asset Class</span>
+                    <span className="font-semibold text-cyan-300">Debt &amp; Savings</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Gold & Precious Metals */}
+              {(goldValue !== undefined && (goldValue > 0 || hasOtherAssets)) && (
+                <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                          Gold &amp; Bullion
+                        </p>
+                      </div>
+                      {goldValue === 0 && onAddGold && (
+                        <span
+                          onClick={onAddGold}
+                          className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                          + Add
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${goldValue === 0 ? "opacity-50" : ""}`}>
+                      <PrivacyMask>₹{Math.round(goldValue || 0).toLocaleString("en-IN")}</PrivacyMask>
+                    </p>
+                    <div className="text-[10px] text-amber-200/80 font-medium mt-1.5 truncate">
+                      SGB · Physical · Digital
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/80">
+                    <span className="text-[10px] text-white/60">Asset Class</span>
+                    <span className="font-semibold text-amber-300">Precious Metals</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Real Estate */}
+              {(realEstateValue !== undefined && (realEstateValue > 0 || hasOtherAssets)) && (
+                <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                        <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
+                          Real Estate
+                        </p>
+                      </div>
+                      {realEstateValue === 0 && onAddRealEstate && (
+                        <span
+                          onClick={onAddRealEstate}
+                          className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
+                          + Add
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${realEstateValue === 0 ? "opacity-50" : ""}`}>
+                      <PrivacyMask>₹{Math.round(realEstateValue || 0).toLocaleString("en-IN")}</PrivacyMask>
+                    </p>
+                    <div className="text-[10px] text-rose-200/80 font-medium mt-1.5 truncate">
+                      Properties &amp; Lands
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/80">
+                    <span className="text-[10px] text-white/60">Asset Class</span>
+                    <span className="font-semibold text-rose-300">Property Vault</span>
+                  </div>
                 </div>
               )}
             </div>
-
-            {/* XIRR Toggle Switch */}
-            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setMfXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
-                className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
-                title="Tap to toggle between XIRR and Lifetime XIRR">
-                <span className="flex items-center gap-1.5 truncate">
-                  <ArrowDownUp size={11} className={`${(() => {
-                    const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                    return val !== undefined && val < 0 ? "text-rose-300" : "text-emerald-300";
-                  })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
-                  <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
-                </span>
-                {(() => {
-                  const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                  const isNeg = val !== undefined && val !== null && val < 0;
-                  const isPos = val !== undefined && val !== null && val > 0;
-                  const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
-                  return (
-                    <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                      {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
-                    </span>
-                  );
-                })()}
-              </button>
-            </div>
-          </div>
-
-          {/* Stocks */}
-          <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
-                  <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">
-                    Stocks
-                  </p>
-                </div>
-                {stockValue === 0 && (
-                  <span
-                    onClick={onAddStock}
-                    className="text-[9px] uppercase tracking-wider text-primary-200 bg-white/10 hover:bg-white/20 px-1.5 py-0.5 rounded cursor-pointer transition-colors font-medium shrink-0">
-                    + Add
-                  </span>
-                )}
-              </div>
-              <p
-                className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${stockValue === 0 ? "opacity-50" : ""}`}>
-                <PrivacyMask>₹{Math.round(stockValue).toLocaleString("en-IN")}</PrivacyMask>
-              </p>
-              {stockDayChange !== undefined && (
-                <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
-                  <span className={`inline-flex items-center gap-0.5 font-semibold ${stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
-                    {stockDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(stockDayChange)).toLocaleString("en-IN")}
-                    {stockDayChangePct !== undefined && ` (${stockDayChangePct >= 0 ? "+" : ""}${stockDayChangePct.toFixed(2)}%)`}
-                  </span>
-                  <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
-                </div>
-              )}
-            </div>
-
-            {/* XIRR Toggle Switch */}
-            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setStockXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
-                className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
-                title="Tap to toggle between XIRR and Lifetime XIRR">
-                <span className="flex items-center gap-1.5 truncate">
-                  <ArrowDownUp size={11} className={`${(() => {
-                    const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                    return val !== undefined && val < 0 ? "text-rose-300" : "text-blue-300";
-                  })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
-                  <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
-                </span>
-                {(() => {
-                  const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                  const isNeg = val !== undefined && val !== null && val < 0;
-                  const isPos = val !== undefined && val !== null && val > 0;
-                  const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
-                  return (
-                    <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                      {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
-                    </span>
-                  );
-                })()}
-              </button>
-            </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
     </Card>
   );

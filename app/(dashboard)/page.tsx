@@ -357,8 +357,11 @@ export default function HomePage() {
         {/* Aggregate Net Worth Card */}
         <NetWorthCard
           netWorth={familySummary.net_worth}
-          mfValue={familySummary.allocation.mutual_funds}
-          stockValue={familySummary.allocation.stocks}
+          mfValue={familySummary.allocation?.mutual_funds || 0}
+          stockValue={familySummary.allocation?.stocks || 0}
+          fixedIncomeValue={familySummary.allocation?.fixed_income || 0}
+          goldValue={familySummary.allocation?.gold || 0}
+          realEstateValue={familySummary.allocation?.real_estate || 0}
           onRefresh={handleRefreshNAVs}
           isRefreshing={refreshing}
           dayChangePct={summary?.day_change_pct || 0}
@@ -375,28 +378,40 @@ export default function HomePage() {
           stockLifetimeXirr={summary?.stock_lifetime_xirr}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
+          onAddFD={() => router.push("/holdings/fixed-income")}
+          onAddGold={() => router.push("/holdings/gold")}
+          onAddRealEstate={() => router.push("/holdings/real-estate")}
         />
 
         {/* Family Portfolio Summary — per-profile breakdown */}
-        {summary && summary.invested > 0 && (
+        {(familySummary.net_worth > 0 || (summary && summary.invested > 0)) && (
           <section id="tour-portfolio-summary">
             <FamilyPortfolioSummary
-              invested={summary.invested || 0}
-              current={summary.current || 0}
-              profit={summary.profit || 0}
-              returnPct={summary.return_pct || 0}
-              dayChange={summary.day_change || 0}
-              dayChangePct={summary.day_change_pct || 0}
-              mfDayChange={summary.mf_day_change}
-              mfDayChangePct={summary.mf_day_change_pct}
-              stockDayChange={summary.stock_day_change}
-              stockDayChangePct={summary.stock_day_change_pct}
-              mfProfit={summary.mf_profit || 0}
-              stockProfit={summary.stock_profit || 0}
-              mfInvested={summary.mf_invested || 0}
-              stockInvested={summary.stock_invested || 0}
-              mfCurrent={(summary.mf_invested || 0) + (summary.mf_profit || 0)}
-              stockCurrent={(summary.stock_invested || 0) + (summary.stock_profit || 0)}
+              invested={familySummary?.total_invested ?? (summary?.invested || 0)}
+              current={familySummary?.net_worth ?? (summary?.current || 0)}
+              profit={familySummary?.total_gain ?? (summary?.profit || 0)}
+              returnPct={familySummary?.return_pct ?? (summary?.return_pct || 0)}
+              dayChange={summary?.day_change || familySummary?.day_change || 0}
+              dayChangePct={summary?.day_change_pct || familySummary?.day_change_pct || 0}
+              mfDayChange={summary?.mf_day_change}
+              mfDayChangePct={summary?.mf_day_change_pct}
+              stockDayChange={summary?.stock_day_change}
+              stockDayChangePct={summary?.stock_day_change_pct}
+              mfProfit={summary?.mf_profit ?? (familySummary?.gain_allocation?.mutual_funds || 0)}
+              stockProfit={summary?.stock_profit ?? (familySummary?.gain_allocation?.stocks || 0)}
+              fiProfit={summary?.fi_profit ?? (familySummary?.gain_allocation?.fixed_income || 0)}
+              goldProfit={summary?.gold_profit ?? (familySummary?.gain_allocation?.gold || 0)}
+              reProfit={summary?.re_profit ?? (familySummary?.gain_allocation?.real_estate || 0)}
+              mfInvested={familySummary?.invested_allocation?.mutual_funds ?? (summary?.mf_invested || 0)}
+              stockInvested={familySummary?.invested_allocation?.stocks ?? (summary?.stock_invested || 0)}
+              fiInvested={familySummary?.invested_allocation?.fixed_income ?? (summary?.fi_invested || 0)}
+              goldInvested={familySummary?.invested_allocation?.gold ?? (summary?.gold_invested || 0)}
+              reInvested={familySummary?.invested_allocation?.real_estate ?? (summary?.re_invested || 0)}
+              mfCurrent={familySummary?.allocation?.mutual_funds ?? (summary?.mf_current || 0)}
+              stockCurrent={familySummary?.allocation?.stocks ?? (summary?.stock_current || 0)}
+              fiCurrent={familySummary?.allocation?.fixed_income ?? (summary?.fi_current || 0)}
+              goldCurrent={familySummary?.allocation?.gold ?? (summary?.gold_current || 0)}
+              reCurrent={familySummary?.allocation?.real_estate ?? (summary?.re_current || 0)}
               profileBreakdown={familySummary?.profile_breakdown || []}
             />
           </section>
@@ -426,7 +441,6 @@ export default function HomePage() {
           </section>
         )}
 
-
         {/* Global Asset Allocation */}
         <section className="grid gap-6 md:grid-cols-2">
           {familySummary.net_worth > 0 && (
@@ -434,16 +448,37 @@ export default function HomePage() {
               data={[
                 {
                   category: "Mutual Funds",
-                  value: familySummary.allocation.mutual_funds,
+                  value: familySummary.allocation?.mutual_funds || 0,
                   percentage: familySummary.net_worth > 0
-                    ? Math.round((familySummary.allocation.mutual_funds / familySummary.net_worth) * 100)
+                    ? Math.round(((familySummary.allocation?.mutual_funds || 0) / familySummary.net_worth) * 100)
                     : 0,
                 },
                 {
                   category: "Stocks",
-                  value: familySummary.allocation.stocks,
+                  value: familySummary.allocation?.stocks || 0,
                   percentage: familySummary.net_worth > 0
-                    ? Math.round((familySummary.allocation.stocks / familySummary.net_worth) * 100)
+                    ? Math.round(((familySummary.allocation?.stocks || 0) / familySummary.net_worth) * 100)
+                    : 0,
+                },
+                {
+                  category: "Fixed Income",
+                  value: familySummary.allocation?.fixed_income || 0,
+                  percentage: familySummary.net_worth > 0
+                    ? Math.round(((familySummary.allocation?.fixed_income || 0) / familySummary.net_worth) * 100)
+                    : 0,
+                },
+                {
+                  category: "Gold",
+                  value: familySummary.allocation?.gold || 0,
+                  percentage: familySummary.net_worth > 0
+                    ? Math.round(((familySummary.allocation?.gold || 0) / familySummary.net_worth) * 100)
+                    : 0,
+                },
+                {
+                  category: "Real Estate",
+                  value: familySummary.allocation?.real_estate || 0,
+                  percentage: familySummary.net_worth > 0
+                    ? Math.round(((familySummary.allocation?.real_estate || 0) / familySummary.net_worth) * 100)
                     : 0,
                 },
               ]}
@@ -697,6 +732,9 @@ export default function HomePage() {
               netWorth={netWorth?.net_worth || 0}
               mfValue={netWorth?.mutual_funds || 0}
               stockValue={netWorth?.stocks || 0}
+              fixedIncomeValue={netWorth?.fixed_income || 0}
+              goldValue={netWorth?.gold || 0}
+              realEstateValue={netWorth?.real_estate || 0}
               onRefresh={handleRefreshNAVs}
               isRefreshing={refreshing}
               dayChangePct={summary?.day_change_pct || 0}
@@ -713,6 +751,9 @@ export default function HomePage() {
               stockLifetimeXirr={summary?.stock_lifetime_xirr}
               onAddMF={() => router.push("/holdings/mutual-funds")}
               onAddStock={() => router.push("/holdings/stocks")}
+              onAddFD={() => router.push("/holdings/fixed-income")}
+              onAddGold={() => router.push("/holdings/gold")}
+              onAddRealEstate={() => router.push("/holdings/real-estate")}
             />
           </section>
           {/* Portfolio Summary */}
@@ -756,22 +797,43 @@ export default function HomePage() {
           )}
 
           {/* Asset Allocation Chart */}
-          {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
+          {netWorth && (netWorth.net_worth > 0) && (
             <section className="animate-fade-in">
               <AssetAllocationCard
                 data={[
                   {
                     category: "Mutual Funds",
                     value: netWorth.mutual_funds || 0,
-                    percentage: (netWorth.stocks + netWorth.mutual_funds) > 0
-                      ? Math.round((netWorth.mutual_funds / (netWorth.stocks + netWorth.mutual_funds)) * 100)
+                    percentage: netWorth.net_worth > 0
+                      ? Math.round(((netWorth.mutual_funds || 0) / netWorth.net_worth) * 100)
                       : 0,
                   },
                   {
                     category: "Stocks",
                     value: netWorth.stocks || 0,
-                    percentage: (netWorth.stocks + netWorth.mutual_funds) > 0
-                      ? Math.round((netWorth.stocks / (netWorth.stocks + netWorth.mutual_funds)) * 100)
+                    percentage: netWorth.net_worth > 0
+                      ? Math.round(((netWorth.stocks || 0) / netWorth.net_worth) * 100)
+                      : 0,
+                  },
+                  {
+                    category: "Fixed Income",
+                    value: netWorth.fixed_income || 0,
+                    percentage: netWorth.net_worth > 0
+                      ? Math.round(((netWorth.fixed_income || 0) / netWorth.net_worth) * 100)
+                      : 0,
+                  },
+                  {
+                    category: "Gold",
+                    value: netWorth.gold || 0,
+                    percentage: netWorth.net_worth > 0
+                      ? Math.round(((netWorth.gold || 0) / netWorth.net_worth) * 100)
+                      : 0,
+                  },
+                  {
+                    category: "Real Estate",
+                    value: netWorth.real_estate || 0,
+                    percentage: netWorth.net_worth > 0
+                      ? Math.round(((netWorth.real_estate || 0) / netWorth.net_worth) * 100)
                       : 0,
                   },
                 ]}
