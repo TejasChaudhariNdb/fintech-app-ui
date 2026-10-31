@@ -52,6 +52,7 @@ import CustomizeAssetsModal from "@/components/features/CustomizeAssetsModal";
 import {
   useAssetPreferences,
   countActiveAssets,
+  syncPreferencesFromBackend,
 } from "@/lib/assetPreferences";
 
 const getAvatarUrl = (url?: string | null) => {
@@ -348,6 +349,9 @@ export default function ProfilePage() {
         profile_completion_score: data.profile_completion_score || 0,
         kyc_nudges: data.kyc_nudges || [],
       });
+      if (data.asset_preferences) {
+        syncPreferencesFromBackend(data.asset_preferences);
+      }
       setOriginalProfile(data);
     } catch (err) {
       console.error("Failed to load profile", err);

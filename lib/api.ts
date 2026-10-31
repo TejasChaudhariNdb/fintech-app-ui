@@ -1001,6 +1001,16 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  updateAssetPreferences: async (prefs: Record<string, any>) => {
+    const res = await api.fetch("/users/me/asset-preferences", {
+      method: "PATCH",
+      body: JSON.stringify(prefs),
+    });
+    api.clearPortfolioCache();
+    api.clearCache(["user-profile", "family-summary", "net-worth", "portfolio-summary"]);
+    return res;
+  },
+
   uploadAvatar: async (file: File) => {
     const token =
       typeof window !== "undefined"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { api } from "./api";
 
 export interface NetWorthAssetPreferences {
   mutual_funds: boolean;
@@ -52,9 +53,10 @@ export function getStoredAssetPreferences(): NetWorthAssetPreferences {
 }
 
 /**
- * Saves preferences to localStorage and broadcasts an update event.
+ * Saves preferences to localStorage, broadcasts an update event,
+ * and syncs to backend to invalidate Redis cache keys immediately.
  */
-export function storeAssetPreferences(prefs: NetWorthAssetPreferences): void {
+export function storeAssetPreferences(prefs: NetWorthAssetPreferences, syncBackend = true): void {
   if (typeof window === "undefined") return;
 
   try {
@@ -62,8 +64,40 @@ export function storeAssetPreferences(prefs: NetWorthAssetPreferences): void {
     window.dispatchEvent(
       new CustomEvent(ASSET_CHANGE_EVENT, { detail: prefs })
     );
+
+    if (syncBackend) {
+      // Async sync to backend to update feature_flags and wipe Redis cache keys
+      api.updateAssetPreferences(prefs).catch((err) => {
+        console.warn("Could not sync asset preferences to backend:", err);
+      });
+    }
   } catch (e) {
     console.error("Error saving asset preferences to localStorage:", e);
+  }
+}
+
+/**
+ * Initial hydration helper from backend User profile.
+ * If user hasn't explicitly customized locally on this browser yet,
+ * adopts preferences saved on backend.
+ */
+export function syncPreferencesFromBackend(backendPrefs?: Partial<NetWorthAssetPreferences>): void {
+  if (typeof window === "undefined" || !backendPrefs) return;
+  try {
+    const raw = localStorage.getItem(ASSET_STORAGE_KEY);
+    if (!raw) {
+      const merged: NetWorthAssetPreferences = {
+        mutual_funds: typeof backendPrefs.mutual_funds === "boolean" ? backendPrefs.mutual_funds : true,
+        stocks: typeof backendPrefs.stocks === "boolean" ? backendPrefs.stocks : true,
+        fixed_income: typeof backendPrefs.fixed_income === "boolean" ? backendPrefs.fixed_income : true,
+        gold: typeof backendPrefs.gold === "boolean" ? backendPrefs.gold : true,
+        real_estate: typeof backendPrefs.real_estate === "boolean" ? backendPrefs.real_estate : true,
+        show_insurance_cover: typeof backendPrefs.show_insurance_cover === "boolean" ? backendPrefs.show_insurance_cover : false,
+      };
+      storeAssetPreferences(merged, false);
+    }
+  } catch (e) {
+    console.error("Error hydrating asset preferences from backend:", e);
   }
 }
 

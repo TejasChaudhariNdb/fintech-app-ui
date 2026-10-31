@@ -39,6 +39,7 @@ import CustomizeAssetsModal from "@/components/features/CustomizeAssetsModal";
 import {
   useAssetPreferences,
   countActiveAssets,
+  syncPreferencesFromBackend,
 } from "@/lib/assetPreferences";
 
 export default function HomePage() {
@@ -177,6 +178,9 @@ export default function HomePage() {
         if (topH) setTopHoldings(topH.holdings || []);
         if (up) {
           setUserProfile(up);
+          if (up.asset_preferences) {
+            syncPreferencesFromBackend(up.asset_preferences);
+          }
           analytics.identifyUser(up.email || up.id, up.email, {
             full_name: up.full_name,
             phone_number: up.phone_number,
@@ -260,6 +264,9 @@ export default function HomePage() {
         setBenchmark(bm);
         if (up) {
           setUserProfile(up);
+          if (up.asset_preferences) {
+            syncPreferencesFromBackend(up.asset_preferences);
+          }
           analytics.identifyUser(up.email || up.id, up.email, {
             full_name: up.full_name,
             phone_number: up.phone_number,
@@ -761,7 +768,10 @@ export default function HomePage() {
           isOpen={showCustomizeModal}
           onClose={() => setShowCustomizeModal(false)}
           preferences={assetPrefs}
-          onSave={(newPrefs) => setAssetPrefs(newPrefs)}
+          onSave={(newPrefs) => {
+            setAssetPrefs(newPrefs);
+            showToast("Preferences saved & cache refreshed", "success");
+          }}
           values={{
             mutual_funds: familySummary?.allocation?.mutual_funds || 0,
             stocks: familySummary?.allocation?.stocks || 0,
@@ -842,7 +852,10 @@ export default function HomePage() {
         isOpen={showCustomizeModal}
         onClose={() => setShowCustomizeModal(false)}
         preferences={assetPrefs}
-        onSave={(newPrefs) => setAssetPrefs(newPrefs)}
+        onSave={(newPrefs) => {
+          setAssetPrefs(newPrefs);
+          showToast("Preferences saved & cache refreshed", "success");
+        }}
         values={{
           mutual_funds: netWorth?.mutual_funds || 0,
           stocks: netWorth?.stocks || 0,
