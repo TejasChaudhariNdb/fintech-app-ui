@@ -66,8 +66,12 @@ interface FixedIncomeItem {
 
 interface MaturityBucket {
   count: number;
-  total_principal: number;
-  total_maturity_amount: number;
+  principal?: number;
+  total_principal?: number;
+  maturity_amount?: number;
+  total_maturity_amount?: number;
+  interest?: number;
+  label?: string;
 }
 
 interface CalendarMaturity {
@@ -543,7 +547,7 @@ export default function FixedIncomePage() {
                     {b.label}
                   </div>
                   <div className="text-sm sm:text-base font-black text-neutral-900 dark:text-white tabular-nums mt-0.5">
-                    {formatINRShort(b.data?.total_maturity_amount || 0)}
+                    {formatINRShort(b.data?.total_maturity_amount ?? b.data?.maturity_amount ?? 0)}
                   </div>
                   <div className="text-[10px] text-neutral-400 font-medium mt-0.5">
                     {b.data?.count || 0} deposit{b.data?.count === 1 ? "" : "s"}
