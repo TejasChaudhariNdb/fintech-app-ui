@@ -140,6 +140,22 @@ function getDepositTypeBadge(type: string): { label: string; color: string } {
   }
 }
 
+function formatInstitutionName(name: string): string {
+  if (!name) return "";
+  const trimmed = name.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower === "hdfc") return "HDFC Bank";
+  if (lower === "icici") return "ICICI Bank";
+  if (lower === "sbi") return "State Bank of India";
+  if (lower === "axis" || lower === "axis bank") return "Axis Bank";
+  if (lower === "kotak") return "Kotak Mahindra Bank";
+  if (lower === "pnb") return "Punjab National Bank";
+  if (trimmed === lower) {
+    return trimmed.replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+  return trimmed;
+}
+
 function formatDatePretty(dateStr?: string | null): string {
   if (!dateStr) return "--";
   try {
@@ -363,75 +379,36 @@ export default function FixedIncomePage() {
   return (
     <div className="px-4 space-y-6 max-w-7xl mx-auto">
       {/* ── TOP ACTION & SUMMARY BAR ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
-            <span>Fixed Income &amp; Deposits</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
-              Maturity &amp; Liquidity Flow
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight">
+              Fixed Income &amp; Deposits
+            </h2>
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-500/20">
+              Safe Yield &amp; Liquidity Flow
             </span>
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+          </div>
+          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-2xl">
             Track bank FDs, corporate deposits, Post Office MIS/SCSS, RBI Bonds, Tax-Free Bonds, and PPF with maturity calendar alerts
           </p>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto flex-wrap">
-          {/* View Mode Switcher */}
-          <div className="flex items-center bg-neutral-100 dark:bg-white/10 p-1 rounded-xl border border-neutral-200 dark:border-white/10">
-            <button
-              onClick={() => setViewMode("GRID")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === "GRID"
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}
-              title="Cards Grid View"
-            >
-              <LayoutGrid size={14} />
-              <span className="hidden sm:inline">Cards</span>
-            </button>
-
-            <button
-              onClick={() => setViewMode("TIMELINE")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === "TIMELINE"
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}
-              title="Maturity Timeline & Calendar View"
-            >
-              <CalendarClock size={14} />
-              <span className="hidden sm:inline">Timeline</span>
-            </button>
-
-            <button
-              onClick={() => setViewMode("REPORT")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === "REPORT"
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs"
-                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}
-              title="Maturity Schedule Report"
-            >
-              <FileSpreadsheet size={14} />
-              <span>Report</span>
-            </button>
-          </div>
-
+        {/* Primary Page Actions — Clean single line on desktop */}
+        <div className="flex items-center gap-2 sm:gap-2.5 self-stretch sm:self-auto justify-end shrink-0">
           <button
             onClick={exportMaturityScheduleCSV}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-all shadow-2xs active:scale-95 cursor-pointer"
             title="Download complete FD maturity schedule as CSV"
           >
-            <Download size={14} />
-            <span className="hidden md:inline">Export CSV</span>
+            <Download size={14} className="text-neutral-500 dark:text-neutral-400" />
+            <span className="hidden sm:inline">Export CSV</span>
           </button>
 
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors"
+            className="p-2 sm:px-2.5 sm:py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-all shadow-2xs active:scale-95 cursor-pointer"
             title="Refresh calculations"
           >
             <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
@@ -439,7 +416,7 @@ export default function FixedIncomePage() {
 
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/25 transition-all active:scale-95 cursor-pointer"
           >
             <Plus size={16} />
             <span>Add Deposit</span>
@@ -508,48 +485,74 @@ export default function FixedIncomePage() {
 
       {/* ── LIQUIDITY & MATURITY HORIZON CARDS ── */}
       {summary?.maturity_buckets && (
-        <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+        <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-4 sm:p-5 space-y-3.5 shadow-xs">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CalendarClock size={16} className="text-primary-600 dark:text-primary-400" />
-              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
-                Liquidity Horizon &amp; Maturity Schedule
-              </h3>
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <CalendarClock size={15} />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
+                  Liquidity Horizon &amp; Maturity Schedule
+                </h3>
+                <p className="text-[11px] text-neutral-400 hidden sm:block">
+                  Upcoming cash flow payouts grouped by maturity milestone
+                </p>
+              </div>
             </div>
-            <span className="text-[11px] text-neutral-400">Tap bucket to filter</span>
+
+            {horizonFilter !== "ALL" ? (
+              <button
+                onClick={() => setHorizonFilter("ALL")}
+                className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Clear Filter</span>
+                <span className="w-4 h-4 rounded-full bg-emerald-500/15 flex items-center justify-center text-[10px]">✕</span>
+              </button>
+            ) : (
+              <span className="text-[11px] text-neutral-400">Tap bucket to filter</span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             {[
               { id: "30D", label: "Next 30 Days", data: summary.maturity_buckets.next_30d, alert: true },
-              { id: "90D", label: "1 - 3 Months", data: summary.maturity_buckets.next_90d, alert: false },
-              { id: "180D", label: "3 - 6 Months", data: summary.maturity_buckets.next_180d, alert: false },
-              { id: "365D", label: "6 - 12 Months", data: summary.maturity_buckets.next_365d, alert: false },
+              { id: "90D", label: "1 – 3 Months", data: summary.maturity_buckets.next_90d, alert: false },
+              { id: "180D", label: "3 – 6 Months", data: summary.maturity_buckets.next_180d, alert: false },
+              { id: "365D", label: "6 – 12 Months", data: summary.maturity_buckets.next_365d, alert: false },
               { id: "1Y_PLUS", label: "1+ Years", data: summary.maturity_buckets.beyond_1y, alert: false },
               { id: "OVERDUE", label: "Matured", data: summary.maturity_buckets.matured, alert: false },
             ].map((b) => {
               const isSelected = horizonFilter === b.id;
               const hasItems = (b.data?.count || 0) > 0;
+              const isAlert = b.alert && hasItems;
 
               return (
                 <button
                   key={b.id}
                   onClick={() => setHorizonFilter(isSelected ? "ALL" : (b.id as HorizonFilter))}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden ${
                     isSelected
-                      ? "bg-primary-500/10 border-primary-500 ring-2 ring-primary-500/20"
+                      ? "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs"
+                      : isAlert
+                      ? "bg-amber-50/60 dark:bg-amber-950/20 border-amber-300 dark:border-amber-500/30 hover:border-amber-400 shadow-2xs"
                       : hasItems
-                      ? "bg-neutral-50 dark:bg-white/5 border-neutral-200/80 dark:border-white/10 hover:border-neutral-300"
-                      : "bg-neutral-50/50 dark:bg-white/2 border-neutral-100 dark:border-white/5 opacity-60"
+                      ? "bg-neutral-50/80 dark:bg-white/5 border-neutral-200/80 dark:border-white/10 hover:border-neutral-300"
+                      : "bg-neutral-50/30 dark:bg-white/2 border-neutral-100 dark:border-white/5 opacity-60 hover:opacity-80"
                   }`}
                 >
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 truncate">
-                    {b.label}
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 truncate">
+                      {b.label}
+                    </span>
+                    {hasItems && (
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${isAlert ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                    )}
                   </div>
-                  <div className="text-sm sm:text-base font-black text-neutral-900 dark:text-white tabular-nums mt-0.5">
+                  <div className={`text-sm sm:text-base font-black tabular-nums tracking-tight ${isAlert ? "text-amber-700 dark:text-amber-400" : hasItems ? "text-neutral-900 dark:text-white" : "text-neutral-400"}`}>
                     {formatINRShort(b.data?.total_maturity_amount ?? b.data?.maturity_amount ?? 0)}
                   </div>
-                  <div className="text-[10px] text-neutral-400 font-medium mt-0.5">
+                  <div className="text-[10px] text-neutral-400 font-medium mt-0.5 truncate">
                     {b.data?.count || 0} deposit{b.data?.count === 1 ? "" : "s"}
                   </div>
                 </button>
@@ -559,45 +562,86 @@ export default function FixedIncomePage() {
         </div>
       )}
 
-      {/* ── SEARCH, HORIZON & TYPE FILTER TOOLBAR ── */}
-      <div className="space-y-2.5">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-              type="text"
-              placeholder="Search by Bank, FDR No, or Profile..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs sm:text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600"
-              >
-                ✕
-              </button>
-            )}
+      {/* ── TOOLBAR: VIEW SWITCHER, SEARCH & SORT ── */}
+      <div className="space-y-3 pt-1">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* View Mode Switcher (Full width on mobile, sleek pill on desktop) */}
+          <div className="flex items-center bg-neutral-100 dark:bg-white/10 p-1 rounded-2xl border border-neutral-200/80 dark:border-white/10 w-full md:w-auto shrink-0 shadow-2xs">
+            <button
+              onClick={() => setViewMode("GRID")}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "GRID"
+                  ? "bg-white dark:bg-[#151A23] text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Cards Grid View"
+            >
+              <LayoutGrid size={14} />
+              <span>Cards</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode("TIMELINE")}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "TIMELINE"
+                  ? "bg-white dark:bg-[#151A23] text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Maturity Timeline & Calendar View"
+            >
+              <CalendarClock size={14} />
+              <span>Timeline</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode("REPORT")}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "REPORT"
+                  ? "bg-white dark:bg-[#151A23] text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Maturity Schedule Report"
+            >
+              <FileSpreadsheet size={14} />
+              <span>Report Schedule</span>
+            </button>
           </div>
 
-          {/* Sort Controls */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs text-neutral-400 font-medium">Sort:</span>
+          {/* Search & Sort Controls */}
+          <div className="flex items-center gap-2 flex-1 md:max-w-md justify-end">
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                type="text"
+                placeholder="Search bank, FDR no, profile..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-7 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             <select
               value={sortField}
               onChange={(e) => setSortField(e.target.value as SortField)}
-              className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-200 focus:outline-none"
+              className="px-2.5 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-200 focus:outline-none shrink-0"
             >
               <option value="maturity_date">Maturity Date</option>
               <option value="days_left">Days Remaining</option>
-              <option value="principal">Principal Amount</option>
+              <option value="principal">Principal</option>
               <option value="rate">Interest Rate</option>
             </select>
+
             <button
               onClick={() => setSortAsc(!sortAsc)}
-              className="p-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 hover:bg-neutral-50 transition-colors"
+              className="p-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 hover:bg-neutral-50 transition-colors shrink-0"
               title={sortAsc ? "Ascending" : "Descending"}
             >
               <ArrowUpDown size={14} className={sortAsc ? "rotate-180 transition-transform" : "transition-transform"} />
@@ -704,7 +748,7 @@ export default function FixedIncomePage() {
                     >
                       <td className="py-3 px-4 font-bold text-neutral-900 dark:text-white">
                         <div className="truncate max-w-[200px]" title={item.institution_name}>
-                          {item.institution_name}
+                          {formatInstitutionName(item.institution_name)}
                         </div>
                         {item.account_number_or_fdr && (
                           <span className="text-[10px] font-mono text-neutral-400">
@@ -833,7 +877,7 @@ export default function FixedIncomePage() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-extrabold text-neutral-900 dark:text-white">
-                            {item.institution_name}
+                            {formatInstitutionName(item.institution_name)}
                           </span>
                           <span className="text-xs text-neutral-400">
                             • {formatDatePretty(item.maturity_date)}
@@ -896,7 +940,7 @@ export default function FixedIncomePage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-base sm:text-lg font-black text-neutral-900 dark:text-white tracking-tight">
-                          {item.institution_name}
+                          {formatInstitutionName(item.institution_name)}
                         </h3>
                         {item.account_number_or_fdr && (
                           <span className="text-[10px] font-mono bg-neutral-100 dark:bg-white/10 px-2 py-0.5 rounded text-neutral-600 dark:text-neutral-300">
