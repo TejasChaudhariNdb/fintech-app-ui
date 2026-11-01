@@ -8,6 +8,8 @@ import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import FixedIncomeModal from "@/components/features/FixedIncomeModal";
 import { FixedIncomeFormData } from "@/components/features/FixedIncomeForm";
+import DebtBulkUploadModal from "@/components/features/DebtBulkUploadModal";
+import InterestReceiptEditModal, { InterestReceiptItemData } from "@/components/features/InterestReceiptEditModal";
 import {
   Building2,
   Plus,
@@ -30,6 +32,10 @@ import {
   FileSpreadsheet,
   ArrowUpDown,
   CheckCircle2,
+  Check,
+  AlertCircle,
+  IndianRupee,
+  Layers,
 } from "lucide-react";
 
 interface FixedIncomeItem {
@@ -101,7 +107,45 @@ interface SummaryData {
   calendar_maturities?: CalendarMaturity[];
 }
 
-type ViewMode = "GRID" | "TIMELINE" | "REPORT";
+interface InterestScheduleItem {
+  receipt_id?: number | null;
+  holding_id: number;
+  due_date: string;
+  reference: string;
+  instrument_name: string;
+  deposit_type: string;
+  institution: string;
+  owner: string;
+  profile_id?: number;
+  tax_status: string;
+  payout_frequency: string;
+  principal_amount: number;
+  interest_rate_pct: number;
+  expected_amount: number;
+  is_received: boolean;
+  actual_amount?: number | null;
+  tds_deducted: number;
+  date_received?: string | null;
+  bank_account?: string | null;
+  status: "RECEIVED" | "PENDING" | "DUE_SOON" | "OVERDUE";
+  notes?: string | null;
+  is_maturity_payout?: boolean;
+}
+
+interface InterestScheduleSummary {
+  total_expected: number;
+  total_received: number;
+  total_pending: number;
+  total_tds: number;
+  current_fy: string;
+  selected_fy: string;
+  available_fys: string[];
+  total_count: number;
+  received_count: number;
+  pending_count: number;
+}
+
+type ViewMode = "GRID" | "TIMELINE" | "REPORT" | "SCHEDULE";
 type HorizonFilter = "ALL" | "OVERDUE" | "30D" | "90D" | "180D" | "365D" | "1Y_PLUS";
 type SortField = "maturity_date" | "principal" | "rate" | "days_left";
 
@@ -185,10 +229,22 @@ export default function FixedIncomePage() {
   const [sortField, setSortField] = useState<SortField>("maturity_date");
   const [sortAsc, setSortAsc] = useState(true);
 
-  // Modal State
+  // Modals & Receipts State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FixedIncomeItem | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [receiptEditOpen, setReceiptEditOpen] = useState(false);
+  const [editingReceipt, setEditingReceipt] = useState<InterestReceiptItemData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Interest Schedule state (Feedback #83 / #1824 - Sreekanth P)
+  const [scheduleData, setScheduleData] = useState<{
+    summary: InterestScheduleSummary;
+    items: InterestScheduleItem[];
+  } | null>(null);
+  const [selectedFy, setSelectedFy] = useState<string>("");
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<string>("ALL");
+  const [scheduleLoading, setScheduleLoading] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -210,8 +266,32 @@ export default function FixedIncomePage() {
     }
   };
 
+  const loadScheduleData = async (targetFy?: string, statusFilter?: string) => {
+    try {
+      setScheduleLoading(true);
+      const fyToUse = targetFy !== undefined ? targetFy : (selectedFy || undefined);
+      const statusToUse = statusFilter !== undefined ? statusFilter : scheduleStatusFilter;
+      const res = await api.getInterestSchedule({
+        profileId: activeProfileId,
+        fy: fyToUse,
+        statusFilter: statusToUse,
+      });
+      if (res) {
+        setScheduleData(res);
+        if (!selectedFy && res.summary?.selected_fy) {
+          setSelectedFy(res.summary.selected_fy);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load interest schedule:", err);
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadScheduleData();
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("added") === "true") {
@@ -224,8 +304,100 @@ export default function FixedIncomePage() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadData();
+    await Promise.all([loadData(), loadScheduleData()]);
     setRefreshing(false);
+  };
+
+  const handleToggleReceipt = async (item: InterestScheduleItem) => {
+    const nextReceived = !item.is_received;
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    // Optimistic local state update
+    setScheduleData((prev) => {
+      if (!prev) return prev;
+      const updated = prev.items.map((it) => {
+        if (it.holding_id === item.holding_id && it.due_date === item.due_date) {
+          return {
+            ...it,
+            is_received: nextReceived,
+            actual_amount: nextReceived ? (it.actual_amount ?? it.expected_amount) : null,
+            date_received: nextReceived ? todayStr : null,
+            status: (nextReceived ? "RECEIVED" : (new Date(it.due_date) < new Date() ? "OVERDUE" : "PENDING")) as any,
+          };
+        }
+        return it;
+      });
+      const totalRec = updated.filter((i) => i.is_received).reduce((acc, i) => acc + (i.actual_amount ?? i.expected_amount), 0);
+      const totalPen = updated.filter((i) => !i.is_received).reduce((acc, i) => acc + i.expected_amount, 0);
+      return {
+        ...prev,
+        summary: {
+          ...prev.summary,
+          total_received: Math.round(totalRec * 100) / 100,
+          total_pending: Math.round(totalPen * 100) / 100,
+          received_count: updated.filter((i) => i.is_received).length,
+          pending_count: updated.filter((i) => !i.is_received).length,
+        },
+        items: updated,
+      };
+    });
+
+    try {
+      await api.updateInterestReceipt({
+        holding_id: item.holding_id,
+        due_date: item.due_date,
+        is_received: nextReceived,
+        actual_amount: nextReceived ? (item.actual_amount ?? item.expected_amount) : undefined,
+        tds_deducted: item.tds_deducted || 0,
+        date_received: nextReceived ? todayStr : undefined,
+        bank_account: item.bank_account || undefined,
+      });
+      showToast(nextReceived ? "Interest marked as received" : "Interest marked as pending");
+    } catch (err: any) {
+      console.error("Failed to toggle interest receipt:", err);
+      showToast("Failed to update receipt");
+      await loadScheduleData();
+    }
+  };
+
+  const handleOpenReceiptEdit = (item: InterestScheduleItem) => {
+    setEditingReceipt({
+      receipt_id: item.receipt_id,
+      holding_id: item.holding_id,
+      due_date: item.due_date,
+      reference: item.reference,
+      instrument_name: item.instrument_name,
+      institution: item.institution,
+      owner: item.owner,
+      tax_status: item.tax_status,
+      expected_amount: item.expected_amount,
+      is_received: item.is_received,
+      actual_amount: item.actual_amount,
+      tds_deducted: item.tds_deducted,
+      date_received: item.date_received,
+      bank_account: item.bank_account,
+      notes: item.notes,
+    });
+    setReceiptEditOpen(true);
+  };
+
+  const handleSaveReceiptDetails = async (payload: {
+    holding_id: number;
+    due_date: string;
+    is_received: boolean;
+    actual_amount: number;
+    tds_deducted: number;
+    date_received?: string;
+    bank_account?: string;
+    notes?: string;
+  }) => {
+    await api.updateInterestReceipt(payload);
+    showToast("Receipt details updated");
+    await loadScheduleData();
+  };
+
+  const exportScheduleCSV = () => {
+    window.open(api.getInterestScheduleExportUrl(selectedFy, activeProfileId), "_blank");
   };
 
   const handleOpenAdd = () => {
@@ -395,11 +567,20 @@ export default function FixedIncomePage() {
         </div>
 
         {/* Primary Page Actions — Clean single line on desktop */}
-        <div className="flex items-center gap-2 sm:gap-2.5 self-stretch sm:self-auto justify-end shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 self-stretch sm:self-auto justify-end shrink-0 flex-wrap sm:flex-nowrap">
           <button
-            onClick={exportMaturityScheduleCSV}
+            onClick={() => setUploadModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-all shadow-2xs active:scale-95 cursor-pointer"
-            title="Download complete FD maturity schedule as CSV"
+            title="Bulk import debt holdings from Excel (.xlsx) or CSV"
+          >
+            <FileSpreadsheet size={14} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="hidden sm:inline">Import Excel/CSV</span>
+          </button>
+
+          <button
+            onClick={viewMode === "SCHEDULE" ? exportScheduleCSV : exportMaturityScheduleCSV}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title={viewMode === "SCHEDULE" ? "Download interest cash flow schedule as CSV" : "Download complete FD maturity schedule as CSV"}
           >
             <Download size={14} className="text-neutral-500 dark:text-neutral-400" />
             <span className="hidden sm:inline">Export CSV</span>
@@ -595,7 +776,7 @@ export default function FixedIncomePage() {
 
             <button
               onClick={() => setViewMode("REPORT")}
-              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "REPORT"
                   ? "bg-white dark:bg-[#151A23] text-neutral-900 dark:text-white shadow-xs"
                   : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
@@ -603,7 +784,24 @@ export default function FixedIncomePage() {
               title="Maturity Schedule Report"
             >
               <FileSpreadsheet size={14} />
-              <span>Report Schedule</span>
+              <span>Maturity Report</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setViewMode("SCHEDULE");
+                if (!scheduleData) loadScheduleData();
+              }}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "SCHEDULE"
+                  ? "bg-white dark:bg-[#151A23] text-emerald-700 dark:text-emerald-400 shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Interest Schedule & FY Cash Flow Projection (Feedback #83 / #1824 - Sreekanth P)"
+            >
+              <Calendar size={14} />
+              <span>Interest Schedule</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             </button>
           </div>
 
@@ -690,6 +888,309 @@ export default function FixedIncomePage() {
         <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
           <Loader2 size={32} className="animate-spin mb-3 text-emerald-600" />
           <p className="text-sm">Calculating compound interest &amp; accruals...</p>
+        </div>
+      ) : viewMode === "SCHEDULE" ? (
+        /* ── INTEREST CASH FLOW SCHEDULE (Feedback #83 / #1824 - Sreekanth P) ── */
+        <div className="space-y-4">
+          {/* Controls Bar: FY Selector + Status Pills + Export */}
+          <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    Financial Year:
+                  </span>
+                  <select
+                    value={selectedFy || scheduleData?.summary.selected_fy || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSelectedFy(val);
+                      loadScheduleData(val, scheduleStatusFilter);
+                    }}
+                    className="bg-neutral-100 dark:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-neutral-900 dark:text-white outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    {(scheduleData?.summary.available_fys || [
+                      "FY 2024-25",
+                      "FY 2025-26",
+                      "FY 2026-27",
+                      "FY 2027-28",
+                      "FY 2028-29",
+                      "FY 2029-30",
+                    ]).map((fy) => (
+                      <option key={fy} value={fy}>
+                        {fy} {fy === scheduleData?.summary.current_fy ? "(Current)" : ""}
+                      </option>
+                    ))}
+                    <option value="ALL_UPCOMING">All Upcoming Payouts</option>
+                    <option value="ALL">All Past &amp; Future</option>
+                  </select>
+                </div>
+
+                <div className="h-4 w-[1px] bg-neutral-200 dark:bg-white/10 hidden sm:block" />
+
+                {/* Status Filter Chips */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: "ALL", label: "All Receipts" },
+                    { id: "PENDING", label: "Pending" },
+                    { id: "RECEIVED", label: "Received" },
+                    { id: "DUE_SOON", label: "Due Soon" },
+                    { id: "OVERDUE", label: "Overdue" },
+                  ].map((sf) => (
+                    <button
+                      key={sf.id}
+                      onClick={() => {
+                        setScheduleStatusFilter(sf.id);
+                        loadScheduleData(selectedFy, sf.id);
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        scheduleStatusFilter === sf.id
+                          ? "bg-emerald-600 text-white shadow-2xs"
+                          : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                      }`}
+                    >
+                      {sf.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={exportScheduleCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/15 text-neutral-800 dark:text-neutral-200 text-xs font-bold transition-all self-end sm:self-auto cursor-pointer"
+              >
+                <Download size={13} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Export Schedule CSV</span>
+              </button>
+            </div>
+
+            {/* 4 Summary Metric Cards for Selected FY */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1 border-t border-neutral-100 dark:border-white/5">
+              <div className="p-3 rounded-2xl bg-neutral-50/80 dark:bg-white/5 border border-neutral-200/60 dark:border-white/5">
+                <span className="text-[11px] font-semibold text-neutral-400 block uppercase tracking-wider">
+                  Total Projected Interest
+                </span>
+                <span className="text-base sm:text-xl font-black text-neutral-900 dark:text-white tabular-nums">
+                  <PrivacyMask>
+                    ₹{Math.round(scheduleData?.summary.total_expected || 0).toLocaleString("en-IN")}
+                  </PrivacyMask>
+                </span>
+                <span className="text-[10px] text-neutral-400 block mt-0.5">
+                  Across {scheduleData?.summary.total_count || 0} scheduled receipts
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-500/20">
+                <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 block uppercase tracking-wider">
+                  Received to Date
+                </span>
+                <span className="text-base sm:text-xl font-black text-emerald-800 dark:text-emerald-300 tabular-nums">
+                  <PrivacyMask>
+                    ₹{Math.round(scheduleData?.summary.total_received || 0).toLocaleString("en-IN")}
+                  </PrivacyMask>
+                </span>
+                <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 block mt-0.5">
+                  {scheduleData?.summary.received_count || 0} credited receipt{scheduleData?.summary.received_count === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-500/20">
+                <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 block uppercase tracking-wider">
+                  Pending Due
+                </span>
+                <span className="text-base sm:text-xl font-black text-amber-800 dark:text-amber-300 tabular-nums">
+                  <PrivacyMask>
+                    ₹{Math.round(scheduleData?.summary.total_pending || 0).toLocaleString("en-IN")}
+                  </PrivacyMask>
+                </span>
+                <span className="text-[10px] text-amber-600/80 dark:text-amber-400/80 block mt-0.5">
+                  {scheduleData?.summary.pending_count || 0} upcoming payment{scheduleData?.summary.pending_count === 1 ? "" : "s"}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-neutral-50/80 dark:bg-white/5 border border-neutral-200/60 dark:border-white/5">
+                <span className="text-[11px] font-semibold text-neutral-400 block uppercase tracking-wider">
+                  TDS Deducted
+                </span>
+                <span className="text-base sm:text-xl font-black text-neutral-900 dark:text-white tabular-nums">
+                  <PrivacyMask>
+                    ₹{Math.round(scheduleData?.summary.total_tds || 0).toLocaleString("en-IN")}
+                  </PrivacyMask>
+                </span>
+                <span className="text-[10px] text-neutral-400 block mt-0.5">
+                  Reported on Form 26AS
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Table matching Sreekanth P's exact Google Sheet */}
+          <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-xs">
+            {scheduleLoading ? (
+              <div className="py-16 text-center text-neutral-400 flex flex-col items-center justify-center gap-2">
+                <Loader2 size={24} className="animate-spin text-emerald-600" />
+                <span className="text-xs font-semibold">Generating FY cash flow projection...</span>
+              </div>
+            ) : !scheduleData?.items || scheduleData.items.length === 0 ? (
+              <div className="py-16 text-center text-neutral-400 space-y-2">
+                <Calendar size={32} className="mx-auto text-neutral-300 dark:text-neutral-600" />
+                <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                  No interest receipts found for {selectedFy || "this period"}
+                </p>
+                <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                  Add a fixed deposit, SCSS, or corporate bond with periodic payout frequency (Monthly, Quarterly, Half-Yearly) to see projected receipts.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-white/10 bg-[#0F223A] text-white text-[11px] font-bold uppercase tracking-wider">
+                      <th className="py-3 px-3.5">Due Date</th>
+                      <th className="py-3 px-3">Reference / Folio</th>
+                      <th className="py-3 px-3">Instrument Name</th>
+                      <th className="py-3 px-2.5">Instn</th>
+                      <th className="py-3 px-2.5">Owner</th>
+                      <th className="py-3 px-2.5">Tax Status</th>
+                      <th className="py-3 px-3 text-right">Expected Amount</th>
+                      <th className="py-3 px-3 text-center">Received?</th>
+                      <th className="py-3 px-3 text-right">Actual (₹)</th>
+                      <th className="py-3 px-3 text-right">TDS (₹)</th>
+                      <th className="py-3 px-3">Date Recd</th>
+                      <th className="py-3 px-3">Bank Account</th>
+                      <th className="py-3 px-3 text-center">Status</th>
+                      <th className="py-3 px-2.5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
+                    {scheduleData.items.map((it, idx) => {
+                      return (
+                        <tr
+                          key={`${it.holding_id}_${it.due_date}_${idx}`}
+                          className={`hover:bg-neutral-50/80 dark:hover:bg-white/5 transition-colors ${
+                            it.is_received ? "bg-emerald-50/20 dark:bg-emerald-950/10" : ""
+                          }`}
+                        >
+                          <td className="py-3 px-3.5 whitespace-nowrap font-bold text-neutral-900 dark:text-white tabular-nums">
+                            {it.due_date}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap font-mono text-xs text-neutral-600 dark:text-neutral-300">
+                            {it.reference}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap font-medium text-neutral-900 dark:text-white">
+                            {it.instrument_name}
+                          </td>
+                          <td className="py-3 px-2.5 whitespace-nowrap text-xs text-neutral-500 dark:text-neutral-400">
+                            {formatInstitutionName(it.institution)}
+                          </td>
+                          <td className="py-3 px-2.5 whitespace-nowrap text-xs text-neutral-600 dark:text-neutral-300 font-medium">
+                            {it.owner}
+                          </td>
+                          <td className="py-3 px-2.5 whitespace-nowrap">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                it.tax_status === "Tax-Free"
+                                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                                  : "bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"
+                              }`}
+                            >
+                              {it.tax_status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-right font-black text-neutral-900 dark:text-white tabular-nums">
+                            <PrivacyMask>₹{Math.round(it.expected_amount).toLocaleString("en-IN")}</PrivacyMask>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-center">
+                            <input
+                              type="checkbox"
+                              checked={it.is_received}
+                              onChange={() => handleToggleReceipt(it)}
+                              className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 dark:bg-neutral-800 border-neutral-300 dark:border-white/20 cursor-pointer"
+                              title="Toggle received status"
+                            />
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-right tabular-nums">
+                            {it.actual_amount !== null && it.actual_amount !== undefined ? (
+                              <span className="font-bold text-emerald-700 dark:text-emerald-400">
+                                <PrivacyMask>₹{Math.round(it.actual_amount).toLocaleString("en-IN")}</PrivacyMask>
+                              </span>
+                            ) : (
+                              <span className="text-neutral-400">—</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-right text-xs text-neutral-500 tabular-nums">
+                            {it.tds_deducted > 0 ? (
+                              <span className="font-bold text-amber-700 dark:text-amber-400">
+                                <PrivacyMask>₹{Math.round(it.tds_deducted).toLocaleString("en-IN")}</PrivacyMask>
+                              </span>
+                            ) : (
+                              <span className="text-neutral-400">₹0</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-xs text-neutral-500 dark:text-neutral-400 tabular-nums">
+                            {it.date_received || "—"}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                            {it.bank_account || "—"}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap text-center">
+                            <span
+                              className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                                it.status === "RECEIVED"
+                                  ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
+                                  : it.status === "OVERDUE"
+                                  ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/20"
+                                  : it.status === "DUE_SOON"
+                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20 animate-pulse"
+                                  : "bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"
+                              }`}
+                            >
+                              {it.status === "RECEIVED" ? "✓ Received" : it.status === "DUE_SOON" ? "Due Soon" : it.status === "OVERDUE" ? "Overdue" : "Pending"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2.5 whitespace-nowrap text-center">
+                            <button
+                              onClick={() => handleOpenReceiptEdit(it)}
+                              className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-800 dark:hover:text-white transition-all cursor-pointer"
+                              title="Edit actual receipt, TDS & bank account"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-neutral-100/80 dark:bg-white/5 border-t-2 border-neutral-300 dark:border-white/20 font-black text-xs sm:text-sm">
+                      <td colSpan={6} className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                        Total Scheduled for {selectedFy || "FY"}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-neutral-900 dark:text-white tabular-nums">
+                        <PrivacyMask>
+                          ₹{Math.round(scheduleData.summary.total_expected).toLocaleString("en-IN")}
+                        </PrivacyMask>
+                      </td>
+                      <td className="py-3.5 px-3 text-center text-xs text-neutral-500">
+                        {scheduleData.summary.received_count} / {scheduleData.summary.total_count}
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-emerald-700 dark:text-emerald-400 tabular-nums">
+                        <PrivacyMask>
+                          ₹{Math.round(scheduleData.summary.total_received).toLocaleString("en-IN")}
+                        </PrivacyMask>
+                      </td>
+                      <td className="py-3.5 px-3 text-right text-amber-700 dark:text-amber-400 tabular-nums">
+                        <PrivacyMask>
+                          ₹{Math.round(scheduleData.summary.total_tds).toLocaleString("en-IN")}
+                        </PrivacyMask>
+                      </td>
+                      <td colSpan={4}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       ) : sortedHoldings.length === 0 ? (
         <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto">
@@ -1133,6 +1634,8 @@ export default function FixedIncomePage() {
                 principal_amount: editingItem.principal_amount,
                 interest_rate_pct: editingItem.interest_rate_pct,
                 compounding_frequency: editingItem.compounding_frequency,
+                payout_frequency: (editingItem as any).payout_frequency,
+                payout_bank_account: (editingItem as any).payout_bank_account,
                 start_date: editingItem.start_date,
                 maturity_date: editingItem.maturity_date,
                 maturity_amount: editingItem.maturity_amount,
@@ -1142,6 +1645,26 @@ export default function FixedIncomePage() {
               }
             : null
         }
+      />
+
+      {/* ── BULK UPLOAD MODAL ── */}
+      <DebtBulkUploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSuccess={async () => {
+          setUploadModalOpen(false);
+          showToast("Bulk debt holdings imported successfully");
+          await Promise.all([loadData(), loadScheduleData()]);
+        }}
+        profileId={activeProfileId}
+      />
+
+      {/* ── RECEIPT EDIT MODAL ── */}
+      <InterestReceiptEditModal
+        isOpen={receiptEditOpen}
+        item={editingReceipt}
+        onClose={() => setReceiptEditOpen(false)}
+        onSave={handleSaveReceiptDetails}
       />
 
       {/* ── FLOATING TOAST NOTIFICATION ── */}

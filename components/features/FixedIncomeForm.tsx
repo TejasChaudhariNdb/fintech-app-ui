@@ -22,6 +22,8 @@ export interface FixedIncomeFormData {
   principal_amount: number;
   interest_rate_pct: number;
   compounding_frequency: string;
+  payout_frequency?: string;
+  payout_bank_account?: string;
   start_date: string;
   maturity_date?: string;
   maturity_amount?: number;
@@ -175,6 +177,12 @@ export default function FixedIncomeForm({
   );
   const [frequency, setFrequency] = useState<string>(
     initialData?.compounding_frequency || "QUARTERLY"
+  );
+  const [payoutFreq, setPayoutFreq] = useState<string>(
+    initialData?.payout_frequency || "QUARTERLY"
+  );
+  const [payoutBankAccount, setPayoutBankAccount] = useState<string>(
+    initialData?.payout_bank_account || ""
   );
   const [startDate, setStartDate] = useState<string>(
     initialData?.start_date || new Date().toISOString().split("T")[0]
@@ -332,6 +340,7 @@ export default function FixedIncomeForm({
     if (typeId === "PPF") {
       setRateStr("7.10");
       setFrequency("ANNUALLY");
+      setPayoutFreq("ANNUALLY");
       setIsTaxSaving(true);
       if (startDate) {
         const st = new Date(startDate);
@@ -340,9 +349,13 @@ export default function FixedIncomeForm({
       }
     } else if (typeId === "TAX_FREE_BOND") {
       setFrequency("ANNUALLY");
+      setPayoutFreq("ANNUALLY");
       setIsTaxSaving(true);
     } else if (typeId === "RBI_BOND") {
       setFrequency("HALF_YEARLY");
+      setPayoutFreq("HALF_YEARLY");
+    } else if (typeId === "POST_OFFICE") {
+      setPayoutFreq("QUARTERLY");
     }
   };
 
@@ -390,6 +403,8 @@ export default function FixedIncomeForm({
         principal_amount: principalNum,
         interest_rate_pct: rateNum,
         compounding_frequency: isPPF ? "ANNUALLY" : frequency,
+        payout_frequency: isPPF ? "ANNUALLY" : payoutFreq,
+        payout_bank_account: payoutBankAccount.trim() || undefined,
         start_date: startDate,
         maturity_date: maturityDate,
         maturity_amount: Math.round(maturityVal * 100) / 100,
@@ -749,18 +764,55 @@ export default function FixedIncomeForm({
         </div>
       </div>
 
-      {/* ── FDR / ACCOUNT NUMBER ── */}
+      {/* ── FDR / ACCOUNT NUMBER & BANK ACCOUNT ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+            {isPPF ? "PPF Account Number (Optional)" : "FDR / Reference # (Optional)"}
+          </label>
+          <input
+            type="text"
+            placeholder={isPPF ? "e.g. 31943053212" : "e.g. PO SCSS 5655 / FDR-837192"}
+            value={fdrNumber}
+            onChange={(e) => setFdrNumber(e.target.value)}
+            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+            Interest Payout Periodicity
+          </label>
+          <select
+            value={isPPF ? "ANNUALLY" : payoutFreq}
+            disabled={isPPF}
+            onChange={(e) => setPayoutFreq(e.target.value)}
+            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-semibold text-neutral-900 dark:text-white outline-none disabled:opacity-60"
+          >
+            <option value="QUARTERLY">Quarterly Payout (SCSS / Regular FD)</option>
+            <option value="MONTHLY">Monthly Payout (Post Office MIS)</option>
+            <option value="HALF_YEARLY">Half-Yearly Payout (RBI Bonds)</option>
+            <option value="ANNUALLY">Annual Payout (Tax-Free Coupon)</option>
+            <option value="AT_MATURITY">At Maturity (Cumulative FD)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ── CREDITING BANK ACCOUNT ── */}
       <div>
         <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-          {isPPF ? "PPF Account Number (Optional)" : "FDR / Account # (Optional)"}
+          Payout Crediting Bank Account (Optional)
         </label>
         <input
           type="text"
-          placeholder={isPPF ? "e.g. 31943053212" : "e.g. FDR-837192"}
-          value={fdrNumber}
-          onChange={(e) => setFdrNumber(e.target.value)}
+          placeholder="e.g. POSB, HDFC Bank A/c 4012, SBI 8821"
+          value={payoutBankAccount}
+          onChange={(e) => setPayoutBankAccount(e.target.value)}
           className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
         />
+        <p className="text-[11px] text-neutral-500 mt-1">
+          Used to auto-populate your Interest Schedule and verify receipt credits.
+        </p>
       </div>
 
       {/* ── DATES & TENURE ── */}

@@ -645,6 +645,60 @@ export const api = {
     api.clearPortfolioCache();
     return res;
   },
+  getInterestSchedule: (params?: { profileId?: string; fy?: string; statusFilter?: string }) => {
+    const activeProf = params?.profileId !== undefined ? params.profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const searchParams = new URLSearchParams();
+    if (activeProf && activeProf !== "all") searchParams.append("profile_id", activeProf);
+    if (params?.fy) searchParams.append("fy", params.fy);
+    if (params?.statusFilter) searchParams.append("status_filter", params.statusFilter);
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return api.fetch(`/fixed-income/interest-schedule${qs}`);
+  },
+  updateInterestReceipt: async (payload: {
+    holding_id: number;
+    due_date: string;
+    is_received: boolean;
+    actual_amount?: number;
+    tds_deducted?: number;
+    date_received?: string;
+    bank_account?: string;
+    notes?: string;
+  }) => {
+    const res = await api.fetch("/fixed-income/interest-receipt", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  uploadFixedIncomeBulk: async (file: File, profileId?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
+    const qs = activeProf && activeProf !== "all" ? `?profile_id=${activeProf}` : "";
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const res = await fetch(`${API_URL}/fixed-income/upload-bulk${qs}`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+      throw new Error(err.detail || "Failed to bulk upload fixed income holdings");
+    }
+    api.clearPortfolioCache();
+    return res.json();
+  },
+  getFixedIncomeTemplateUrl: () => `${API_URL}/fixed-income/template/csv`,
+  getInterestScheduleExportUrl: (fy?: string, profileId?: string) => {
+    const searchParams = new URLSearchParams();
+    if (profileId && profileId !== "all") searchParams.append("profile_id", profileId);
+    if (fy) searchParams.append("fy", fy);
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return `${API_URL}/fixed-income/export/interest-schedule${qs}`;
+  },
 
   // Insurance & Policy Vault
   getInsurancePolicies: (profileId?: string) => {
