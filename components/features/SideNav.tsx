@@ -26,13 +26,11 @@ import {
 import { usePrivacy } from "@/context/PrivacyContext";
 import { useProfile } from "@/context/ProfileContext";
 import { api } from "@/lib/api";
-import { useAssetPreferences } from "@/lib/assetPreferences";
 
 export default function SideNav() {
   const pathname = usePathname();
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
   const { activeProfileId } = useProfile();
-  const { preferences: assetPrefs } = useAssetPreferences(activeProfileId);
   const [isHoldingsExpanded, setIsHoldingsExpanded] = useState(true);
   const [user, setUser] = useState<{
     full_name?: string;
@@ -93,37 +91,32 @@ export default function SideNav() {
       label: "Mutual Funds",
       icon: PieChart,
       dotColor: "bg-emerald-400",
-      enabled: assetPrefs.mutual_funds,
     },
     {
       id: "/holdings/stocks",
       label: "Stocks",
       icon: TrendingUp,
       dotColor: "bg-blue-400",
-      enabled: assetPrefs.stocks,
     },
     {
       id: "/holdings/deposits",
       label: "Fixed Income",
       icon: Landmark,
       dotColor: "bg-cyan-400",
-      enabled: assetPrefs.fixed_income,
     },
     {
       id: "/holdings/gold",
       label: "Gold & Bullion",
       icon: Coins,
       dotColor: "bg-amber-400",
-      enabled: assetPrefs.gold,
     },
     {
       id: "/holdings/real-estate",
       label: "Real Estate",
       icon: Building,
       dotColor: "bg-rose-400",
-      enabled: assetPrefs.real_estate,
     },
-  ].filter((item) => item.enabled !== false);
+  ];
 
   const isSettingsActive = pathname.startsWith("/profile");
 

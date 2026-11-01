@@ -755,20 +755,35 @@ export default function HomePage() {
   }
 
   // ✅ UX: Onboarding / Empty State
-  // If an individual profile genuinely has 0 assets after loading finishes, show OnboardingWizard to prompt them to import
+  // If an individual profile genuinely has 0 assets across all asset classes, show OnboardingWizard
+  const hasAnyActualAsset =
+    (netWorth?.mutual_funds || 0) > 0 ||
+    (netWorth?.stocks || 0) > 0 ||
+    (netWorth?.fixed_income || 0) > 0 ||
+    (netWorth?.gold || 0) > 0 ||
+    (netWorth?.real_estate || 0) > 0 ||
+    (netWorth?.net_worth || 0) > 0;
+
   const isProfileEmpty =
     activeProfileId !== "all" &&
     netWorth !== null &&
-    netWorth.net_worth === 0 &&
-    summary !== null &&
-    summary.invested === 0 &&
-    summary.current === 0;
+    !hasAnyActualAsset &&
+    (summary?.invested || 0) === 0 &&
+    (summary?.current || 0) === 0;
 
   // If Family view has 0 assets overall across all profiles
+  const hasAnyFamilyAsset =
+    (familySummary?.net_worth || 0) > 0 ||
+    (familySummary?.allocation?.mutual_funds || 0) > 0 ||
+    (familySummary?.allocation?.stocks || 0) > 0 ||
+    (familySummary?.allocation?.fixed_income || 0) > 0 ||
+    (familySummary?.allocation?.gold || 0) > 0 ||
+    (familySummary?.allocation?.real_estate || 0) > 0;
+
   const isFamilyEmpty =
     activeProfileId === "all" &&
     familySummary !== null &&
-    familySummary.net_worth === 0;
+    !hasAnyFamilyAsset;
 
   if (isProfileEmpty || isFamilyEmpty) {
     return <OnboardingWizard userProfile={userProfile} />;
@@ -1033,8 +1048,20 @@ export default function HomePage() {
                     stockXirr={summary.stock_xirr || 0}
                     mfProfit={summary.mf_profit || 0}
                     stockProfit={summary.stock_profit || 0}
+                    fiProfit={summary.fi_profit || 0}
+                    goldProfit={summary.gold_profit || 0}
+                    reProfit={summary.re_profit || 0}
                     mfInvested={summary.mf_invested || 0}
                     stockInvested={summary.stock_invested || 0}
+                    fiInvested={summary.fi_invested || 0}
+                    goldInvested={summary.gold_invested || 0}
+                    reInvested={summary.re_invested || 0}
+                    mfCurrent={netWorth?.mutual_funds || 0}
+                    stockCurrent={netWorth?.stocks || 0}
+                    fiCurrent={netWorth?.fixed_income || 0}
+                    goldCurrent={netWorth?.gold || 0}
+                    reCurrent={netWorth?.real_estate || 0}
+                    assetPrefs={assetPrefs}
                   />
                 </section>
               )}

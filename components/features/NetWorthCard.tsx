@@ -339,7 +339,8 @@ export default function NetWorthCard({
                       className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${mfValue === 0 ? "opacity-50" : ""}`}>
                       <PrivacyMask>₹{Math.round(mfValue).toLocaleString("en-IN")}</PrivacyMask>
                     </p>
-                    <div className="text-[11px] font-medium mt-1.5 flex items-center justify-between gap-1 flex-wrap">
+                    {/* Line 3: 1D Day Change */}
+                    <div className="text-[11px] font-medium mt-1.5 flex items-center">
                       {mfDayChange !== undefined ? (
                         <span className={`inline-flex items-center gap-0.5 font-semibold ${mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                           {mfDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(mfDayChange)).toLocaleString("en-IN")}
@@ -349,11 +350,16 @@ export default function NetWorthCard({
                       ) : (
                         <span className="text-[10px] text-white/50">Active Folios</span>
                       )}
-                      {mfProfit !== undefined && mfValue > 0 && (
-                        <span className={`text-[10px] font-bold tabular-nums ${mfProfit >= 0 ? "text-emerald-300" : "text-rose-300"}`} title="Total Gain & Return %">
+                    </div>
+                    {/* Line 4: Total Gain (Returns) on its own separate line */}
+                    <div className="text-[11px] font-bold mt-1 min-h-[16px] flex items-center">
+                      {mfProfit !== undefined && (mfValue > 0 || mfProfit !== 0) ? (
+                        <span className={`tabular-nums ${mfProfit >= 0 ? "text-emerald-300" : "text-rose-300"}`} title="Total Gain & Return %">
                           {mfProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(mfProfit)).toLocaleString("en-IN")}
                           {mfReturnPct !== undefined && ` (${mfProfit >= 0 ? "+" : ""}${mfReturnPct.toFixed(1)}%)`}
                         </span>
+                      ) : (
+                        <span className="text-white/40 text-[10px]">--</span>
                       )}
                     </div>
                   </div>
@@ -411,7 +417,8 @@ export default function NetWorthCard({
                       className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${stockValue === 0 ? "opacity-50" : ""}`}>
                       <PrivacyMask>₹{Math.round(stockValue).toLocaleString("en-IN")}</PrivacyMask>
                     </p>
-                    <div className="text-[11px] font-medium mt-1.5 flex items-center justify-between gap-1 flex-wrap">
+                    {/* Line 3: 1D Day Change */}
+                    <div className="text-[11px] font-medium mt-1.5 flex items-center">
                       {stockDayChange !== undefined ? (
                         <span className={`inline-flex items-center gap-0.5 font-semibold ${stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                           {stockDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(stockDayChange)).toLocaleString("en-IN")}
@@ -421,11 +428,16 @@ export default function NetWorthCard({
                       ) : (
                         <span className="text-[10px] text-white/50">Direct Equity</span>
                       )}
-                      {stockProfit !== undefined && stockValue > 0 && (
-                        <span className={`text-[10px] font-bold tabular-nums ${stockProfit >= 0 ? "text-emerald-300" : "text-rose-300"}`} title="Total Gain & Return %">
+                    </div>
+                    {/* Line 4: Total Gain (Returns) on its own separate line */}
+                    <div className="text-[11px] font-bold mt-1 min-h-[16px] flex items-center">
+                      {stockProfit !== undefined && (stockValue > 0 || stockProfit !== 0) ? (
+                        <span className={`tabular-nums ${stockProfit >= 0 ? "text-emerald-300" : "text-rose-300"}`} title="Total Gain & Return %">
                           {stockProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(stockProfit)).toLocaleString("en-IN")}
                           {stockReturnPct !== undefined && ` (${stockProfit >= 0 ? "+" : ""}${stockReturnPct.toFixed(1)}%)`}
                         </span>
+                      ) : (
+                        <span className="text-white/40 text-[10px]">--</span>
                       )}
                     </div>
                   </div>
@@ -566,13 +578,19 @@ export default function NetWorthCard({
                       Properties &amp; Lands
                     </div>
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
-                    <span className="text-[10px] text-white/70">Appreciation</span>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90 gap-1.5">
+                    <span className="text-[10px] text-white/70 shrink-0">Appreciation</span>
                     {realEstateValue !== undefined && realEstateValue > 0 && reProfit !== undefined ? (
-                      <span className={`font-bold tabular-nums ${reProfit >= 0 ? "text-rose-300" : "text-rose-400"}`}>
-                        {reProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(reProfit)).toLocaleString("en-IN")}
-                        {reReturnPct !== undefined && ` (${reProfit >= 0 ? "+" : ""}${reReturnPct.toFixed(1)}%)`}
-                      </span>
+                      <div className="flex flex-col items-end text-right">
+                        <span className={`font-bold tabular-nums text-[11px] ${reProfit >= 0 ? "text-rose-300" : "text-rose-400"}`}>
+                          {reProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(reProfit)).toLocaleString("en-IN")}
+                        </span>
+                        {reReturnPct !== undefined && (
+                          <span className={`text-[10px] font-semibold tabular-nums ${reProfit >= 0 ? "text-rose-300" : "text-rose-400"}`}>
+                            ({reProfit >= 0 ? "+" : ""}{reReturnPct.toFixed(1)}%)
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="font-semibold text-white/50 tabular-nums">--</span>
                     )}

@@ -22,6 +22,9 @@ import {
   CreditCard,
   CheckCircle2,
   Loader2,
+  Building,
+  Landmark,
+  Coins,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
@@ -546,6 +549,91 @@ export default function OnboardingWizard({
               <div className="w-full flex items-center justify-between font-bold text-emerald-600 dark:text-emerald-400 text-sm pt-2 border-t border-neutral-100 dark:border-white/5">
                 <span>Add Stocks</span>
                 <ArrowRight className="h-4 w-4 transform group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+
+          {/* Alternative Wealth & Real Estate Section */}
+          <div className="max-w-4xl mx-auto mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-px bg-neutral-200 dark:bg-white/10 flex-1" />
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+                Track Real Estate, Fixed Income &amp; Gold
+              </span>
+              <div className="h-px bg-neutral-200 dark:bg-white/10 flex-1" />
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4 md:gap-5">
+              {/* Real Estate Card */}
+              <div
+                onClick={() => router.push("/holdings/real-estate")}
+                className="group relative flex flex-col p-5 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 rounded-3xl hover:border-rose-500/60 dark:hover:border-rose-500/60 hover:shadow-xl hover:shadow-rose-500/10 transition-all duration-300 cursor-pointer text-left">
+                <div className="flex items-start justify-between mb-3 w-full">
+                  <div className="h-11 w-11 bg-rose-50 dark:bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform duration-300">
+                    <Building size={22} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-500/15 px-2.5 py-0.5 rounded-full">
+                    Property
+                  </span>
+                </div>
+                <h4 className="text-base font-bold text-neutral-900 dark:text-white mb-1.5">
+                  Real Estate Vault
+                </h4>
+                <p className="text-neutral-500 dark:text-neutral-400 text-xs mb-4 grow leading-relaxed">
+                  Track residential &amp; commercial properties, land parcels, rental yields &amp; appreciation.
+                </p>
+                <div className="w-full flex items-center justify-between font-bold text-rose-600 dark:text-rose-400 text-xs pt-2 border-t border-neutral-100 dark:border-white/5">
+                  <span>Add Property</span>
+                  <ArrowRight className="h-3.5 w-3.5 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Fixed Income Card */}
+              <div
+                onClick={() => router.push("/holdings/deposits")}
+                className="group relative flex flex-col p-5 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 rounded-3xl hover:border-cyan-500/60 dark:hover:border-cyan-500/60 hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300 cursor-pointer text-left">
+                <div className="flex items-start justify-between mb-3 w-full">
+                  <div className="h-11 w-11 bg-cyan-50 dark:bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-600 dark:text-cyan-400 group-hover:scale-110 transition-transform duration-300">
+                    <Landmark size={22} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-500/15 px-2.5 py-0.5 rounded-full">
+                    Fixed Income
+                  </span>
+                </div>
+                <h4 className="text-base font-bold text-neutral-900 dark:text-white mb-1.5">
+                  FDs, PPF &amp; Bonds
+                </h4>
+                <p className="text-neutral-500 dark:text-neutral-400 text-xs mb-4 grow leading-relaxed">
+                  Track Bank FDs, PPF, EPF &amp; Corporate Bonds with automatic interest calculation.
+                </p>
+                <div className="w-full flex items-center justify-between font-bold text-cyan-600 dark:text-cyan-400 text-xs pt-2 border-t border-neutral-100 dark:border-white/5">
+                  <span>Add Deposit</span>
+                  <ArrowRight className="h-3.5 w-3.5 transform group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+
+              {/* Gold & Bullion Card */}
+              <div
+                onClick={() => router.push("/holdings/gold")}
+                className="group relative flex flex-col p-5 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 rounded-3xl hover:border-amber-500/60 dark:hover:border-amber-500/60 hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-300 cursor-pointer text-left">
+                <div className="flex items-start justify-between mb-3 w-full">
+                  <div className="h-11 w-11 bg-amber-50 dark:bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform duration-300">
+                    <Coins size={22} />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 px-2.5 py-0.5 rounded-full">
+                    Precious Metals
+                  </span>
+                </div>
+                <h4 className="text-base font-bold text-neutral-900 dark:text-white mb-1.5">
+                  Gold &amp; Bullion
+                </h4>
+                <p className="text-neutral-500 dark:text-neutral-400 text-xs mb-4 grow leading-relaxed">
+                  Track SGB, 24K/22K physical jewellery, coins &amp; digital gold with live spot rates.
+                </p>
+                <div className="w-full flex items-center justify-between font-bold text-amber-600 dark:text-amber-400 text-xs pt-2 border-t border-neutral-100 dark:border-white/5">
+                  <span>Add Gold</span>
+                  <ArrowRight className="h-3.5 w-3.5 transform group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
             </div>
           </div>

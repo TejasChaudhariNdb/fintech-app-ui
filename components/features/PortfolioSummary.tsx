@@ -128,26 +128,66 @@ export default function PortfolioSummary({
           {/* Expanded Breakdown */}
           {isInvestedExpanded && (
             <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500">
-                  Mutual Funds
-                </span>
-                <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                  <PrivacyMask>
-                    ₹{mfInvested.toLocaleString("en-IN")}
-                  </PrivacyMask>
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500">
-                  Stocks
-                </span>
-                <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                  <PrivacyMask>
-                    ₹{stockInvested.toLocaleString("en-IN")}
-                  </PrivacyMask>
-                </span>
-              </div>
+              {showMf && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Mutual Funds
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{mfInvested.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showStock && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Stocks
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{stockInvested.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showFi && fiInvested > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Fixed Income
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{fiInvested.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showGold && goldInvested > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Gold &amp; Bullion
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{goldInvested.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showRe && reInvested > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Real Estate
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{reInvested.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -179,26 +219,66 @@ export default function PortfolioSummary({
           {/* Expanded Breakdown */}
           {isCurrentExpanded && (
             <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500">
-                  Mutual Funds
-                </span>
-                <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                  <PrivacyMask>
-                    ₹{mfCurrentVal.toLocaleString("en-IN")}
-                  </PrivacyMask>
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-neutral-400 dark:text-neutral-500">
-                  Stocks
-                </span>
-                <span className="font-medium text-neutral-700 dark:text-neutral-300">
-                  <PrivacyMask>
-                    ₹{stockCurrentVal.toLocaleString("en-IN")}
-                  </PrivacyMask>
-                </span>
-              </div>
+              {showMf && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Mutual Funds
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{mfCurrentVal.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showStock && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Stocks
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{stockCurrentVal.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showFi && fiCurrentVal > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Fixed Income
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{fiCurrentVal.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showGold && goldCurrentVal > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Gold &amp; Bullion
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{goldCurrentVal.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {showRe && reCurrentVal > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    Real Estate
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{reCurrentVal.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -404,63 +484,157 @@ export default function PortfolioSummary({
             </div>
           </div>
 
-          {/* Two-row breakdown: Mutual Funds in one row, Stocks in row below */}
+          {/* Asset breakdown */}
           <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-white/10 px-1 text-xs sm:text-sm">
-            <div className="flex justify-between items-center gap-2">
-              <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                Mutual Funds
-              </span>
-              <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
-                <PrivacyMask blurStrength="sm">
+            {showMf && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  Mutual Funds
+                </span>
+                <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                  <PrivacyMask blurStrength="sm">
+                    <span
+                      className={`font-semibold ${
+                        (mfProfit ?? 0) >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(mfProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
+                      {Math.round(Math.abs(mfProfit ?? 0)).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
                   <span
-                    className={`font-semibold ${
+                    className={`text-xs ${
                       (mfProfit ?? 0) >= 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-red-500 dark:text-red-400"
+                        ? "text-emerald-600/80 dark:text-emerald-500/80"
+                        : "text-red-600/80 dark:text-red-500/80"
                     }`}>
-                    {(mfProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
-                    {Math.round(Math.abs(mfProfit ?? 0)).toLocaleString("en-IN")}
+                    ({(mfProfit ?? 0) >= 0 ? "+" : ""}{mfReturnPct.toFixed(2)}%)
                   </span>
-                </PrivacyMask>
-                <span
-                  className={`text-xs ${
-                    (mfProfit ?? 0) >= 0
-                      ? "text-emerald-600/80 dark:text-emerald-500/80"
-                      : "text-red-600/80 dark:text-red-500/80"
-                  }`}>
-                  ({(mfProfit ?? 0) >= 0 ? "+" : ""}{mfReturnPct.toFixed(2)}%)
-                </span>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex justify-between items-center gap-2">
-              <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                Stocks
-              </span>
-              <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
-                <PrivacyMask blurStrength="sm">
-                  <span
-                    className={`font-semibold ${
-                      (stockProfit ?? 0) >= 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-red-500 dark:text-red-400"
-                    }`}>
-                    {(stockProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
-                    {Math.round(Math.abs(stockProfit ?? 0)).toLocaleString("en-IN")}
-                  </span>
-                </PrivacyMask>
-                <span
-                  className={`text-xs ${
-                    (stockProfit ?? 0) >= 0
-                      ? "text-emerald-600/80 dark:text-emerald-500/80"
-                      : "text-red-600/80 dark:text-red-500/80"
-                  }`}>
-                  ({(stockProfit ?? 0) >= 0 ? "+" : ""}{stockReturnPct.toFixed(2)}%)
+            {showStock && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                  Stocks
                 </span>
+                <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                  <PrivacyMask blurStrength="sm">
+                    <span
+                      className={`font-semibold ${
+                        (stockProfit ?? 0) >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(stockProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
+                      {Math.round(Math.abs(stockProfit ?? 0)).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  <span
+                    className={`text-xs ${
+                      (stockProfit ?? 0) >= 0
+                        ? "text-emerald-600/80 dark:text-emerald-500/80"
+                        : "text-red-600/80 dark:text-red-500/80"
+                    }`}>
+                    ({(stockProfit ?? 0) >= 0 ? "+" : ""}{stockReturnPct.toFixed(2)}%)
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
+
+            {showFi && (fiInvested > 0 || (fiProfit !== undefined && fiProfit !== 0)) && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                  Fixed Income (Interest)
+                </span>
+                <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                  <PrivacyMask blurStrength="sm">
+                    <span
+                      className={`font-semibold ${
+                        (fiProfit ?? 0) >= 0
+                          ? "text-cyan-600 dark:text-cyan-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(fiProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
+                      {Math.round(Math.abs(fiProfit ?? 0)).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  <span
+                    className={`text-xs ${
+                      (fiProfit ?? 0) >= 0
+                        ? "text-cyan-600/80 dark:text-cyan-400/80"
+                        : "text-red-600/80 dark:text-red-500/80"
+                    }`}>
+                    ({(fiProfit ?? 0) >= 0 ? "+" : ""}{fiReturnPct.toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {showGold && (goldInvested > 0 || (goldProfit !== undefined && goldProfit !== 0)) && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  Gold &amp; Bullion
+                </span>
+                <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                  <PrivacyMask blurStrength="sm">
+                    <span
+                      className={`font-semibold ${
+                        (goldProfit ?? 0) >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(goldProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
+                      {Math.round(Math.abs(goldProfit ?? 0)).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  <span
+                    className={`text-xs ${
+                      (goldProfit ?? 0) >= 0
+                        ? "text-emerald-600/80 dark:text-emerald-500/80"
+                        : "text-red-600/80 dark:text-red-500/80"
+                    }`}>
+                    ({(goldProfit ?? 0) >= 0 ? "+" : ""}{goldReturnPct.toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {showRe && (reInvested > 0 || (reProfit !== undefined && reProfit !== 0)) && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                  Real Estate (Appreciation)
+                </span>
+                <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                  <PrivacyMask blurStrength="sm">
+                    <span
+                      className={`font-semibold ${
+                        (reProfit ?? 0) >= 0
+                          ? "text-rose-500 dark:text-rose-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(reProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
+                      {Math.round(Math.abs(reProfit ?? 0)).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  <span
+                    className={`text-xs ${
+                      (reProfit ?? 0) >= 0
+                        ? "text-rose-500/80 dark:text-rose-400/80"
+                        : "text-red-600/80 dark:text-red-500/80"
+                    }`}>
+                    ({(reProfit ?? 0) >= 0 ? "+" : ""}{reReturnPct.toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
