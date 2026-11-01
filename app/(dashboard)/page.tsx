@@ -57,7 +57,7 @@ export default function HomePage() {
   const [benchmark, setBenchmark] = useState<any>(null); // New State
   const [insuranceData, setInsuranceData] = useState<any>(null);
   const [showCustomizeModal, setShowCustomizeModal] = useState(false);
-  const { preferences: assetPrefs, updatePreferences: setAssetPrefs } = useAssetPreferences();
+  const { preferences: assetPrefs, updatePreferences: setAssetPrefs } = useAssetPreferences(activeProfileId);
   const [loading, setLoading] = useState(true);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -179,7 +179,7 @@ export default function HomePage() {
         if (up) {
           setUserProfile(up);
           if (up.asset_preferences) {
-            syncPreferencesFromBackend(up.asset_preferences);
+            syncPreferencesFromBackend(up.asset_preferences, up.asset_preferences_by_profile);
           }
           analytics.identifyUser(up.email || up.id, up.email, {
             full_name: up.full_name,
@@ -265,7 +265,7 @@ export default function HomePage() {
         if (up) {
           setUserProfile(up);
           if (up.asset_preferences) {
-            syncPreferencesFromBackend(up.asset_preferences);
+            syncPreferencesFromBackend(up.asset_preferences, up.asset_preferences_by_profile);
           }
           analytics.identifyUser(up.email || up.id, up.email, {
             full_name: up.full_name,

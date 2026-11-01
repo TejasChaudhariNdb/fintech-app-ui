@@ -350,7 +350,7 @@ export default function ProfilePage() {
         kyc_nudges: data.kyc_nudges || [],
       });
       if (data.asset_preferences) {
-        syncPreferencesFromBackend(data.asset_preferences);
+        syncPreferencesFromBackend(data.asset_preferences, data.asset_preferences_by_profile);
       }
       setOriginalProfile(data);
     } catch (err) {

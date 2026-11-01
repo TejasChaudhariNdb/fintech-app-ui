@@ -1001,13 +1001,15 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  updateAssetPreferences: async (prefs: Record<string, any>) => {
-    const res = await api.fetch("/users/me/asset-preferences", {
+  updateAssetPreferences: async (prefs: Record<string, any>, profileId?: string | number) => {
+    const query = profileId ? `?profile_id=${profileId}` : "";
+    const payload = profileId ? { ...prefs, profile_id: profileId } : prefs;
+    const res = await api.fetch(`/users/me/asset-preferences${query}`, {
       method: "PATCH",
-      body: JSON.stringify(prefs),
+      body: JSON.stringify(payload),
     });
     api.clearPortfolioCache();
-    api.clearCache(["user-profile", "family-summary", "net-worth", "portfolio-summary"]);
+    api.clearCache(["user-profile", "family-summary", "net-worth", "portfolio-summary", "profile"]);
     return res;
   },
 

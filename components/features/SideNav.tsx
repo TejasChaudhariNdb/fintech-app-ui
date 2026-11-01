@@ -24,13 +24,15 @@ import {
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
+import { useProfile } from "@/context/ProfileContext";
 import { api } from "@/lib/api";
 import { useAssetPreferences } from "@/lib/assetPreferences";
 
 export default function SideNav() {
   const pathname = usePathname();
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
-  const { preferences: assetPrefs } = useAssetPreferences();
+  const { activeProfileId } = useProfile();
+  const { preferences: assetPrefs } = useAssetPreferences(activeProfileId);
   const [isHoldingsExpanded, setIsHoldingsExpanded] = useState(true);
   const [user, setUser] = useState<{
     full_name?: string;

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Card from "../ui/Card";
 import PrivacyMask from "../ui/PrivacyMask";
 import { ChevronDown } from "lucide-react";
+import { NetWorthAssetPreferences } from "@/lib/assetPreferences";
 
 interface PortfolioSummaryProps {
   invested: number;
@@ -21,8 +22,20 @@ interface PortfolioSummaryProps {
   stockXirr?: number;
   mfProfit?: number;
   stockProfit?: number;
+  fiProfit?: number;
+  goldProfit?: number;
+  reProfit?: number;
   mfInvested?: number;
   stockInvested?: number;
+  fiInvested?: number;
+  goldInvested?: number;
+  reInvested?: number;
+  mfCurrent?: number;
+  stockCurrent?: number;
+  fiCurrent?: number;
+  goldCurrent?: number;
+  reCurrent?: number;
+  assetPrefs?: NetWorthAssetPreferences;
 }
 
 export default function PortfolioSummary({
@@ -41,8 +54,20 @@ export default function PortfolioSummary({
   stockXirr = 0,
   mfProfit,
   stockProfit,
+  fiProfit,
+  goldProfit,
+  reProfit,
   mfInvested = 0,
   stockInvested = 0,
+  fiInvested = 0,
+  goldInvested = 0,
+  reInvested = 0,
+  mfCurrent,
+  stockCurrent,
+  fiCurrent,
+  goldCurrent,
+  reCurrent,
+  assetPrefs,
 }: PortfolioSummaryProps) {
   const isPositive = profit >= 0;
   const isDayPositive = dayChange >= 0;
@@ -51,10 +76,23 @@ export default function PortfolioSummary({
   const [isDayChangeExpanded, setIsDayChangeExpanded] = useState(false);
   const [isXirrExpanded, setIsXirrExpanded] = useState(false);
 
-  const mfCurrentVal = mfInvested + (mfProfit || 0);
-  const stockCurrentVal = stockInvested + (stockProfit || 0);
+  const showMf = assetPrefs?.mutual_funds ?? true;
+  const showStock = assetPrefs?.stocks ?? true;
+  const showFi = assetPrefs?.fixed_income ?? true;
+  const showGold = assetPrefs?.gold ?? true;
+  const showRe = assetPrefs?.real_estate ?? true;
+
+  const mfCurrentVal = mfCurrent ?? (mfInvested + (mfProfit || 0));
+  const stockCurrentVal = stockCurrent ?? (stockInvested + (stockProfit || 0));
+  const fiCurrentVal = fiCurrent ?? (fiInvested + (fiProfit || 0));
+  const goldCurrentVal = goldCurrent ?? (goldInvested + (goldProfit || 0));
+  const reCurrentVal = reCurrent ?? (reInvested + (reProfit || 0));
+
   const mfReturnPct = mfInvested > 0 && mfProfit !== undefined ? (mfProfit / mfInvested) * 100 : 0;
   const stockReturnPct = stockInvested > 0 && stockProfit !== undefined ? (stockProfit / stockInvested) * 100 : 0;
+  const fiReturnPct = fiInvested > 0 && fiProfit !== undefined ? (fiProfit / fiInvested) * 100 : 0;
+  const goldReturnPct = goldInvested > 0 && goldProfit !== undefined ? (goldProfit / goldInvested) * 100 : 0;
+  const reReturnPct = reInvested > 0 && reProfit !== undefined ? (reProfit / reInvested) * 100 : 0;
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">

@@ -404,15 +404,15 @@ export default function CustomizeAssetsModal({
           </div>
         </div>
 
-        {/* Bottom Actions */}
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-neutral-200/80 dark:border-white/10">
+        {/* Bottom Actions — Sticky at bottom so Apply Changes is always visible and clickable */}
+        <div className="sticky bottom-0 -mx-6 -mb-4 px-6 py-3.5 bg-white/95 dark:bg-[#151A23]/95 backdrop-blur-md border-t border-neutral-200/80 dark:border-white/10 flex items-center justify-between gap-3 z-20 shadow-lg mt-4">
           <button
             type="button"
             onClick={handleResetToDefault}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
             <RotateCcw size={13} />
-            <span>Reset to Default</span>
+            <span>Reset</span>
           </button>
 
           <div className="flex items-center gap-2">
@@ -427,7 +427,7 @@ export default function CustomizeAssetsModal({
             <button
               type="button"
               onClick={handleSave}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-primary-600/20 cursor-pointer"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-primary-600/30 cursor-pointer"
             >
               <Check size={14} />
               <span>Apply Changes</span>
