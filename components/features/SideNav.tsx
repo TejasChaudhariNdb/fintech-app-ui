@@ -15,20 +15,36 @@ import {
   Lightbulb,
   FileSpreadsheet,
   Shield,
+  PieChart,
+  TrendingUp,
+  Landmark,
+  Coins,
+  Building,
+  ChevronDown,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
 import { api } from "@/lib/api";
+import { useAssetPreferences } from "@/lib/assetPreferences";
 
 export default function SideNav() {
   const pathname = usePathname();
   const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
+  const { preferences: assetPrefs } = useAssetPreferences();
+  const [isHoldingsExpanded, setIsHoldingsExpanded] = useState(true);
   const [user, setUser] = useState<{
     full_name?: string;
     email?: string;
     avatar_url?: string | null;
   } | null>(null);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+
+  // Auto-expand holdings sub-menu whenever user is on any /holdings route
+  useEffect(() => {
+    if (pathname.startsWith("/holdings")) {
+      setIsHoldingsExpanded(true);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -69,6 +85,44 @@ export default function SideNav() {
     { id: "/suggestions", label: "Suggestions", icon: Lightbulb },
   ];
 
+  const holdingsSubItems = [
+    {
+      id: "/holdings/mutual-funds",
+      label: "Mutual Funds",
+      icon: PieChart,
+      dotColor: "bg-emerald-400",
+      enabled: assetPrefs.mutual_funds,
+    },
+    {
+      id: "/holdings/stocks",
+      label: "Stocks",
+      icon: TrendingUp,
+      dotColor: "bg-blue-400",
+      enabled: assetPrefs.stocks,
+    },
+    {
+      id: "/holdings/deposits",
+      label: "Fixed Income",
+      icon: Landmark,
+      dotColor: "bg-cyan-400",
+      enabled: assetPrefs.fixed_income,
+    },
+    {
+      id: "/holdings/gold",
+      label: "Gold & Bullion",
+      icon: Coins,
+      dotColor: "bg-amber-400",
+      enabled: assetPrefs.gold,
+    },
+    {
+      id: "/holdings/real-estate",
+      label: "Real Estate",
+      icon: Building,
+      dotColor: "bg-rose-400",
+      enabled: assetPrefs.real_estate,
+    },
+  ].filter((item) => item.enabled !== false);
+
   const isSettingsActive = pathname.startsWith("/profile");
 
   const initials = user?.full_name
@@ -90,8 +144,93 @@ export default function SideNav() {
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-3 space-y-0.5">
+      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto min-h-0">
         {mainTabs.map((tab) => {
+          if (tab.id === "/holdings") {
+            const isHoldingsActive = pathname.startsWith("/holdings");
+            const Icon = tab.icon;
+
+            return (
+              <div key={tab.id} className="space-y-0.5">
+                <div
+                  className={`flex items-center justify-between w-full rounded-xl transition-all duration-200 group ${
+                    isHoldingsActive
+                      ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 font-semibold"
+                      : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white font-medium"
+                  }`}>
+                  <Link
+                    href="/holdings"
+                    onClick={() => setIsHoldingsExpanded(true)}
+                    className="flex items-center gap-3 flex-1 px-3 py-2.5 text-sm min-w-0">
+                    <Icon
+                      size={18}
+                      strokeWidth={isHoldingsActive ? 2.5 : 2}
+                      className={
+                        isHoldingsActive ? "text-primary-600 dark:text-primary-400" : ""
+                      }
+                    />
+                    <span className="truncate">{tab.label}</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsHoldingsExpanded(!isHoldingsExpanded);
+                    }}
+                    className="p-1.5 mr-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-white/10 transition-all cursor-pointer"
+                    title={isHoldingsExpanded ? "Collapse Holdings" : "Expand Holdings"}>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${
+                        isHoldingsExpanded ? "rotate-0" : "-rotate-90"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Holdings Quick Submenus */}
+                {isHoldingsExpanded && (
+                  <div className="ml-4 pl-3 my-1 border-l-2 border-neutral-200/70 dark:border-white/10 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                    {holdingsSubItems.map((sub) => {
+                      const isSubActive =
+                        pathname === sub.id || pathname.startsWith(sub.id + "/");
+                      const SubIcon = sub.icon;
+
+                      return (
+                        <Link
+                          key={sub.id}
+                          href={sub.id}
+                          className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all duration-150 group ${
+                            isSubActive
+                              ? "bg-primary-500/10 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 font-bold shadow-2xs"
+                              : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white font-medium"
+                          }`}>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${sub.dotColor} shrink-0 transition-transform group-hover:scale-125`}
+                          />
+                          <SubIcon
+                            size={14}
+                            className={`shrink-0 transition-colors ${
+                              isSubActive
+                                ? "text-primary-600 dark:text-primary-400"
+                                : "text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-600 dark:group-hover:text-neutral-300"
+                            }`}
+                          />
+                          <span className="truncate">{sub.label}</span>
+                          {isSubActive && (
+                            <span className="ml-auto w-1 h-1 rounded-full bg-primary-500" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           const isActive =
             tab.id === "/" ? pathname === "/" : pathname.startsWith(tab.id);
           const Icon = tab.icon;
@@ -101,7 +240,7 @@ export default function SideNav() {
               href={tab.id}
               className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group ${
                 isActive
-                  ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300"
+                  ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 font-semibold"
                   : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
               }`}>
               <Icon

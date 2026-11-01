@@ -7,25 +7,43 @@ import PrivacyMask from "../ui/PrivacyMask";
 
 interface NetWorthCardProps {
   netWorth: number;
+  totalInvested?: number;
+  totalGain?: number;
+  totalReturnPct?: number;
   mfValue: number;
+  mfInvested?: number;
+  mfProfit?: number;
+  mfReturnPct?: number;
+  mfDayChange?: number;
+  mfDayChangePct?: number;
+  mfXirr?: number;
+  mfLifetimeXirr?: number;
   stockValue: number;
+  stockInvested?: number;
+  stockProfit?: number;
+  stockReturnPct?: number;
+  stockDayChange?: number;
+  stockDayChangePct?: number;
+  stockXirr?: number;
+  stockLifetimeXirr?: number;
   fixedIncomeValue?: number;
+  fiInvested?: number;
+  fiProfit?: number;
+  fiReturnPct?: number;
   goldValue?: number;
+  goldInvested?: number;
+  goldProfit?: number;
+  goldReturnPct?: number;
   realEstateValue?: number;
+  reInvested?: number;
+  reProfit?: number;
+  reReturnPct?: number;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   dayChangePct?: number;
-  mfDayChange?: number;
-  mfDayChangePct?: number;
-  stockDayChange?: number;
-  stockDayChangePct?: number;
   lastUpdated?: string;
   xirr?: number;
-  mfXirr?: number;
-  stockXirr?: number;
   lifetimeXirr?: number;
-  mfLifetimeXirr?: number;
-  stockLifetimeXirr?: number;
   onAddMF?: () => void;
   onAddStock?: () => void;
   onAddFD?: () => void;
@@ -43,25 +61,43 @@ interface NetWorthCardProps {
 
 export default function NetWorthCard({
   netWorth,
+  totalInvested,
+  totalGain,
+  totalReturnPct,
   mfValue,
+  mfInvested,
+  mfProfit,
+  mfReturnPct,
+  mfDayChange,
+  mfDayChangePct,
+  mfXirr,
+  mfLifetimeXirr,
   stockValue,
+  stockInvested,
+  stockProfit,
+  stockReturnPct,
+  stockDayChange,
+  stockDayChangePct,
+  stockXirr,
+  stockLifetimeXirr,
   fixedIncomeValue,
+  fiInvested,
+  fiProfit,
+  fiReturnPct,
   goldValue,
+  goldInvested,
+  goldProfit,
+  goldReturnPct,
   realEstateValue,
+  reInvested,
+  reProfit,
+  reReturnPct,
   onRefresh,
   isRefreshing = false,
   dayChangePct = 0,
-  mfDayChange,
-  mfDayChangePct,
-  stockDayChange,
-  stockDayChangePct,
   lastUpdated,
   xirr,
-  mfXirr,
-  stockXirr,
   lifetimeXirr,
-  mfLifetimeXirr,
-  stockLifetimeXirr,
   onAddMF,
   onAddStock,
   onAddFD,
@@ -212,6 +248,22 @@ export default function NetWorthCard({
               <span className="text-white/60 font-medium text-[10px]">1D</span>
             </div>
 
+            {totalGain !== undefined && (
+              <div
+                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-md shadow-xs ${
+                  totalGain >= 0
+                    ? "bg-white/15 text-white border border-white/20"
+                    : "bg-rose-500/25 text-rose-100 border border-rose-400/30"
+                }`}
+                title="Overall return across all active assets">
+                <span className="text-white/70 font-medium text-[11px]">Overall:</span>
+                <span className={`font-bold tabular-nums ${totalGain >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+                  {totalGain >= 0 ? "+" : "-"}₹{Math.round(Math.abs(totalGain)).toLocaleString("en-IN")}
+                  {totalReturnPct !== undefined && ` (${totalGain >= 0 ? "+" : ""}${totalReturnPct.toFixed(2)}%)`}
+                </span>
+              </div>
+            )}
+
             {xirr !== undefined && xirr !== null && (
               <div
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-md shadow-xs ${
@@ -242,12 +294,11 @@ export default function NetWorthCard({
 
         {/* Multi-Asset Subcards Grid */}
         {(() => {
-          const hasOtherAssets = (fixedIncomeValue && fixedIncomeValue > 0) || (goldValue && goldValue > 0) || (realEstateValue && realEstateValue > 0);
-          const showMfCard = showMF;
-          const showStockCard = showStock;
-          const showFiCard = showFixedIncome && (fixedIncomeValue !== undefined && (fixedIncomeValue > 0 || hasOtherAssets));
-          const showGoldCard = showGold && (goldValue !== undefined && (goldValue > 0 || hasOtherAssets));
-          const showReCard = showRealEstate && (realEstateValue !== undefined && (realEstateValue > 0 || hasOtherAssets));
+          const showMfCard = Boolean(showMF);
+          const showStockCard = Boolean(showStock);
+          const showFiCard = Boolean(showFixedIncome);
+          const showGoldCard = Boolean(showGold);
+          const showReCard = Boolean(showRealEstate);
 
           const visibleCount = [showMfCard, showStockCard, showFiCard, showGoldCard, showReCard].filter(Boolean).length;
           if (visibleCount === 0) return null;
@@ -288,15 +339,23 @@ export default function NetWorthCard({
                       className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${mfValue === 0 ? "opacity-50" : ""}`}>
                       <PrivacyMask>₹{Math.round(mfValue).toLocaleString("en-IN")}</PrivacyMask>
                     </p>
-                    {mfDayChange !== undefined && (
-                      <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
+                    <div className="text-[11px] font-medium mt-1.5 flex items-center justify-between gap-1 flex-wrap">
+                      {mfDayChange !== undefined ? (
                         <span className={`inline-flex items-center gap-0.5 font-semibold ${mfDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                           {mfDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(mfDayChange)).toLocaleString("en-IN")}
                           {mfDayChangePct !== undefined && ` (${mfDayChangePct >= 0 ? "+" : ""}${mfDayChangePct.toFixed(2)}%)`}
+                          <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider ml-0.5">1D</span>
                         </span>
-                        <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
-                      </div>
-                    )}
+                      ) : (
+                        <span className="text-[10px] text-white/50">Active Folios</span>
+                      )}
+                      {mfProfit !== undefined && mfValue > 0 && (
+                        <span className={`text-[10px] font-bold tabular-nums ${mfProfit >= 0 ? "text-emerald-300" : "text-rose-300"}`} title="Total Gain & Return %">
+                          {mfProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(mfProfit)).toLocaleString("en-IN")}
+                          {mfReturnPct !== undefined && ` (${mfProfit >= 0 ? "+" : ""}${mfReturnPct.toFixed(1)}%)`}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* XIRR Toggle Switch */}
@@ -320,7 +379,7 @@ export default function NetWorthCard({
                         const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
                         return (
                           <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                            {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                            {val !== undefined && val !== null && (mfValue > 0 || val !== 0) ? `${val.toFixed(2)}%` : "--"}
                           </span>
                         );
                       })()}
@@ -352,15 +411,23 @@ export default function NetWorthCard({
                       className={`text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white ${stockValue === 0 ? "opacity-50" : ""}`}>
                       <PrivacyMask>₹{Math.round(stockValue).toLocaleString("en-IN")}</PrivacyMask>
                     </p>
-                    {stockDayChange !== undefined && (
-                      <div className="text-[11px] font-medium mt-1.5 flex items-center gap-1 flex-wrap">
+                    <div className="text-[11px] font-medium mt-1.5 flex items-center justify-between gap-1 flex-wrap">
+                      {stockDayChange !== undefined ? (
                         <span className={`inline-flex items-center gap-0.5 font-semibold ${stockDayChange >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
                           {stockDayChange >= 0 ? "▲ +" : "▼ "}₹{Math.round(Math.abs(stockDayChange)).toLocaleString("en-IN")}
                           {stockDayChangePct !== undefined && ` (${stockDayChangePct >= 0 ? "+" : ""}${stockDayChangePct.toFixed(2)}%)`}
+                          <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider ml-0.5">1D</span>
                         </span>
-                        <span className="text-white/50 text-[10px] uppercase font-bold tracking-wider">1D</span>
-                      </div>
-                    )}
+                      ) : (
+                        <span className="text-[10px] text-white/50">Direct Equity</span>
+                      )}
+                      {stockProfit !== undefined && stockValue > 0 && (
+                        <span className={`text-[10px] font-bold tabular-nums ${stockProfit >= 0 ? "text-emerald-300" : "text-rose-300"}`} title="Total Gain & Return %">
+                          {stockProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(stockProfit)).toLocaleString("en-IN")}
+                          {stockReturnPct !== undefined && ` (${stockProfit >= 0 ? "+" : ""}${stockReturnPct.toFixed(1)}%)`}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* XIRR Toggle Switch */}
@@ -384,7 +451,7 @@ export default function NetWorthCard({
                         const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
                         return (
                           <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                            {val !== undefined && val !== null ? `${val.toFixed(2)}%` : "--"}
+                            {val !== undefined && val !== null && (stockValue > 0 || val !== 0) ? `${val.toFixed(2)}%` : "--"}
                           </span>
                         );
                       })()}
@@ -419,9 +486,16 @@ export default function NetWorthCard({
                       FDs · PPF · EPF · Bonds
                     </div>
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/80">
-                    <span className="text-[10px] text-white/60">Asset Class</span>
-                    <span className="font-semibold text-cyan-300">Debt &amp; Savings</span>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
+                    <span className="text-[10px] text-white/70">Interest Earned</span>
+                    {fixedIncomeValue !== undefined && fixedIncomeValue > 0 && fiProfit !== undefined ? (
+                      <span className={`font-bold tabular-nums ${fiProfit >= 0 ? "text-cyan-300" : "text-rose-300"}`}>
+                        {fiProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(fiProfit)).toLocaleString("en-IN")}
+                        {fiReturnPct !== undefined && ` (${fiProfit >= 0 ? "+" : ""}${fiReturnPct.toFixed(1)}%)`}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-white/50 tabular-nums">--</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -452,9 +526,16 @@ export default function NetWorthCard({
                       SGB · Physical · Digital
                     </div>
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/80">
-                    <span className="text-[10px] text-white/60">Asset Class</span>
-                    <span className="font-semibold text-amber-300">Precious Metals</span>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
+                    <span className="text-[10px] text-white/70">Total Returns</span>
+                    {goldValue !== undefined && goldValue > 0 && goldProfit !== undefined ? (
+                      <span className={`font-bold tabular-nums ${goldProfit >= 0 ? "text-amber-300" : "text-rose-300"}`}>
+                        {goldProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(goldProfit)).toLocaleString("en-IN")}
+                        {goldReturnPct !== undefined && ` (${goldProfit >= 0 ? "+" : ""}${goldReturnPct.toFixed(1)}%)`}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-white/50 tabular-nums">--</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -485,9 +566,16 @@ export default function NetWorthCard({
                       Properties &amp; Lands
                     </div>
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/80">
-                    <span className="text-[10px] text-white/60">Asset Class</span>
-                    <span className="font-semibold text-rose-300">Property Vault</span>
+                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
+                    <span className="text-[10px] text-white/70">Appreciation</span>
+                    {realEstateValue !== undefined && realEstateValue > 0 && reProfit !== undefined ? (
+                      <span className={`font-bold tabular-nums ${reProfit >= 0 ? "text-rose-300" : "text-rose-400"}`}>
+                        {reProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(reProfit)).toLocaleString("en-IN")}
+                        {reReturnPct !== undefined && ` (${reProfit >= 0 ? "+" : ""}${reReturnPct.toFixed(1)}%)`}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-white/50 tabular-nums">--</span>
+                    )}
                   </div>
                 </div>
               )}

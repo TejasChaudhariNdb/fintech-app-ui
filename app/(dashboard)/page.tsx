@@ -359,6 +359,7 @@ export default function HomePage() {
     // Dynamic calculations based on enabled asset preferences
     const famAlloc = familySummary.allocation || {};
     const famInvAlloc = familySummary.invested_allocation || {};
+    const famGainAlloc = familySummary.gain_allocation || {};
 
     let effectiveFamNetWorth = 0;
     let effectiveFamInvested = 0;
@@ -440,11 +441,29 @@ export default function HomePage() {
         {/* Aggregate Net Worth Card */}
         <NetWorthCard
           netWorth={effectiveFamNetWorth}
+          totalInvested={effectiveFamInvested}
+          totalGain={effectiveFamGain}
+          totalReturnPct={effectiveFamReturnPct}
           mfValue={familySummary.allocation?.mutual_funds || 0}
+          mfInvested={famInvAlloc.mutual_funds || 0}
+          mfProfit={famGainAlloc.mutual_funds ?? ((famAlloc.mutual_funds || 0) - (famInvAlloc.mutual_funds || 0))}
+          mfReturnPct={(famInvAlloc.mutual_funds || 0) > 0 ? ((famGainAlloc.mutual_funds ?? ((famAlloc.mutual_funds || 0) - (famInvAlloc.mutual_funds || 0))) / famInvAlloc.mutual_funds) * 100 : 0}
           stockValue={familySummary.allocation?.stocks || 0}
+          stockInvested={famInvAlloc.stocks || 0}
+          stockProfit={famGainAlloc.stocks ?? ((famAlloc.stocks || 0) - (famInvAlloc.stocks || 0))}
+          stockReturnPct={(famInvAlloc.stocks || 0) > 0 ? ((famGainAlloc.stocks ?? ((famAlloc.stocks || 0) - (famInvAlloc.stocks || 0))) / famInvAlloc.stocks) * 100 : 0}
           fixedIncomeValue={familySummary.allocation?.fixed_income || 0}
+          fiInvested={famInvAlloc.fixed_income || 0}
+          fiProfit={famGainAlloc.fixed_income ?? ((famAlloc.fixed_income || 0) - (famInvAlloc.fixed_income || 0))}
+          fiReturnPct={(famInvAlloc.fixed_income || 0) > 0 ? ((famGainAlloc.fixed_income ?? ((famAlloc.fixed_income || 0) - (famInvAlloc.fixed_income || 0))) / famInvAlloc.fixed_income) * 100 : 0}
           goldValue={familySummary.allocation?.gold || 0}
+          goldInvested={famInvAlloc.gold || 0}
+          goldProfit={famGainAlloc.gold ?? ((famAlloc.gold || 0) - (famInvAlloc.gold || 0))}
+          goldReturnPct={(famInvAlloc.gold || 0) > 0 ? ((famGainAlloc.gold ?? ((famAlloc.gold || 0) - (famInvAlloc.gold || 0))) / famInvAlloc.gold) * 100 : 0}
           realEstateValue={familySummary.allocation?.real_estate || 0}
+          reInvested={famInvAlloc.real_estate || 0}
+          reProfit={famGainAlloc.real_estate ?? ((famAlloc.real_estate || 0) - (famInvAlloc.real_estate || 0))}
+          reReturnPct={(famInvAlloc.real_estate || 0) > 0 ? ((famGainAlloc.real_estate ?? ((famAlloc.real_estate || 0) - (famInvAlloc.real_estate || 0))) / famInvAlloc.real_estate) * 100 : 0}
           showMF={assetPrefs.mutual_funds}
           showStock={assetPrefs.stocks}
           showFixedIncome={assetPrefs.fixed_income}
@@ -899,11 +918,29 @@ export default function HomePage() {
               <section>
                 <NetWorthCard
                   netWorth={effectiveIndNetWorth}
+                  totalInvested={effectiveIndInvested}
+                  totalGain={effectiveIndProfit}
+                  totalReturnPct={effectiveIndReturnPct}
                   mfValue={netWorth?.mutual_funds || 0}
+                  mfInvested={summary?.mf_invested || 0}
+                  mfProfit={summary?.mf_profit || 0}
+                  mfReturnPct={(summary?.mf_invested || 0) > 0 ? ((summary?.mf_profit || 0) / summary.mf_invested) * 100 : 0}
                   stockValue={netWorth?.stocks || 0}
+                  stockInvested={summary?.stock_invested || 0}
+                  stockProfit={summary?.stock_profit || 0}
+                  stockReturnPct={(summary?.stock_invested || 0) > 0 ? ((summary?.stock_profit || 0) / summary.stock_invested) * 100 : 0}
                   fixedIncomeValue={netWorth?.fixed_income || 0}
+                  fiInvested={summary?.fi_invested || 0}
+                  fiProfit={summary?.fi_profit || 0}
+                  fiReturnPct={(summary?.fi_invested || 0) > 0 ? ((summary?.fi_profit || 0) / summary.fi_invested) * 100 : 0}
                   goldValue={netWorth?.gold || 0}
+                  goldInvested={summary?.gold_invested || 0}
+                  goldProfit={summary?.gold_profit || 0}
+                  goldReturnPct={(summary?.gold_invested || 0) > 0 ? ((summary?.gold_profit || 0) / summary.gold_invested) * 100 : 0}
                   realEstateValue={netWorth?.real_estate || 0}
+                  reInvested={summary?.re_invested || 0}
+                  reProfit={summary?.re_profit || 0}
+                  reReturnPct={(summary?.re_invested || 0) > 0 ? ((summary?.re_profit || 0) / summary.re_invested) * 100 : 0}
                   showMF={assetPrefs.mutual_funds}
                   showStock={assetPrefs.stocks}
                   showFixedIncome={assetPrefs.fixed_income}
