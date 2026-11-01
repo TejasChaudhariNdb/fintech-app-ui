@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
@@ -17,12 +17,19 @@ import {
   ShieldCheck,
   RefreshCw,
   Loader2,
-  AlertCircle,
   ExternalLink,
   Calendar,
   Percent,
   Clock,
   Sparkles,
+  Download,
+  Search,
+  LayoutGrid,
+  ListFilter,
+  CalendarClock,
+  FileSpreadsheet,
+  ArrowUpDown,
+  CheckCircle2,
 } from "lucide-react";
 
 interface FixedIncomeItem {
@@ -57,6 +64,18 @@ interface FixedIncomeItem {
   created_at?: string | null;
 }
 
+interface MaturityBucket {
+  count: number;
+  total_principal: number;
+  total_maturity_amount: number;
+}
+
+interface CalendarMaturity {
+  year: number;
+  count: number;
+  total_payout: number;
+}
+
 interface SummaryData {
   total_principal: number;
   total_current_value: number;
@@ -67,7 +86,20 @@ interface SummaryData {
   maturing_soon_count: number;
   maturing_soon_amount: number;
   type_breakdown: Record<string, number>;
+  maturity_buckets?: {
+    matured: MaturityBucket;
+    next_30d: MaturityBucket;
+    next_90d: MaturityBucket;
+    next_180d: MaturityBucket;
+    next_365d: MaturityBucket;
+    beyond_1y: MaturityBucket;
+  };
+  calendar_maturities?: CalendarMaturity[];
 }
+
+type ViewMode = "GRID" | "TIMELINE" | "REPORT";
+type HorizonFilter = "ALL" | "OVERDUE" | "30D" | "90D" | "180D" | "365D" | "1Y_PLUS";
+type SortField = "maturity_date" | "principal" | "rate" | "days_left";
 
 function formatINRShort(val: number): string {
   const abs = Math.abs(val);
@@ -125,8 +157,13 @@ export default function FixedIncomePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Filter
+  // View & Filter states
+  const [viewMode, setViewMode] = useState<ViewMode>("GRID");
   const [activeFilter, setActiveFilter] = useState<string>("ALL");
+  const [horizonFilter, setHorizonFilter] = useState<HorizonFilter>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<SortField>("maturity_date");
+  const [sortAsc, setSortAsc] = useState(true);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -203,18 +240,121 @@ export default function FixedIncomePage() {
     }
   };
 
-  // Filtered Items
-  const filteredHoldings = holdings.filter((item) => {
-    if (activeFilter === "ALL") return true;
-    if (activeFilter === "BANK_FD") return item.deposit_type === "BANK_FD";
-    if (activeFilter === "CORPORATE_FD") return item.deposit_type === "CORPORATE_FD";
-    if (activeFilter === "POST_OFFICE") return item.deposit_type === "POST_OFFICE" || item.deposit_type?.startsWith("PO_");
-    if (activeFilter === "RBI_BOND") return item.deposit_type === "RBI_BOND";
-    if (activeFilter === "TAX_FREE_BOND") return item.deposit_type === "TAX_FREE_BOND";
-    if (activeFilter === "PPF") return item.deposit_type === "PPF" || item.deposit_type === "EPF";
-    if (activeFilter === "RD") return item.deposit_type === "RD";
-    return true;
-  });
+  // CSV Maturity Schedule Exporter
+  const exportMaturityScheduleCSV = () => {
+    if (holdings.length === 0) {
+      showToast("No deposits to export");
+      return;
+    }
+
+    const headers = [
+      "Bank / Institution",
+      "Account / FDR No",
+      "Deposit Type",
+      "Profile",
+      "Principal (INR)",
+      "Interest Rate (%)",
+      "Compounding",
+      "Start Date",
+      "Maturity Date",
+      "Days to Maturity",
+      "Accrued Interest (INR)",
+      "Current Value (INR)",
+      "Expected Maturity Corpus (INR)",
+      "Tax Saver",
+      "Status",
+    ];
+
+    const rows = sortedHoldings.map((h) => [
+      `"${h.institution_name.replace(/"/g, '""')}"`,
+      `"${(h.account_number_or_fdr || "").replace(/"/g, '""')}"`,
+      h.deposit_type,
+      `"${h.profile_name}"`,
+      h.principal_amount,
+      h.interest_rate_pct,
+      h.compounding_frequency,
+      h.start_date || "",
+      h.maturity_date || "",
+      h.days_to_maturity ?? "",
+      Math.round(h.accrued_interest || 0),
+      Math.round(h.current_value || 0),
+      Math.round(h.maturity_amount || 0),
+      h.is_tax_saving ? "Yes" : "No",
+      h.status || "ACTIVE",
+    ]);
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `Arthavi_FD_Maturity_Schedule_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Maturity Schedule exported to CSV");
+  };
+
+  // Filtered & Sorted Items
+  const filteredHoldings = useMemo(() => {
+    return holdings.filter((item) => {
+      // Type Filter
+      if (activeFilter === "BANK_FD" && item.deposit_type !== "BANK_FD") return false;
+      if (activeFilter === "CORPORATE_FD" && item.deposit_type !== "CORPORATE_FD") return false;
+      if (activeFilter === "POST_OFFICE" && !item.deposit_type?.includes("POST_OFFICE") && !item.deposit_type?.startsWith("PO_")) return false;
+      if (activeFilter === "RBI_BOND" && item.deposit_type !== "RBI_BOND") return false;
+      if (activeFilter === "TAX_FREE_BOND" && item.deposit_type !== "TAX_FREE_BOND") return false;
+      if (activeFilter === "PPF" && item.deposit_type !== "PPF" && item.deposit_type !== "EPF") return false;
+      if (activeFilter === "RD" && item.deposit_type !== "RD") return false;
+
+      // Horizon Filter
+      const d = item.days_to_maturity;
+      if (horizonFilter === "OVERDUE" && d >= 0) return false;
+      if (horizonFilter === "30D" && (d < 0 || d > 30)) return false;
+      if (horizonFilter === "90D" && (d < 0 || d > 90)) return false;
+      if (horizonFilter === "180D" && (d < 0 || d > 180)) return false;
+      if (horizonFilter === "365D" && (d < 0 || d > 365)) return false;
+      if (horizonFilter === "1Y_PLUS" && d <= 365) return false;
+
+      // Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = item.institution_name.toLowerCase().includes(q);
+        const matchesFDR = (item.account_number_or_fdr || "").toLowerCase().includes(q);
+        const matchesProfile = item.profile_name.toLowerCase().includes(q);
+        const matchesType = item.deposit_type.toLowerCase().includes(q);
+        if (!matchesName && !matchesFDR && !matchesProfile && !matchesType) return false;
+      }
+
+      return true;
+    });
+  }, [holdings, activeFilter, horizonFilter, searchQuery]);
+
+  const sortedHoldings = useMemo(() => {
+    return [...filteredHoldings].sort((a, b) => {
+      let comp = 0;
+      if (sortField === "maturity_date") {
+        comp = new Date(a.maturity_date || "9999").getTime() - new Date(b.maturity_date || "9999").getTime();
+      } else if (sortField === "principal") {
+        comp = a.principal_amount - b.principal_amount;
+      } else if (sortField === "rate") {
+        comp = a.interest_rate_pct - b.interest_rate_pct;
+      } else if (sortField === "days_left") {
+        comp = a.days_to_maturity - b.days_to_maturity;
+      }
+      return sortAsc ? comp : -comp;
+    });
+  }, [filteredHoldings, sortField, sortAsc]);
+
+  // Aggregate totals for currently visible set
+  const visiblePrincipal = useMemo(() => sortedHoldings.reduce((acc, h) => acc + h.principal_amount, 0), [sortedHoldings]);
+  const visibleMaturity = useMemo(() => sortedHoldings.reduce((acc, h) => acc + (h.maturity_amount || 0), 0), [sortedHoldings]);
+  const visibleAccrued = useMemo(() => sortedHoldings.reduce((acc, h) => acc + (h.accrued_interest || 0), 0), [sortedHoldings]);
 
   return (
     <div className="px-4 space-y-6 max-w-7xl mx-auto">
@@ -224,60 +364,84 @@ export default function FixedIncomePage() {
           <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
             <span>Fixed Income &amp; Deposits</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
-              Safe Yield
+              Maturity &amp; Liquidity Flow
             </span>
           </h2>
           <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-            Track bank FDs, corporate deposits, Post Office schemes, RBI Bonds, Tax-Free Bonds, and PPF with automated interest compounding
+            Track bank FDs, corporate deposits, Post Office MIS/SCSS, RBI Bonds, Tax-Free Bonds, and PPF with maturity calendar alerts
           </p>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
+        <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto flex-wrap">
+          {/* View Mode Switcher */}
+          <div className="flex items-center bg-neutral-100 dark:bg-white/10 p-1 rounded-xl border border-neutral-200 dark:border-white/10">
+            <button
+              onClick={() => setViewMode("GRID")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "GRID"
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Cards Grid View"
+            >
+              <LayoutGrid size={14} />
+              <span className="hidden sm:inline">Cards</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode("TIMELINE")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "TIMELINE"
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Maturity Timeline & Calendar View"
+            >
+              <CalendarClock size={14} />
+              <span className="hidden sm:inline">Timeline</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode("REPORT")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === "REPORT"
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}
+              title="Maturity Schedule Report"
+            >
+              <FileSpreadsheet size={14} />
+              <span>Report</span>
+            </button>
+          </div>
+
+          <button
+            onClick={exportMaturityScheduleCSV}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold transition-colors"
+            title="Download complete FD maturity schedule as CSV"
+          >
+            <Download size={14} />
+            <span className="hidden md:inline">Export CSV</span>
+          </button>
+
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="p-2.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors"
+            className="p-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors"
             title="Refresh calculations"
           >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
           </button>
-          <Link
-            href="/holdings/deposits/add"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 font-semibold text-xs sm:text-sm transition-colors"
-            title="Open full dedicated page"
-          >
-            <ExternalLink size={15} />
-            <span>Full Page</span>
-          </Link>
+
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
           >
             <Plus size={16} />
             <span>Add Deposit</span>
           </button>
         </div>
       </div>
-
-      {/* ── MATURING SOON BANNER (If any deposit maturing within 90 days) ── */}
-      {summary && summary.maturing_soon_count > 0 && (
-        <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between gap-3 animate-in fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
-              <Clock size={20} className="animate-pulse" />
-            </div>
-            <div>
-              <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                {summary.maturing_soon_count} Deposit{summary.maturing_soon_count > 1 ? "s" : ""}{" "}
-                Maturing in Next 90 Days ({formatINRShort(summary.maturing_soon_amount)})
-              </div>
-              <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                Plan your reinvestment, renewal, or milestone goal payout before maturity.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── 4 SUMMARY METRIC CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -338,49 +502,160 @@ export default function FixedIncomePage() {
         </Card>
       </div>
 
-      {/* ── FILTER TABS ── */}
-      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-        {[
-          { id: "ALL", label: `All (${holdings.length})` },
-          { id: "BANK_FD", label: "Bank FDs" },
-          { id: "CORPORATE_FD", label: "Corporate FDs" },
-          { id: "POST_OFFICE", label: "Post Office" },
-          { id: "RBI_BOND", label: "RBI Bonds" },
-          { id: "TAX_FREE_BOND", label: "Tax-Free Bonds" },
-          { id: "PPF", label: "PPF" },
-          { id: "RD", label: "RDs" },
-        ].map((f) => (
-          <button
-            key={f.id}
-            onClick={() => setActiveFilter(f.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-              activeFilter === f.id
-                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs"
-                : "bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10"
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+      {/* ── LIQUIDITY & MATURITY HORIZON CARDS ── */}
+      {summary?.maturity_buckets && (
+        <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarClock size={16} className="text-primary-600 dark:text-primary-400" />
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+                Liquidity Horizon &amp; Maturity Schedule
+              </h3>
+            </div>
+            <span className="text-[11px] text-neutral-400">Tap bucket to filter</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {[
+              { id: "30D", label: "Next 30 Days", data: summary.maturity_buckets.next_30d, alert: true },
+              { id: "90D", label: "1 - 3 Months", data: summary.maturity_buckets.next_90d, alert: false },
+              { id: "180D", label: "3 - 6 Months", data: summary.maturity_buckets.next_180d, alert: false },
+              { id: "365D", label: "6 - 12 Months", data: summary.maturity_buckets.next_365d, alert: false },
+              { id: "1Y_PLUS", label: "1+ Years", data: summary.maturity_buckets.beyond_1y, alert: false },
+              { id: "OVERDUE", label: "Matured", data: summary.maturity_buckets.matured, alert: false },
+            ].map((b) => {
+              const isSelected = horizonFilter === b.id;
+              const hasItems = (b.data?.count || 0) > 0;
+
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setHorizonFilter(isSelected ? "ALL" : (b.id as HorizonFilter))}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-primary-500/10 border-primary-500 ring-2 ring-primary-500/20"
+                      : hasItems
+                      ? "bg-neutral-50 dark:bg-white/5 border-neutral-200/80 dark:border-white/10 hover:border-neutral-300"
+                      : "bg-neutral-50/50 dark:bg-white/2 border-neutral-100 dark:border-white/5 opacity-60"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 truncate">
+                    {b.label}
+                  </div>
+                  <div className="text-sm sm:text-base font-black text-neutral-900 dark:text-white tabular-nums mt-0.5">
+                    {formatINRShort(b.data?.total_maturity_amount || 0)}
+                  </div>
+                  <div className="text-[10px] text-neutral-400 font-medium mt-0.5">
+                    {b.data?.count || 0} deposit{b.data?.count === 1 ? "" : "s"}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── SEARCH, HORIZON & TYPE FILTER TOOLBAR ── */}
+      <div className="space-y-2.5">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              placeholder="Search by Bank, FDR No, or Profile..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3.5 py-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs sm:text-sm text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <span className="text-xs text-neutral-400 font-medium">Sort:</span>
+            <select
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value as SortField)}
+              className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs font-semibold text-neutral-700 dark:text-neutral-200 focus:outline-none"
+            >
+              <option value="maturity_date">Maturity Date</option>
+              <option value="days_left">Days Remaining</option>
+              <option value="principal">Principal Amount</option>
+              <option value="rate">Interest Rate</option>
+            </select>
+            <button
+              onClick={() => setSortAsc(!sortAsc)}
+              className="p-2 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 hover:bg-neutral-50 transition-colors"
+              title={sortAsc ? "Ascending" : "Descending"}
+            >
+              <ArrowUpDown size={14} className={sortAsc ? "rotate-180 transition-transform" : "transition-transform"} />
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          {[
+            { id: "ALL", label: `All (${holdings.length})` },
+            { id: "BANK_FD", label: "Bank FDs" },
+            { id: "CORPORATE_FD", label: "Corporate FDs (Bajaj/Shriram/MM)" },
+            { id: "POST_OFFICE", label: "Post Office (MIS/SCSS)" },
+            { id: "RBI_BOND", label: "RBI Bonds" },
+            { id: "TAX_FREE_BOND", label: "Tax-Free Bonds (NHAI/REC)" },
+            { id: "PPF", label: "PPF / EPF" },
+            { id: "RD", label: "RDs" },
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setActiveFilter(f.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                activeFilter === f.id
+                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs"
+                  : "bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/10"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          {horizonFilter !== "ALL" && (
+            <button
+              onClick={() => setHorizonFilter("ALL")}
+              className="px-2.5 py-1 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400 text-xs font-bold border border-primary-500/20 whitespace-nowrap flex items-center gap-1"
+            >
+              <span>Horizon: {horizonFilter}</span>
+              <span className="text-[10px]">✕</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ── HOLDINGS LIST / ZERO STATE ── */}
+      {/* ── MAIN CONTENT (GRID, TIMELINE, OR REPORT VIEW) ── */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 text-neutral-400">
           <Loader2 size={32} className="animate-spin mb-3 text-emerald-600" />
           <p className="text-sm">Calculating compound interest &amp; accruals...</p>
         </div>
-      ) : filteredHoldings.length === 0 ? (
+      ) : sortedHoldings.length === 0 ? (
         <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
             <Building2 size={32} />
           </div>
           <div>
             <h3 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-white">
-              No Fixed Deposits or PPF Added Yet
+              No Matching Deposits Found
             </h3>
             <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-md mx-auto">
-              Track your bank fixed deposits, recurring deposits, and PPF in one place. See real-time quarterly compounding and maturity alerts.
+              {searchQuery || activeFilter !== "ALL" || horizonFilter !== "ALL"
+                ? "Try adjusting your filters or search terms."
+                : "Track your bank fixed deposits, corporate deposits, Post Office MIS/SCSS, and PPF in one place."}
             </p>
           </div>
           <div className="pt-2">
@@ -393,9 +668,216 @@ export default function FixedIncomePage() {
             </button>
           </div>
         </div>
+      ) : viewMode === "REPORT" ? (
+        /* ── REPORT TABLE VIEW ── */
+        <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-neutral-200 dark:border-white/10 bg-neutral-50/70 dark:bg-white/2 text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  <th className="py-3.5 px-4">Bank / Institution</th>
+                  <th className="py-3.5 px-3">Type</th>
+                  <th className="py-3.5 px-3">Profile</th>
+                  <th className="py-3.5 px-3 text-right">Principal</th>
+                  <th className="py-3.5 px-3 text-right">Rate</th>
+                  <th className="py-3.5 px-3">Maturity Date</th>
+                  <th className="py-3.5 px-3 text-center">Days Left</th>
+                  <th className="py-3.5 px-3 text-right">Accrued Int.</th>
+                  <th className="py-3.5 px-4 text-right">Maturity Payout</th>
+                  <th className="py-3.5 px-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
+                {sortedHoldings.map((item) => {
+                  const isMatured = item.status === "MATURED" || item.days_to_maturity < 0;
+                  const isMaturingSoon = item.is_maturing_soon;
+                  const badge = getDepositTypeBadge(item.deposit_type);
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-neutral-50/80 dark:hover:bg-white/5 transition-colors"
+                    >
+                      <td className="py-3 px-4 font-bold text-neutral-900 dark:text-white">
+                        <div className="truncate max-w-[200px]" title={item.institution_name}>
+                          {item.institution_name}
+                        </div>
+                        {item.account_number_or_fdr && (
+                          <span className="text-[10px] font-mono text-neutral-400">
+                            {item.account_number_or_fdr}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-semibold border ${badge.color}`}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-neutral-600 dark:text-neutral-300 whitespace-nowrap">
+                        {item.profile_name}
+                      </td>
+                      <td className="py-3 px-3 text-right font-bold tabular-nums text-neutral-900 dark:text-white whitespace-nowrap">
+                        <PrivacyMask>₹{item.principal_amount.toLocaleString("en-IN")}</PrivacyMask>
+                      </td>
+                      <td className="py-3 px-3 text-right tabular-nums text-neutral-800 dark:text-neutral-200 whitespace-nowrap">
+                        {item.interest_rate_pct}%
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap text-neutral-600 dark:text-neutral-300">
+                        {formatDatePretty(item.maturity_date)}
+                      </td>
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                        {isMatured ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-white/10 text-neutral-500">
+                            Matured
+                          </span>
+                        ) : isMaturingSoon ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                            {item.days_to_maturity}d
+                          </span>
+                        ) : (
+                          <span className="text-xs text-neutral-500">
+                            {item.days_to_maturity}d
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
+                        <PrivacyMask>+₹{Math.round(item.accrued_interest || 0).toLocaleString("en-IN")}</PrivacyMask>
+                      </td>
+                      <td className="py-3 px-4 text-right font-black text-neutral-900 dark:text-white tabular-nums whitespace-nowrap">
+                        <PrivacyMask>₹{Math.round(item.maturity_amount || 0).toLocaleString("en-IN")}</PrivacyMask>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="p-1 rounded text-neutral-400 hover:text-neutral-700 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            className="p-1 rounded text-neutral-400 hover:text-rose-500 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-neutral-200 dark:border-white/10 bg-neutral-50/90 dark:bg-white/5 font-black text-xs sm:text-sm">
+                  <td colSpan={3} className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300">
+                    Total ({sortedHoldings.length} deposits)
+                  </td>
+                  <td className="py-3.5 px-3 text-right text-neutral-900 dark:text-white tabular-nums">
+                    <PrivacyMask>₹{Math.round(visiblePrincipal).toLocaleString("en-IN")}</PrivacyMask>
+                  </td>
+                  <td colSpan={3} />
+                  <td className="py-3.5 px-3 text-right text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    <PrivacyMask>+₹{Math.round(visibleAccrued).toLocaleString("en-IN")}</PrivacyMask>
+                  </td>
+                  <td className="py-3.5 px-4 text-right text-neutral-900 dark:text-white tabular-nums">
+                    <PrivacyMask>₹{Math.round(visibleMaturity).toLocaleString("en-IN")}</PrivacyMask>
+                  </td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      ) : viewMode === "TIMELINE" ? (
+        /* ── TIMELINE VIEW ── */
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+              <CalendarClock size={16} className="text-emerald-600" />
+              <span>Upcoming Maturity Feed</span>
+            </h3>
+
+            <div className="relative border-l-2 border-emerald-500/30 dark:border-emerald-500/20 ml-3 sm:ml-4 pl-4 sm:pl-6 space-y-6">
+              {sortedHoldings.map((item) => {
+                const isMatured = item.status === "MATURED" || item.days_to_maturity < 0;
+                const isMaturingSoon = item.is_maturing_soon;
+
+                return (
+                  <div key={item.id} className="relative group">
+                    {/* Circle Node on Timeline */}
+                    <div
+                      className={`absolute -left-[23px] sm:-left-[31px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#151A23] ${
+                        isMatured
+                          ? "bg-neutral-400"
+                          : isMaturingSoon
+                          ? "bg-amber-500 animate-ping"
+                          : "bg-emerald-600"
+                      }`}
+                    />
+                    <div
+                      className={`absolute -left-[23px] sm:-left-[31px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#151A23] ${
+                        isMatured
+                          ? "bg-neutral-400"
+                          : isMaturingSoon
+                          ? "bg-amber-500"
+                          : "bg-emerald-600"
+                      }`}
+                    />
+
+                    <div className="p-4 rounded-2xl bg-neutral-50/70 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-extrabold text-neutral-900 dark:text-white">
+                            {item.institution_name}
+                          </span>
+                          <span className="text-xs text-neutral-400">
+                            • {formatDatePretty(item.maturity_date)}
+                          </span>
+                          {isMatured ? (
+                            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-neutral-200 dark:bg-white/10 text-neutral-700">
+                              Matured
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.2 rounded-full ${
+                                isMaturingSoon
+                                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                                  : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                              }`}
+                            >
+                              In {item.days_to_maturity} days
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-neutral-500 mt-1 flex items-center gap-2 flex-wrap">
+                          <span>Principal: ₹{item.principal_amount.toLocaleString("en-IN")}</span>
+                          <span>•</span>
+                          <span>Yield: {item.interest_rate_pct}% p.a.</span>
+                          <span>•</span>
+                          <span>Profile: {item.profile_name}</span>
+                        </div>
+                      </div>
+
+                      <div className="text-right sm:self-center self-start">
+                        <span className="text-[10px] uppercase font-bold text-neutral-400 block">
+                          Expected Payout
+                        </span>
+                        <span className="text-base sm:text-lg font-black text-neutral-900 dark:text-white tabular-nums">
+                          <PrivacyMask>₹{Math.round(item.maturity_amount || 0).toLocaleString("en-IN")}</PrivacyMask>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       ) : (
+        /* ── GRID CARDS VIEW ── */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredHoldings.map((item) => {
+          {sortedHoldings.map((item) => {
             const isMaturingSoon = item.is_maturing_soon;
             const isMatured = item.status === "MATURED";
 

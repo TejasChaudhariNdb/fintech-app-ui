@@ -94,6 +94,13 @@ export default function PortfolioSummary({
   const goldReturnPct = goldInvested > 0 && goldProfit !== undefined ? (goldProfit / goldInvested) * 100 : 0;
   const reReturnPct = reInvested > 0 && reProfit !== undefined ? (reProfit / reInvested) * 100 : 0;
 
+  const hasMf = mfInvested > 0 || mfCurrentVal > 0 || (mfProfit !== undefined && mfProfit !== 0);
+  const hasStock = stockInvested > 0 || stockCurrentVal > 0 || (stockProfit !== undefined && stockProfit !== 0);
+  const hasFi = fiInvested > 0 || fiCurrentVal > 0 || (fiProfit !== undefined && fiProfit !== 0);
+  const hasGold = goldInvested > 0 || goldCurrentVal > 0 || (goldProfit !== undefined && goldProfit !== 0);
+  const hasRe = reInvested > 0 || reCurrentVal > 0 || (reProfit !== undefined && reProfit !== 0);
+  const hasAnyAsset = hasMf || hasStock || hasFi || hasGold || hasRe;
+
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
       <h3 className="text-base sm:text-lg font-semibold mb-6 text-neutral-900 dark:text-white">
@@ -128,7 +135,7 @@ export default function PortfolioSummary({
           {/* Expanded Breakdown */}
           {isInvestedExpanded && (
             <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              {showMf && (
+              {showMf && (hasMf || !hasAnyAsset) && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Mutual Funds
@@ -140,7 +147,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showStock && (
+              {showStock && (hasStock || !hasAnyAsset) && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Stocks
@@ -152,7 +159,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showFi && fiInvested > 0 && (
+              {showFi && hasFi && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Fixed Income
@@ -164,7 +171,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showGold && goldInvested > 0 && (
+              {showGold && hasGold && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Gold &amp; Bullion
@@ -176,7 +183,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showRe && reInvested > 0 && (
+              {showRe && hasRe && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Real Estate
@@ -219,7 +226,7 @@ export default function PortfolioSummary({
           {/* Expanded Breakdown */}
           {isCurrentExpanded && (
             <div className="mt-2 ml-1 pl-3 border-l-2 border-neutral-100 dark:border-white/5 space-y-2 animate-in slide-in-from-top-2 fade-in duration-200">
-              {showMf && (
+              {showMf && (hasMf || !hasAnyAsset) && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Mutual Funds
@@ -231,7 +238,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showStock && (
+              {showStock && (hasStock || !hasAnyAsset) && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Stocks
@@ -243,7 +250,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showFi && fiCurrentVal > 0 && (
+              {showFi && hasFi && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Fixed Income
@@ -255,7 +262,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showGold && goldCurrentVal > 0 && (
+              {showGold && hasGold && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Gold &amp; Bullion
@@ -267,7 +274,7 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
-              {showRe && reCurrentVal > 0 && (
+              {showRe && hasRe && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-neutral-400 dark:text-neutral-500">
                     Real Estate
@@ -486,7 +493,7 @@ export default function PortfolioSummary({
 
           {/* Asset breakdown */}
           <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-white/10 px-1 text-xs sm:text-sm">
-            {showMf && (
+            {showMf && (hasMf || !hasAnyAsset) && (
               <div className="flex justify-between items-center gap-2">
                 <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -516,7 +523,7 @@ export default function PortfolioSummary({
               </div>
             )}
 
-            {showStock && (
+            {showStock && (hasStock || !hasAnyAsset) && (
               <div className="flex justify-between items-center gap-2">
                 <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />

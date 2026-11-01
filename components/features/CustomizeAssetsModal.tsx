@@ -294,7 +294,7 @@ export default function CustomizeAssetsModal({
           </div>
         </div>
 
-        {/* Live Preview Banner */}
+        {/* Live Preview Banner with Quick Apply */}
         {previewNetWorth !== null && (
           <div className="rounded-2xl p-4 bg-linear-to-r from-primary-600/10 via-indigo-600/10 to-primary-600/5 dark:from-primary-500/15 dark:via-indigo-500/10 dark:to-transparent border border-primary-500/20 flex items-center justify-between gap-3">
             <div>
@@ -308,9 +308,14 @@ export default function CustomizeAssetsModal({
                 Aggregating {activeCoreCount} of 5 core wealth categories
               </span>
             </div>
-            <div className="shrink-0 p-2.5 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400">
-              <SlidersHorizontal size={20} />
-            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-primary-600/30 cursor-pointer shrink-0"
+            >
+              <Check size={14} />
+              <span>Apply</span>
+            </button>
           </div>
         )}
 

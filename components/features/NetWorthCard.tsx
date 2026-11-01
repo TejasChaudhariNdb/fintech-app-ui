@@ -231,7 +231,7 @@ export default function NetWorthCard({
 
         {/* Amount & Badges */}
         <div className="flex flex-col gap-2 mb-3">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums whitespace-nowrap">
             <PrivacyMask blurStrength="md">
               ₹{Math.round(netWorth).toLocaleString("en-IN")}
             </PrivacyMask>
@@ -497,6 +497,7 @@ export default function NetWorthCard({
                     <div className="text-[10px] text-cyan-200/80 font-medium mt-1.5 truncate">
                       FDs · PPF · EPF · Bonds
                     </div>
+                    <div className="min-h-[16px] mt-1" />
                   </div>
                   <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
                     <span className="text-[10px] text-white/70">Interest Earned</span>
@@ -537,6 +538,7 @@ export default function NetWorthCard({
                     <div className="text-[10px] text-amber-200/80 font-medium mt-1.5 truncate">
                       SGB · Physical · Digital
                     </div>
+                    <div className="min-h-[16px] mt-1" />
                   </div>
                   <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
                     <span className="text-[10px] text-white/70">Total Returns</span>
@@ -577,6 +579,7 @@ export default function NetWorthCard({
                     <div className="text-[10px] text-rose-200/80 font-medium mt-1.5 truncate">
                       Properties &amp; Lands
                     </div>
+                    <div className="min-h-[16px] mt-1" />
                   </div>
                   <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90 gap-1.5">
                     <span className="text-[10px] text-white/70 shrink-0">Appreciation</span>
