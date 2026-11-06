@@ -51,16 +51,16 @@ export default function MutualFundJourneyChart({
       ? (hoveredGain / (activePoint?.invested || 1)) * 100
       : 0;
 
-  // Period-specific metrics (when user is viewing the range without scrubbing)
-  const periodValueDelta = (lastPoint?.value || 0) - (firstPoint?.value || 0);
+  // Period-specific metrics (net of external cash inflows/outflows during the period)
+  const periodInvestedDelta =
+    (lastPoint?.invested || 0) - (firstPoint?.invested || 0);
+  const periodGain =
+    (lastPoint?.value || 0) - (firstPoint?.value || 0) - periodInvestedDelta;
+  // Capital base: beginning value + half of period net capital inflows (Modified Dietz)
+  const capitalBase =
+    (firstPoint?.value || 0) + Math.max(0, periodInvestedDelta * 0.5);
   const periodReturnPct =
-    (firstPoint?.value || 0) > 0
-      ? (periodValueDelta / (firstPoint?.value || 1)) * 100
-      : 0;
-  const periodInvestedDelta = Math.max(
-    0,
-    (lastPoint?.invested || 0) - (firstPoint?.invested || 0)
-  );
+    capitalBase > 0 ? (periodGain / capitalBase) * 100 : 0;
   const allTimeGain = (lastPoint?.value || 0) - (lastPoint?.invested || 0);
   const allTimeGainPct =
     (lastPoint?.invested || 0) > 0
@@ -241,10 +241,10 @@ export default function MutualFundJourneyChart({
                   </p>
                   <p
                     className={`font-semibold ${
-                      periodValueDelta >= 0 ? "text-emerald-500" : "text-rose-500"
+                      periodGain >= 0 ? "text-emerald-500" : "text-rose-500"
                     }`}>
-                    {periodValueDelta >= 0 ? "+" : ""}₹
-                    {Math.round(Math.abs(periodValueDelta)).toLocaleString("en-IN")}{" "}
+                    {periodGain >= 0 ? "+" : ""}₹
+                    {Math.round(Math.abs(periodGain)).toLocaleString("en-IN")}{" "}
                     <span className="text-xs font-semibold">
                       ({periodReturnPct >= 0 ? "+" : ""}{periodReturnPct.toFixed(2)}%)
                     </span>
@@ -255,7 +255,7 @@ export default function MutualFundJourneyChart({
                     Invested in {selectedRange}
                   </p>
                   <p className="font-semibold text-neutral-900 dark:text-white">
-                    ₹{Math.round(periodInvestedDelta).toLocaleString("en-IN")}
+                    {periodInvestedDelta > 0 ? "+" : ""}₹{Math.round(periodInvestedDelta).toLocaleString("en-IN")}
                   </p>
                 </div>
                 <div>

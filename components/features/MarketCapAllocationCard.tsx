@@ -123,13 +123,20 @@ export default function MarketCapAllocationCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-neutral-100 dark:bg-white/5 px-3 py-1.5 rounded-xl self-start sm:self-auto border border-neutral-200/50 dark:border-white/5">
-          <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-            Total Equity:
-          </span>
-          <span className="text-sm font-bold text-neutral-900 dark:text-white tabular-nums">
-            <PrivacyMask>₹{Math.round(total_equity_value).toLocaleString("en-IN")}</PrivacyMask>
-          </span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 self-start sm:self-auto">
+          <div className="flex items-center gap-2 bg-neutral-100 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-neutral-200/50 dark:border-white/5">
+            <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+              {data.non_equity_value > 0 ? "Pure Equity:" : "Total Equity:"}
+            </span>
+            <span className="text-sm font-bold text-neutral-900 dark:text-white tabular-nums">
+              <PrivacyMask>₹{Math.round(total_equity_value).toLocaleString("en-IN")}</PrivacyMask>
+            </span>
+          </div>
+          {data.non_equity_value > 0 && (
+            <span className="text-[11px] text-neutral-400 font-medium px-1">
+              (+ ₹{Math.round(data.non_equity_value).toLocaleString("en-IN")} Arbitrage/Cash)
+            </span>
+          )}
         </div>
       </div>
 

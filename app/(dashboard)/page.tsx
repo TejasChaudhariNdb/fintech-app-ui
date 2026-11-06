@@ -197,7 +197,14 @@ export default function HomePage() {
         const [nw, ps, g, xirrData, ins, bm, up, mcData, insPolicies] = await Promise.all([
           api.getNetWorth().catch((err) => {
             console.error("Net worth error:", err);
-            return { net_worth: 0, mutual_funds: 0, stocks: 0 };
+            return {
+              net_worth: 0,
+              mutual_funds: 0,
+              stocks: 0,
+              fixed_income: 0,
+              gold: 0,
+              real_estate: 0,
+            };
           }),
           api.getPortfolioSummary().catch((err) => {
             console.error("Portfolio summary error:", err);
@@ -301,7 +308,8 @@ export default function HomePage() {
         ? new Date(currentTimestamp).getTime()
         : 0;
 
-      // 2. Trigger Background Task
+      // 2. Trigger Background Task and clear client cache
+      api.clearPortfolioCache();
       await api.refreshNAVs();
 
       // 3. Start Polling for completion
@@ -311,6 +319,7 @@ export default function HomePage() {
       const pollInterval = setInterval(async () => {
         attempts++;
         try {
+          api.clearPortfolioCache();
           let newLastUpdated = 0;
           if (isFamilyView) {
             const latestFam = await api.getFamilySummary();
@@ -382,6 +391,18 @@ export default function HomePage() {
     if (assetPrefs.real_estate) {
       effectiveFamNetWorth += famAlloc.real_estate || 0;
       effectiveFamInvested += famInvAlloc.real_estate || 0;
+    }
+
+    // Fallbacks if invested_allocation was not in cache or sum is 0 but portfolio total_invested exists
+    if (effectiveFamInvested <= 0 && (familySummary.total_invested || 0) > 0) {
+      effectiveFamInvested = familySummary.total_invested;
+    }
+    if (effectiveFamInvested <= 0 && Array.isArray(familySummary.profile_breakdown)) {
+      const breakdownInvested = familySummary.profile_breakdown.reduce(
+        (acc: number, p: any) => acc + (p.total_invested || 0),
+        0
+      );
+      if (breakdownInvested > 0) effectiveFamInvested = breakdownInvested;
     }
 
     const effectiveFamGain = effectiveFamNetWorth - effectiveFamInvested;

@@ -135,10 +135,14 @@ export const api = {
           "/real-estate"
         ];
         
-        const pathPart = endpoint.split("?")[0];
-        if (scopedPrefixes.some(prefix => pathPart === prefix || pathPart.startsWith(prefix + "/"))) {
-          const separator = endpoint.includes("?") ? "&" : "?";
-          finalEndpoint = `${endpoint}${separator}profile_id=${activeProfileId}`;
+        const method = (options.method || "GET").toUpperCase();
+        // Only append profile query scoping for read (GET) requests
+        if (method === "GET") {
+          const pathPart = endpoint.split("?")[0];
+          if (scopedPrefixes.some(prefix => pathPart === prefix || pathPart.startsWith(prefix + "/"))) {
+            const separator = endpoint.includes("?") ? "&" : "?";
+            finalEndpoint = `${endpoint}${separator}profile_id=${activeProfileId}`;
+          }
         }
       }
 
