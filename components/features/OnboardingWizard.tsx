@@ -40,6 +40,7 @@ interface OnboardingWizardProps {
   initialStep?: number;
   onAddTransactionClick?: () => void;
   onClose?: () => void;
+  onSuccess?: (profileId?: string) => void;
 }
 
 export default function OnboardingWizard({
@@ -47,6 +48,7 @@ export default function OnboardingWizard({
   initialStep = 1,
   onAddTransactionClick,
   onClose,
+  onSuccess,
 }: OnboardingWizardProps) {
   const router = useRouter();
   const [step, setStep] = useState(initialStep); // 1: Intro, 2: Upload
@@ -88,6 +90,10 @@ export default function OnboardingWizard({
   };
 
   const handleFinishAndRedirect = () => {
+    api.clearPortfolioCache();
+    if (onSuccess) {
+      onSuccess(selectedProfileId);
+    }
     if (onClose) {
       onClose();
     }
@@ -444,6 +450,8 @@ export default function OnboardingWizard({
       properties: { step: 1, method: "manual" },
     });
     setShowManualModal(false);
+    api.clearPortfolioCache();
+    if (onSuccess) onSuccess(selectedProfileId);
     if (onClose) onClose();
     router.replace("/holdings/mutual-funds");
     router.refresh();

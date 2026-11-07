@@ -28,7 +28,7 @@ export default function MutualFundsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
-  const { activeProfileId, profiles } = useProfile();
+  const { activeProfileId, profiles, refreshProfiles, changeActiveProfile } = useProfile();
 
   const getRelationForProfile = (profileId: number) => {
     const found = profiles.find((p) => p.id === profileId);
@@ -348,6 +348,23 @@ export default function MutualFundsPage() {
   const allocationLegendData =
     allocationView === "amc" ? amcAllocation : schemeAllocation.slice(0, 6);
 
+  const handleWizardSuccess = async (targetProfileId?: string) => {
+    setShowImportWizard(false);
+    api.clearPortfolioCache();
+    showToast("Portfolio imported successfully! Loading your holdings...", "success");
+    if (refreshProfiles) {
+      try {
+        await refreshProfiles();
+      } catch (e) {
+        console.error("Failed to refresh profiles:", e);
+      }
+    }
+    if (targetProfileId && activeProfileId !== "all" && activeProfileId !== targetProfileId) {
+      changeActiveProfile(targetProfileId);
+    }
+    await loadData();
+  };
+
   if (isLoading) {
     return <AppSkeleton />;
   }
@@ -360,9 +377,11 @@ export default function MutualFundsPage() {
           setShowImportWizard(false);
           setShowAddTx(true);
         }}
-        onClose={() => {
+        onSuccess={handleWizardSuccess}
+        onClose={async () => {
           setShowImportWizard(false);
-          router.replace("/holdings/mutual-funds");
+          api.clearPortfolioCache();
+          await loadData();
         }}
       />
     );

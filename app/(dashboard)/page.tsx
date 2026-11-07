@@ -44,7 +44,7 @@ import {
 
 export default function HomePage() {
   const router = useRouter();
-  const { activeProfileId, profiles, loading: profileLoading } = useProfile();
+  const { activeProfileId, profiles, loading: profileLoading, refreshProfiles } = useProfile();
   const [netWorth, setNetWorth] = useState<any>(null);
   const [summary, setSummary] = useState<any>(null);
   const [familySummary, setFamilySummary] = useState<any>(null);
@@ -807,7 +807,23 @@ export default function HomePage() {
     !hasAnyFamilyAsset;
 
   if (isProfileEmpty || isFamilyEmpty) {
-    return <OnboardingWizard userProfile={userProfile} />;
+    return (
+      <OnboardingWizard
+        userProfile={userProfile}
+        onSuccess={async () => {
+          api.clearPortfolioCache();
+          if (refreshProfiles) {
+            try {
+              await refreshProfiles();
+            } catch (e) {
+              console.error("Failed to refresh profiles:", e);
+            }
+          }
+          await loadData();
+          router.replace("/holdings/mutual-funds");
+        }}
+      />
+    );
   }
 
   if (activeProfileId === "all") {
