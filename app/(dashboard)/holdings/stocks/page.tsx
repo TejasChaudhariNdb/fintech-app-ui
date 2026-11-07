@@ -176,6 +176,7 @@ export default function StocksPage() {
   );
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
   const abortManualTxRef = useRef<AbortController | null>(null);
+  const [manualError, setManualError] = useState<string | null>(null);
   const [showTradebookModal, setShowTradebookModal] = useState(false);
   const [showDematReconcileModal, setShowDematReconcileModal] = useState(false);
   const [corpActionStock, setCorpActionStock] = useState<any>(null);
@@ -425,6 +426,7 @@ export default function StocksPage() {
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmittingManual) return;
+    setManualError(null);
     try {
       if (!isValidSymbol) {
         showToast("Please select a valid stock from search", "error");
@@ -478,7 +480,9 @@ export default function StocksPage() {
       await loadData();
     } catch (err: any) {
       if (err?.message !== "Request canceled.") {
-        showToast(err?.message || "Failed to add transaction", "error");
+        const errorMsg = err?.message || "Failed to add transaction";
+        setManualError(errorMsg);
+        showToast(errorMsg, "error");
       }
     } finally {
       setIsSubmittingManual(false);
@@ -489,6 +493,7 @@ export default function StocksPage() {
     abortManualTxRef.current?.abort();
     abortManualTxRef.current = null;
     setIsSubmittingManual(false);
+    setManualError(null);
     setShowStockModal(false);
     setStockModalTab("MANUAL");
     setStockForm({
@@ -1667,6 +1672,12 @@ export default function StocksPage() {
               max={new Date().toISOString().split("T")[0]}
               required
             />
+            {manualError && (
+              <div className="p-3 text-xs rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{manualError}</span>
+              </div>
+            )}
             <Button
               type="submit"
               className="w-full"

@@ -97,7 +97,7 @@ export default function Toast({
 
   return (
     <div
-      className="fixed bottom-24 md:bottom-8 left-1/2 z-[9998] pointer-events-auto"
+      className="fixed bottom-24 md:bottom-8 left-1/2 z-[100000] pointer-events-auto"
       style={{
         transform: exiting
           ? "translate(-50%, 10px) scale(0.96)"

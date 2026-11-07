@@ -10,6 +10,7 @@ import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import Toast from "@/components/ui/Toast";
 import {
+  AlertCircle,
   CalendarDays,
   ChevronLeft,
   Info,
@@ -122,6 +123,7 @@ export default function StockDetailPage() {
   const [editingTx, setEditingTx] = useState<EditableTransaction | null>(null);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
   const [isSubmittingTx, setIsSubmittingTx] = useState(false);
+  const [addTxError, setAddTxError] = useState<string | null>(null);
   const addTxAbortRef = useRef<AbortController | null>(null);
   const [isCorporateActionOpen, setIsCorporateActionOpen] = useState(false);
   const [newTxForm, setNewTxForm] = useState({
@@ -204,12 +206,17 @@ export default function StockDetailPage() {
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmittingTx) return;
+    setAddTxError(null);
     if (activeProfileId === "all") {
-      showToast("Please select a specific family profile to add transactions.", "error");
+      const msg = "Please select a specific family profile to add transactions.";
+      setAddTxError(msg);
+      showToast(msg, "error");
       return;
     }
     if (!newTxForm.quantity || !newTxForm.price || !newTxForm.date) {
-      showToast("Please fill all required fields", "error");
+      const msg = "Please fill all required fields";
+      setAddTxError(msg);
+      showToast(msg, "error");
       return;
     }
     setIsSubmittingTx(true);
@@ -231,6 +238,7 @@ export default function StockDetailPage() {
         { signal: controller.signal }
       );
       setIsAddTxOpen(false);
+      setAddTxError(null);
       setNewTxForm({
         transaction_type: "BUY",
         quantity: "",
@@ -241,7 +249,9 @@ export default function StockDetailPage() {
       showToast("Transaction added successfully", "success");
     } catch (err: any) {
       if (err?.message !== "Request canceled.") {
-        showToast(err?.message || "Failed to add transaction", "error");
+        const errorMsg = err?.message || "Failed to add transaction";
+        setAddTxError(errorMsg);
+        showToast(errorMsg, "error");
       }
     } finally {
       setIsSubmittingTx(false);
@@ -919,6 +929,7 @@ export default function StockDetailPage() {
         onClose={() => {
           addTxAbortRef.current?.abort();
           setIsSubmittingTx(false);
+          setAddTxError(null);
           setIsAddTxOpen(false);
         }}
         title={`Add Transaction — ${symbol}`}>
@@ -982,6 +993,13 @@ export default function StockDetailPage() {
             }
             required
           />
+
+          {addTxError && (
+            <div className="p-3 text-xs rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 flex items-start gap-2">
+              <AlertCircle size={15} className="shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{addTxError}</span>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" isLoading={isSubmittingTx}>
             Add {newTxForm.transaction_type} Entry
