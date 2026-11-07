@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { LogOut, ArrowRight, Sparkles } from "lucide-react";
-import { useIsDemo } from "@/lib/hooks/useIsDemo";
+import { useIsDemo, isDemoUser } from "@/lib/hooks/useIsDemo";
 
 export default function DemoRibbon() {
   const isDemo = useIsDemo();
   const router = useRouter();
 
-  if (!isDemo) return null;
+  if (!isDemo && !isDemoUser()) return null;
 
   const handleExit = () => {
     localStorage.removeItem("access_token");
@@ -17,44 +17,44 @@ export default function DemoRibbon() {
     router.push("/login");
   };
 
-  const handleStartFree = () => {
+  const handleCreateAccount = () => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_email");
-    sessionStorage.clear();
-    router.push("/register");
+    sessionStorage.removeItem("is_demo_session");
+    router.push("/auth?tab=signup");
   };
 
   return (
-    <div className="sticky top-0 z-[45] h-10 w-full bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 text-white text-xs font-semibold px-3 sm:px-4 flex items-center justify-between shadow-lg backdrop-blur-md border-b border-white/10 select-none">
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse hidden sm:inline-block" />
-        <span className="tracking-wide text-[10px] sm:text-xs flex items-center gap-1.5">
-          <span className="hidden sm:inline text-white/90">Exploring in</span>
-          <strong className="font-extrabold uppercase bg-black/25 px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] tracking-wider border border-white/5">
+    <div className="sticky top-0 z-[45] h-10 w-full bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-700 text-white text-xs px-3 sm:px-4 flex items-center justify-between shadow-xs backdrop-blur-md border-b border-white/10 select-none">
+      {/* Left: Demo Indicator & Context */}
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+        <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse hidden sm:inline-block shrink-0" />
+        <span className="text-xs text-white/90 flex items-center gap-1.5 tracking-wide">
+          <span className="hidden sm:inline font-normal">Exploring in</span>
+          <strong className="font-extrabold uppercase bg-black/25 px-1.5 py-0.5 rounded-md text-[10px] tracking-wider border border-white/10 text-white">
             Demo Mode
           </strong>
-          <span className="hidden md:inline text-white/80">. Track your own portfolio!</span>
         </span>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Subtle Exit Demo Link */}
+      {/* Right: Actions */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <button
           onClick={handleExit}
-          className="text-[10px] sm:text-[11px] font-semibold text-white/80 hover:text-white hover:underline transition-all flex items-center gap-1 active:scale-95"
+          className="px-2.5 py-1 text-xs font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+          title="Exit Demo"
         >
-          <span className="hidden sm:inline">Exit Demo</span>
-          <span className="sm:hidden">Exit</span>
-          <LogOut size={11} className="opacity-80" />
+          <LogOut size={13} className="opacity-80" />
+          <span className="whitespace-nowrap">Exit Demo</span>
         </button>
 
-        {/* High-Converting Glowing Start Free Button */}
+        {/* Create Free Account CTA */}
         <button
-          onClick={handleStartFree}
-          className="bg-white text-primary-600 hover:bg-neutral-50 active:scale-95 px-2 py-0.5 sm:px-3 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-extrabold transition-all shadow-md shadow-black/10 hover:shadow-lg flex items-center gap-0.5 sm:gap-1 group"
+          onClick={handleCreateAccount}
+          className="bg-white hover:bg-white/95 active:scale-95 text-neutral-900 font-semibold px-3 py-1 rounded-lg text-xs transition-all shadow-xs flex items-center gap-1.5 group cursor-pointer"
         >
-          <span>Start Free</span>
-          <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+          <Sparkles size={12} className="text-primary-600 shrink-0" />
+          <span className="whitespace-nowrap">Create Free Account</span>
         </button>
       </div>
     </div>

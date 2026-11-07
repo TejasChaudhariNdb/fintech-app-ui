@@ -113,7 +113,7 @@ export default function DemoRestrictionModal() {
           {/* Pill Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-[11px] font-bold uppercase tracking-wider mb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            Demo Sandbox • Read-Only
+            Demo Account • View Only
           </div>
 
           <h2 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
@@ -121,7 +121,7 @@ export default function DemoRestrictionModal() {
           </h2>
 
           <p className="mt-2 text-neutral-600 dark:text-neutral-400 text-xs sm:text-sm leading-relaxed max-w-sm">
-            Changes and uploads are disabled in this shared public demo. Create your free personal account to start importing and tracking your real investments.
+            Changes and uploads are disabled in the demo account. Create your free personal account to start importing and tracking your real investments.
           </p>
 
           {/* Value Highlights Checklist */}
