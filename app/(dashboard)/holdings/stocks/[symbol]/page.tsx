@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import Card from "@/components/ui/Card";
@@ -121,6 +121,8 @@ export default function StockDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingTx, setEditingTx] = useState<EditableTransaction | null>(null);
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [isSubmittingTx, setIsSubmittingTx] = useState(false);
+  const addTxAbortRef = useRef<AbortController | null>(null);
   const [isCorporateActionOpen, setIsCorporateActionOpen] = useState(false);
   const [newTxForm, setNewTxForm] = useState({
     transaction_type: "BUY" as "BUY" | "SELL",
@@ -201,10 +203,20 @@ export default function StockDetailPage() {
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingTx) return;
+    if (activeProfileId === "all") {
+      showToast("Please select a specific family profile to add transactions.", "error");
+      return;
+    }
     if (!newTxForm.quantity || !newTxForm.price || !newTxForm.date) {
       showToast("Please fill all required fields", "error");
       return;
     }
+    setIsSubmittingTx(true);
+    addTxAbortRef.current?.abort();
+    const controller = new AbortController();
+    addTxAbortRef.current = controller;
+
     try {
       showToast("Adding transaction...", "loading");
       await api.addStockTransaction(
@@ -215,7 +227,8 @@ export default function StockDetailPage() {
           date: newTxForm.date,
           transaction_type: newTxForm.transaction_type,
         },
-        activeProfileId ? String(activeProfileId) : undefined
+        activeProfileId && activeProfileId !== "all" ? String(activeProfileId) : undefined,
+        { signal: controller.signal }
       );
       setIsAddTxOpen(false);
       setNewTxForm({
@@ -226,8 +239,12 @@ export default function StockDetailPage() {
       });
       await loadPageData();
       showToast("Transaction added successfully", "success");
-    } catch {
-      showToast("Failed to add transaction", "error");
+    } catch (err: any) {
+      if (err?.message !== "Request canceled.") {
+        showToast(err?.message || "Failed to add transaction", "error");
+      }
+    } finally {
+      setIsSubmittingTx(false);
     }
   };
 
@@ -899,7 +916,11 @@ export default function StockDetailPage() {
 
       <Modal
         isOpen={isAddTxOpen}
-        onClose={() => setIsAddTxOpen(false)}
+        onClose={() => {
+          addTxAbortRef.current?.abort();
+          setIsSubmittingTx(false);
+          setIsAddTxOpen(false);
+        }}
         title={`Add Transaction — ${symbol}`}>
         <form onSubmit={handleAddTransaction} className="space-y-4">
           <div className="grid grid-cols-2 gap-2 bg-neutral-100 dark:bg-white/5 p-1 rounded-lg">
@@ -962,7 +983,7 @@ export default function StockDetailPage() {
             required
           />
 
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" isLoading={isSubmittingTx}>
             Add {newTxForm.transaction_type} Entry
           </Button>
         </form>

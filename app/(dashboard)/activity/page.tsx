@@ -225,8 +225,10 @@ export default function ActivityPage() {
       showToast("Stock transaction added", "success");
       setShowAddStock(false);
       loadTransactions(0);
-    } catch (err) {
-      showToast("Failed to add stock transaction", "error");
+    } catch (err: any) {
+      if (err?.message !== "Request canceled.") {
+        showToast(err?.message || "Failed to add stock transaction", "error");
+      }
     }
   };
 

@@ -146,15 +146,45 @@ export const api = {
         }
       }
 
-      const res = await fetch(`${API_URL}${finalEndpoint}`, {
-        ...options,
-        cache: options.cache || "no-store",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-          ...options.headers,
-        },
-      });
+      // Default 25-second client timeout to prevent indefinite hangs
+      const controller = new AbortController();
+      let didTimeout = false;
+      const timeoutTimer = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, 25000);
+
+      if (options.signal) {
+        if (options.signal.aborted) {
+          controller.abort();
+        } else {
+          options.signal.addEventListener("abort", () => controller.abort(), { once: true });
+        }
+      }
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_URL}${finalEndpoint}`, {
+          ...options,
+          signal: controller.signal,
+          cache: options.cache || "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+            ...options.headers,
+          },
+        });
+      } catch (fetchErr: any) {
+        if (didTimeout) {
+          throw new Error("Request timed out. Please check your connection and try again.");
+        }
+        if (options.signal?.aborted) {
+          throw new Error("Request canceled.");
+        }
+        throw fetchErr;
+      } finally {
+        clearTimeout(timeoutTimer);
+      }
 
       if (!res.ok) {
         if (res.status === 401) {
@@ -332,11 +362,13 @@ export const api = {
       date: string;
       transaction_type: "BUY" | "SELL";
     },
-    profileId?: string
+    profileId?: string,
+    options?: { signal?: AbortSignal }
   ) =>
     api.fetch(`/equity/transaction${profileId ? `?profile_id=${profileId}` : ""}`, {
       method: "POST",
       body: JSON.stringify(data),
+      signal: options?.signal,
     }),
 
   refreshStockPrices: () => api.fetch("/equity/refresh", { method: "POST" }),

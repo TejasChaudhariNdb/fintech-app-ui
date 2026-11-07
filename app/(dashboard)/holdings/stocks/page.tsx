@@ -175,6 +175,7 @@ export default function StocksPage() {
     "MANUAL",
   );
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
+  const abortManualTxRef = useRef<AbortController | null>(null);
   const [showTradebookModal, setShowTradebookModal] = useState(false);
   const [showDematReconcileModal, setShowDematReconcileModal] = useState(false);
   const [corpActionStock, setCorpActionStock] = useState<any>(null);
@@ -434,6 +435,10 @@ export default function StocksPage() {
         return;
       }
       setIsSubmittingManual(true);
+      abortManualTxRef.current?.abort();
+      const controller = new AbortController();
+      abortManualTxRef.current = controller;
+
       const isFirst = manualStocks.length === 0;
       await api.addStockTransaction({
         symbol: stockForm.symbol,
@@ -441,7 +446,7 @@ export default function StocksPage() {
         price: Number(stockForm.price),
         date: stockForm.date,
         transaction_type: stockForm.transaction_type,
-      }, targetProfileId);
+      }, targetProfileId, { signal: controller.signal });
 
       if (isFirst) {
         analytics.track({
@@ -471,14 +476,19 @@ export default function StocksPage() {
       showToast("Transaction added successfully", "success");
       closeStockModal();
       await loadData();
-    } catch (err) {
-      showToast("Failed to add transaction", "error");
+    } catch (err: any) {
+      if (err?.message !== "Request canceled.") {
+        showToast(err?.message || "Failed to add transaction", "error");
+      }
     } finally {
       setIsSubmittingManual(false);
     }
   };
 
   const closeStockModal = () => {
+    abortManualTxRef.current?.abort();
+    abortManualTxRef.current = null;
+    setIsSubmittingManual(false);
     setShowStockModal(false);
     setStockModalTab("MANUAL");
     setStockForm({
