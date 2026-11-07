@@ -6,13 +6,18 @@ import { Sparkles } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { api } from "@/lib/api";
 import Button from "@/components/ui/Button";
+import { useIsDemo, isDemoUser } from "@/lib/hooks/useIsDemo";
 
 export default function WhatsNewModal() {
   const router = useRouter();
+  const isDemo = useIsDemo();
   const [isOpen, setIsOpen] = useState(false);
   const [announcement, setAnnouncement] = useState<any>(null);
 
   useEffect(() => {
+    // For demo account: don't fetch or show what's new announcements
+    if (isDemo || isDemoUser()) return;
+
     // Check if token exists in localStorage (only query if logged in)
     const token = localStorage.getItem("access_token");
     if (!token) return;
@@ -61,7 +66,7 @@ export default function WhatsNewModal() {
     setIsOpen(false);
   };
 
-  if (!announcement) return null;
+  if (isDemo || isDemoUser() || !announcement) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={handleDismiss} title="New in Arthavi">

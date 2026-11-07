@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getMessaging, getToken } from "firebase/messaging";
 import { app } from "../lib/firebase";
 import { api } from "../lib/api";
+import { isDemoUser } from "../lib/hooks/useIsDemo";
 
 const useFcmToken = () => {
   const [token, setToken] = useState<string | null>(null);
@@ -72,6 +73,7 @@ const useFcmToken = () => {
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
+      if (isDemoUser()) return;
       setPermission(Notification.permission);
 
       // If permission is already granted, retrieve the token silently

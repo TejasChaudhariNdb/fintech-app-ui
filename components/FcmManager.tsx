@@ -5,12 +5,16 @@ import useFcmToken from "../hooks/useFcmToken";
 import { getMessaging, onMessage } from "firebase/messaging";
 import { app } from "../lib/firebase";
 import { Bell, X } from "lucide-react";
+import { useIsDemo, isDemoUser } from "@/lib/hooks/useIsDemo";
 
 const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000; // 4 days snooze
 
 const FcmManager = () => {
+  const isDemo = useIsDemo();
   const { permission, requestPermission } = useFcmToken();
   const [showBanner, setShowBanner] = useState(false);
+
+  if (isDemo || isDemoUser()) return null;
 
   const dismissBanner = () => {
     if (typeof window !== "undefined") {

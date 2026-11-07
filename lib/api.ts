@@ -36,12 +36,11 @@ function checkDemoRestriction() {
   const token = localStorage.getItem("access_token");
   const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
   const userEmail = localStorage.getItem("user_email");
+  const isDemoSession = sessionStorage.getItem("is_demo_session") === "true";
 
   if (
     token &&
-    userEmail &&
-    demoEmail &&
-    userEmail.toLowerCase() === demoEmail.toLowerCase()
+    (isDemoSession || (userEmail && demoEmail && userEmail.toLowerCase() === demoEmail.toLowerCase()))
   ) {
     window.dispatchEvent(new CustomEvent("show-demo-restriction"));
     throw new Error("This action is disabled in demo mode.");
@@ -83,16 +82,21 @@ export const api = {
     try {
       const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
 
-      // Intercept and block demo user actions
+      // Intercept and block demo user actions for mutations (editing/creating/deleting)
       if (
         token &&
         typeof window !== "undefined" &&
         ["POST", "PUT", "DELETE", "PATCH"].includes(options.method || "GET")
       ) {
-        // Allowed endpoints for demo user
-        const allowedEndpoints = ["/auth/login", "/auth/logout"];
+        // Safe / background endpoints that shouldn't trigger the restriction modal
+        const isAllowedForDemo =
+          endpoint.startsWith("/auth/") ||
+          endpoint.startsWith("/updates/") ||
+          endpoint.startsWith("/analytics/") ||
+          endpoint.startsWith("/fcm/") ||
+          endpoint.startsWith("/ai/");
 
-        if (!allowedEndpoints.some((ep) => endpoint.startsWith(ep))) {
+        if (!isAllowedForDemo) {
           checkDemoRestriction();
         }
       }

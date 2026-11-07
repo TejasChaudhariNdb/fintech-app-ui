@@ -606,19 +606,13 @@ export default function TradebookImportModal({
             </button>
             <button
               type="button"
-              onClick={() => {
-                setImportMode("TRADEBOOK");
-                setErrorMessage(null);
-              }}
-              className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
-                importMode === "TRADEBOOK"
-                  ? "border-primary-600 text-primary-600 dark:text-primary-400"
-                  : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}>
+              disabled
+              title="Tradebook order import is temporarily disabled (Beta Users Only)"
+              className="pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-neutral-400 dark:text-neutral-500 flex items-center gap-2 cursor-not-allowed opacity-60 select-none">
               <FileSpreadsheet size={16} />
               <span>Tradebook Orders</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-neutral-100 dark:bg-white/10 text-neutral-500">
-                Order Logs
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                Beta Users Only
               </span>
             </button>
           </div>
@@ -900,6 +894,20 @@ export default function TradebookImportModal({
               {/* ════════ TAB B: TRADEBOOK ORDERS ════════ */}
               {importMode === "TRADEBOOK" && (
                 <div className="space-y-4 animate-in fade-in duration-150">
+                  <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 flex items-start gap-2.5 text-xs">
+                    <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-amber-950 dark:text-amber-100 flex items-center gap-1.5">
+                        Tradebook Import Disabled
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                          Beta Users Only
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-amber-800 dark:text-amber-300">
+                        Multi-year tradebook order log import is temporarily restricted for beta users. Please use the <strong>Holdings Statement</strong> tab to sync your latest broker holdings directly.
+                      </p>
+                    </div>
+                  </div>
                   {/* Supported Brokers Badges */}
                   <div>
                     <div className="flex items-center justify-between mb-2">

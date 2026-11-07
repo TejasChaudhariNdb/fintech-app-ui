@@ -221,9 +221,9 @@ export default function DashboardLayout({
       <ChatWidget />
       <FcmManager />
       <FeedbackButton />
-      <WhatsNewModal />
+      {!isDemo && <WhatsNewModal />}
       <DemoRestrictionModal />
-      <AppTour />
+      {!isDemo && <AppTour />}
     </PrivacyProvider>
   );
 }

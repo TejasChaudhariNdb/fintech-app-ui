@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Users, ShieldCheck, TrendingUp, Compass, Sparkles, X, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
-import { useIsDemo } from "@/lib/hooks/useIsDemo";
+import { useIsDemo, isDemoUser } from "@/lib/hooks/useIsDemo";
 
 interface TourStep {
   targetId: string;
@@ -92,18 +92,13 @@ export default function AppTour() {
   // Automatic trigger logic
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Never show or auto-trigger tour for demo accounts
+    if (isDemo || isDemoUser()) return;
+
     const token = localStorage.getItem("access_token");
     if (!token) return;
 
     const hasSeen = localStorage.getItem("has_seen_app_tour");
-
-    if (isDemo) {
-      // In demo mode: trigger quickly to orient visitors
-      const timer = setTimeout(() => {
-        startTour();
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
 
     if (!hasSeen) {
       // In real user mode: only trigger once dashboard is rendered
@@ -195,7 +190,7 @@ export default function AppTour() {
     return highlightRect.top > window.innerHeight * 0.45;
   }, [highlightRect]);
 
-  if (!isActive) return null;
+  if (isDemo || isDemoUser() || !isActive) return null;
 
   const step = TOUR_STEPS[currentStep];
   const Icon = step.icon;

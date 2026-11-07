@@ -1523,13 +1523,14 @@ export default function StocksPage() {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setShowStockModal(false);
-              setShowTradebookModal(true);
-            }}
-            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center justify-center gap-1.5">
+            disabled
+            title="Upload Tradebook is temporarily disabled (Beta Users Only)"
+            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 dark:text-neutral-500 cursor-not-allowed opacity-60 flex items-center justify-center gap-1.5 select-none">
             <FileSpreadsheet size={15} />
             <span>Upload Tradebook</span>
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              Beta Users Only
+            </span>
           </button>
         </div>
 
