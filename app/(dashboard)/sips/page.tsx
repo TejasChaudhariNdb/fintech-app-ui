@@ -25,6 +25,7 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  ReceiptText,
 } from "lucide-react";
 
 import Card from "@/components/ui/Card";
@@ -358,45 +359,82 @@ export default function MySIPsPage() {
       />
 
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/10 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 rounded-xl text-emerald-600 dark:text-emerald-400">
+      <div className="border-b border-neutral-200 dark:border-white/10 pb-5 space-y-3">
+        {/* Top Row: Title, Profile Badge, Subtitle & Action Buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl text-emerald-600 dark:text-emerald-400 shrink-0">
               <CalendarClock className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
-                My SIPs
-              </h1>
-              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Track ongoing & stopped mutual fund SIPs, scheduled deduction dates, and reminders.
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+                  My SIPs
+                </h1>
+                {/* Profile context badge */}
+                <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium ${
+                  activeProfileId === "all"
+                    ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/20"
+                    : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    activeProfileId === "all" ? "bg-primary-500"
+                    : activeProfile?.relation?.toUpperCase() === "SELF" ? "bg-blue-500"
+                    : activeProfile?.relation?.toUpperCase() === "MOTHER" ? "bg-purple-500"
+                    : activeProfile?.relation?.toUpperCase() === "FATHER" ? "bg-green-500"
+                    : activeProfile?.relation?.toUpperCase() === "SPOUSE" ? "bg-orange-500"
+                    : activeProfile?.relation?.toUpperCase() === "CHILD" ? "bg-yellow-500"
+                    : "bg-indigo-500"
+                  }`} />
+                  <span>{activeProfileId === "all" ? "All Family" : activeProfile?.name}</span>
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                Track ongoing & stopped mutual fund SIPs, scheduled deduction dates, and reminders
               </p>
             </div>
           </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleManualSync}
+              disabled={syncing}
+              className="rounded-xl flex items-center gap-1.5 border-neutral-200 dark:border-white/10 text-xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-primary-500" : ""}`} />
+              <span>{syncing ? "Syncing..." : "Sync from CAS"}</span>
+            </Button>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => openAddEditModal()}
+              className="rounded-xl flex items-center gap-1.5 shadow-sm text-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add SIP</span>
+            </Button>
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleManualSync}
-            disabled={syncing}
-            className="rounded-xl flex items-center gap-1.5 border-neutral-200 dark:border-white/10"
+        {/* Bottom Row: Clean Segmented Switcher */}
+        <div className="flex items-center p-1 bg-neutral-100/90 dark:bg-neutral-800/60 rounded-xl w-full sm:max-w-xs border border-neutral-200/50 dark:border-white/5">
+          <button
+            onClick={() => router.push("/activity")}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin text-primary-500" : ""}`} />
-            <span>{syncing ? "Syncing..." : "Sync from CAS"}</span>
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => openAddEditModal()}
-            className="rounded-xl flex items-center gap-1.5 shadow-sm"
+            <ReceiptText className="w-3.5 h-3.5" />
+            <span>Transactions</span>
+          </button>
+          <button
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm transition-all cursor-default"
           >
-            <Plus className="w-4 h-4" />
-            <span>Add SIP</span>
-          </Button>
+            <CalendarClock className="w-3.5 h-3.5 text-primary-500" />
+            <span>My SIPs</span>
+          </button>
         </div>
       </div>
 

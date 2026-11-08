@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import Toast, { ToastType } from "@/components/ui/Toast";
@@ -9,11 +10,12 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Calendar, Filter, Download, Plus, Trash2 } from "lucide-react";
+import { Search, Calendar, Filter, Download, Plus, Trash2, CalendarClock, ReceiptText } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useProfile } from "@/context/ProfileContext";
 
 export default function ActivityPage() {
+  const router = useRouter();
   const { activeProfileId, profiles, activeProfile } = useProfile();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -274,93 +276,115 @@ export default function ActivityPage() {
       />
 
       {/* Header */}
-      <div className="bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5 p-4 sticky top-16 z-20 transition-colors flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Transactions</h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Track your financial history
-          </p>
-          {/* Profile context badge */}
-          <div className="flex items-center gap-1.5 mt-2">
-            <span className={`w-2 h-2 rounded-full ${
-              activeProfileId === "all" ? "bg-primary-500"
-              : activeProfile?.relation?.toUpperCase() === "SELF" ? "bg-blue-500"
-              : activeProfile?.relation?.toUpperCase() === "MOTHER" ? "bg-purple-500"
-              : activeProfile?.relation?.toUpperCase() === "FATHER" ? "bg-green-500"
-              : activeProfile?.relation?.toUpperCase() === "SPOUSE" ? "bg-orange-500"
-              : activeProfile?.relation?.toUpperCase() === "CHILD" ? "bg-yellow-500"
-              : "bg-indigo-500"
-            }`} />
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              activeProfileId === "all"
-                ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/20"
-                : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10"
-            }`}>
-              {activeProfileId === "all" ? "All Family" : activeProfile?.name}
-            </span>
+      <div className="bg-white/80 dark:bg-[#0B0E14]/80 backdrop-blur-xl border-b border-neutral-200 dark:border-white/5 px-4 py-3 sm:px-6 sticky top-16 z-20 transition-colors space-y-3">
+        {/* Top Row: Title, Profile Badge, Subtitle & Action Buttons */}
+        <div className="flex justify-between items-start gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Activity</h1>
+              {/* Profile context badge */}
+              <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium ${
+                activeProfileId === "all"
+                  ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/20"
+                  : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-white/10"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  activeProfileId === "all" ? "bg-primary-500"
+                  : activeProfile?.relation?.toUpperCase() === "SELF" ? "bg-blue-500"
+                  : activeProfile?.relation?.toUpperCase() === "MOTHER" ? "bg-purple-500"
+                  : activeProfile?.relation?.toUpperCase() === "FATHER" ? "bg-green-500"
+                  : activeProfile?.relation?.toUpperCase() === "SPOUSE" ? "bg-orange-500"
+                  : activeProfile?.relation?.toUpperCase() === "CHILD" ? "bg-yellow-500"
+                  : "bg-indigo-500"
+                }`} />
+                <span>{activeProfileId === "all" ? "All Family" : activeProfile?.name}</span>
+              </div>
+            </div>
+            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+              Track your financial history and transactions
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              title="Export Transactions"
+              className={`p-2 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 border border-neutral-200/60 dark:border-white/10 transition-colors ${
+                exporting ? "opacity-50 cursor-not-allowed" : ""
+              }`}>
+              <Download size={18} className={exporting ? "animate-bounce" : ""} />
+            </button>
+            <div className="relative">
+              <button
+                className="p-2 bg-primary-600 text-white rounded-xl shadow-md shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                onClick={() => {
+                  light();
+                  setShowAddMenu(!showAddMenu);
+                }}
+                aria-label="Add transaction options"
+              >
+                <Plus size={18} className={`transition-transform duration-200 ${showAddMenu ? "rotate-45" : ""}`} />
+              </button>
+              {showAddMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-transparent"
+                    onClick={() => setShowAddMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden min-w-[190px] animate-in fade-in zoom-in-95 duration-150">
+                    <button 
+                      onClick={() => {
+                        light();
+                        setShowAddMenu(false);
+                        setShowAddTx(true);
+                      }}
+                      className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
+                    >
+                      <span>Buy/Sell Mutual Fund</span>
+                      <span className="text-[10px] text-primary-500 font-bold">MF</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        light();
+                        setShowAddMenu(false);
+                        setStockForm({
+                          symbol: "",
+                          quantity: "",
+                          price: "",
+                          date: new Date().toISOString().split("T")[0],
+                          transaction_type: "BUY",
+                        });
+                        setIsValidSymbol(false);
+                        setShowAddStock(true);
+                      }}
+                      className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
+                    >
+                      <span>Buy/Sell Stock</span>
+                      <span className="text-[10px] text-emerald-500 font-bold">Equity</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        {/* Bottom Row: Clean, Spacious Segmented Switcher */}
+        <div className="flex items-center p-1 bg-neutral-100/90 dark:bg-neutral-800/60 rounded-xl w-full sm:max-w-xs border border-neutral-200/50 dark:border-white/5">
           <button
-            onClick={handleExport}
-            disabled={exporting}
-            className={`p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-white/5 text-neutral-500 dark:text-neutral-400 transition-colors ${
-              exporting ? "opacity-50 cursor-not-allowed" : ""
-            }`}>
-            <Download size={20} className={exporting ? "animate-bounce" : ""} />
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-sm transition-all cursor-default"
+          >
+            <ReceiptText className="w-3.5 h-3.5 text-primary-500" />
+            <span>Transactions</span>
           </button>
-          <div className="relative">
-            <button
-              className="p-2 bg-primary-600 text-white rounded-full shadow-lg shadow-primary-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
-              onClick={() => {
-                light();
-                setShowAddMenu(!showAddMenu);
-              }}
-              aria-label="Add transaction options"
-            >
-              <Plus size={20} className={`transition-transform duration-200 ${showAddMenu ? "rotate-45" : ""}`} />
-            </button>
-            {showAddMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40 bg-transparent"
-                  onClick={() => setShowAddMenu(false)}
-                />
-                <div className="absolute right-0 top-full mt-2 z-50 bg-white dark:bg-[#1A1F2B] border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden min-w-[190px] animate-in fade-in zoom-in-95 duration-150">
-                  <button 
-                    onClick={() => {
-                      light();
-                      setShowAddMenu(false);
-                      setShowAddTx(true);
-                    }}
-                    className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 border-b border-neutral-100 dark:border-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
-                  >
-                    <span>Buy/Sell Mutual Fund</span>
-                    <span className="text-[10px] text-primary-500 font-bold">MF</span>
-                  </button>
-                  <button 
-                    onClick={() => {
-                      light();
-                      setShowAddMenu(false);
-                      setStockForm({
-                        symbol: "",
-                        quantity: "",
-                        price: "",
-                        date: new Date().toISOString().split("T")[0],
-                        transaction_type: "BUY",
-                      });
-                      setIsValidSymbol(false);
-                      setShowAddStock(true);
-                    }}
-                    className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
-                  >
-                    <span>Buy/Sell Stock</span>
-                    <span className="text-[10px] text-emerald-500 font-bold">Equity</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            onClick={() => router.push("/sips")}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-all cursor-pointer"
+          >
+            <CalendarClock className="w-3.5 h-3.5" />
+            <span>My SIPs</span>
+          </button>
         </div>
       </div>
 
