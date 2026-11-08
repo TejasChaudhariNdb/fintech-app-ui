@@ -451,24 +451,24 @@ export default function SuggestionsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-neutral-900 dark:text-white">
-                  Arthavi Official WhatsApp Channel
+                  Arthavi WhatsApp Community
                 </p>
                 <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#25D366]/15 text-[#25D366] uppercase tracking-wide">
-                  Live
+                  Community
                 </span>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Get release updates &amp; feature announcements directly on WhatsApp.
+                Connect with fellow investors, discuss stocks &amp; mutual funds, share feedback, and get announcements.
               </p>
             </div>
           </div>
           <a
-            href="https://whatsapp.com/channel/0029VbDJYC42ER6nb5bslr1K"
+            href="https://chat.whatsapp.com/H6QTnlcJLSIEBS6r8UG2Mi"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 active:scale-95 cursor-pointer"
           >
-            <span>Join Channel</span>
+            <span>Join Community</span>
             <ExternalLink size={12} />
           </a>
         </div>

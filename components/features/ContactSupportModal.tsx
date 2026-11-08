@@ -1,6 +1,6 @@
 import React from "react";
 import Modal from "@/components/ui/Modal";
-import { Mail, Phone, MessageCircle } from "lucide-react";
+import { Mail, Phone, MessageCircle, Users } from "lucide-react";
 
 interface ContactSupportModalProps {
   isOpen: boolean;
@@ -63,10 +63,34 @@ export default function ContactSupportModal({
           </div>
           <div>
             <p className="text-sm font-medium text-neutral-900 dark:text-white">
-              WhatsApp
+              WhatsApp Support
             </p>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Chat on WhatsApp
+              Chat on WhatsApp (+91 91581 10065)
+            </p>
+          </div>
+        </a>
+
+        {/* WhatsApp Community */}
+        <a
+          href="https://chat.whatsapp.com/H6QTnlcJLSIEBS6r8UG2Mi"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-4 p-4 rounded-xl bg-[#25D366]/5 dark:bg-[#25D366]/10 hover:bg-[#25D366]/10 dark:hover:bg-[#25D366]/15 border border-[#25D366]/25 transition-colors">
+          <div className="p-3 bg-[#25D366] text-white rounded-full">
+            <Users size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                Arthavi WhatsApp Community
+              </p>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#25D366]/20 text-[#25D366] uppercase">
+                Join
+              </span>
+            </div>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Connect with fellow investors &amp; discuss ideas
             </p>
           </div>
         </a>
