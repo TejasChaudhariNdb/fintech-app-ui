@@ -15,6 +15,52 @@ export type AIQuotaStatus = {
   show_warning: boolean;
 };
 
+export type SIPRecord = {
+  id: number;
+  user_id: number;
+  profile_id?: number | null;
+  profile_name?: string | null;
+  profile_relation?: string | null;
+  scheme_id?: number | null;
+  scheme_name: string;
+  folio_number?: string | null;
+  amc?: string | null;
+  isin?: string | null;
+  amount: number;
+  frequency: string;
+  sip_day?: number | null;
+  status: "ACTIVE" | "STOPPED" | "PAUSED" | "COMPLETED";
+  start_date?: string | null;
+  end_date?: string | null;
+  last_sip_date?: string | null;
+  next_sip_date?: string | null;
+  completed_installments: number;
+  total_installments?: number | null;
+  total_invested: number;
+  reminder_enabled: boolean;
+  reminder_days_before: number;
+  notify_push: boolean;
+  notify_in_app: boolean;
+  notify_email: boolean;
+  is_auto_detected: boolean;
+  notes?: string | null;
+};
+
+export type SIPSummary = {
+  total_active_monthly_commitment: number;
+  active_sips_count: number;
+  stopped_sips_count: number;
+  total_sips_count: number;
+  total_invested_so_far: number;
+  next_upcoming_sip?: {
+    id: number;
+    scheme_name: string;
+    amount: number;
+    next_sip_date: string;
+    days_left: number;
+  } | null;
+};
+
 type AIStreamStatus = {
   stage: string;
   title: string;
@@ -1451,6 +1497,44 @@ export const api = {
   oneClickUnsubscribe: (token: string, reason?: string) => {
     let url = `/notifications/unsubscribe/one-click?token=${encodeURIComponent(token)}`;
     if (reason) url += `&reason=${encodeURIComponent(reason)}`;
+    return api.fetch(url, { method: "POST" });
+  },
+
+  // SIPs Management
+  getSIPs: (profileId?: number | string | null, status?: string) => {
+    let url = "/sips";
+    const params = new URLSearchParams();
+    if (profileId && profileId !== "all") params.append("profile_id", profileId.toString());
+    if (status) params.append("status", status);
+    const queryString = params.toString();
+    return api.fetch(queryString ? `${url}?${queryString}` : url);
+  },
+  getSIPSummary: (profileId?: number | string | null) => {
+    let url = "/sips/summary";
+    if (profileId && profileId !== "all") url += `?profile_id=${profileId}`;
+    return api.fetch(url);
+  },
+  createSIP: (data: any) =>
+    api.fetch("/sips", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateSIP: (id: number, data: any) =>
+    api.fetch(`/sips/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  toggleSIPStatus: (id: number) =>
+    api.fetch(`/sips/${id}/toggle-status`, {
+      method: "POST",
+    }),
+  deleteSIP: (id: number) =>
+    api.fetch(`/sips/${id}`, {
+      method: "DELETE",
+    }),
+  syncSIPs: (profileId?: number | string | null) => {
+    let url = "/sips/sync";
+    if (profileId && profileId !== "all") url += `?profile_id=${profileId}`;
     return api.fetch(url, { method: "POST" });
   },
 };

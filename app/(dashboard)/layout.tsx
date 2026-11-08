@@ -67,6 +67,7 @@ export default function DashboardLayout({
       if (path.includes("/holdings/stocks")) return "Stocks - Arthavi";
       if (path.includes("/holdings/gold")) return "Gold & Metals - Arthavi";
       if (path.startsWith("/holdings")) return "Holdings - Arthavi";
+      if (path.startsWith("/sips")) return "My SIPs - Arthavi";
       if (path.startsWith("/reports")) return "Tax Reports - Arthavi";
       if (path.startsWith("/goals")) return "Goals - Arthavi";
       if (path.startsWith("/transactions")) return "Transactions - Arthavi";

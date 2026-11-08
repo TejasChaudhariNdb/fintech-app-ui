@@ -8,7 +8,7 @@ import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import ShareStockModal from "@/components/features/ShareStockModal";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
-import { Search, Plus, Share2, UploadCloud, Grid, List, LayoutGrid, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff, BarChart2 } from "lucide-react";
+import { Search, Plus, Share2, UploadCloud, Grid, List, LayoutGrid, Download, ArrowDownUp, FileSpreadsheet, Eye, EyeOff, BarChart2, CalendarClock } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import Toast from "@/components/ui/Toast";
@@ -655,6 +655,12 @@ export default function MutualFundsPage() {
                 <span className="inline sm:hidden">CSV</span>
                 <span className="hidden sm:inline">Import CSV</span>
               </span>
+            </button>
+            <button
+              onClick={() => router.push("/sips")}
+              className="flex-1 sm:flex-none h-10 px-2.5 sm:px-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/50 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors whitespace-nowrap shadow-sm dark:shadow-none active:scale-[0.98]">
+              <CalendarClock size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>My SIPs</span>
             </button>
             <button
               onClick={() => {

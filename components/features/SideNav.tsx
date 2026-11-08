@@ -21,6 +21,7 @@ import {
   Coins,
   Building,
   ChevronDown,
+  CalendarClock,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -39,9 +40,9 @@ export default function SideNav() {
   } | null>(null);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
 
-  // Auto-expand holdings sub-menu whenever user is on any /holdings route
+  // Auto-expand holdings sub-menu whenever user is on any /holdings route or /sips
   useEffect(() => {
-    if (pathname.startsWith("/holdings")) {
+    if (pathname.startsWith("/holdings") || pathname.startsWith("/sips")) {
       setIsHoldingsExpanded(true);
     }
   }, [pathname]);
@@ -91,6 +92,12 @@ export default function SideNav() {
       label: "Mutual Funds",
       icon: PieChart,
       dotColor: "bg-emerald-400",
+    },
+    {
+      id: "/sips",
+      label: "My SIPs",
+      icon: CalendarClock,
+      dotColor: "bg-teal-400",
     },
     {
       id: "/holdings/stocks",
