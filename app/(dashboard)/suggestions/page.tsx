@@ -8,6 +8,7 @@ import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Toast from "@/components/ui/Toast";
 import AppSkeleton from "@/components/ui/AppSkeleton";
+import ContactSupportModal from "@/components/features/ContactSupportModal";
 import {
   FEEDBACK_STATUSES,
   getFeedbackStatusMeta,
@@ -44,6 +45,8 @@ import {
   Maximize2,
   Trash2,
   UploadCloud,
+  Copy,
+  Check,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -82,6 +85,7 @@ export default function SuggestionsPage() {
   const [hasMore, setHasMore] = useState(false);
 
   const [showFormModal, setShowFormModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [modalCategory, setModalCategory] = useState<"suggestion" | "feedback">("suggestion");
   const [type, setType] = useState("feature");
   const [title, setTitle] = useState("");
@@ -114,6 +118,18 @@ export default function SuggestionsPage() {
         () => setToast((prev) => ({ ...prev, isVisible: false })),
         3000,
       );
+    }
+  };
+
+  const [copiedTicketId, setCopiedTicketId] = useState<number | null>(null);
+
+  const handleCopyTicket = (ticketId: number, itemTitle?: string) => {
+    const text = `Ticket #${ticketId}${itemTitle ? ` - ${itemTitle}` : ""}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedTicketId(ticketId);
+      setTimeout(() => setCopiedTicketId(null), 2000);
+      showToast(`Copied Ticket #${ticketId} to clipboard!`, "success");
     }
   };
 
@@ -232,7 +248,7 @@ export default function SuggestionsPage() {
 
     setSubmitting(true);
     try {
-      await api.submitFeedback({
+      const res = await api.submitFeedback({
         main_category: modalCategory,
         type,
         title: title.trim(),
@@ -243,10 +259,11 @@ export default function SuggestionsPage() {
       setBody("");
       handleRemoveFile();
       setShowFormModal(false);
+      const ticketMsg = res?.id ? ` (Ticket #${res.id})` : "";
       showToast(
         modalCategory === "feedback"
-          ? "Feedback submitted successfully!"
-          : "Suggestion submitted successfully!",
+          ? `Feedback submitted successfully!${ticketMsg}`
+          : `Suggestion submitted successfully!${ticketMsg}`,
         "success"
       );
 
@@ -572,6 +589,29 @@ export default function SuggestionsPage() {
                       <div className="flex-1 p-4 min-w-0">
                         <div className="flex items-start justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Ticket / Case Number */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyTicket(item.id, item.title);
+                              }}
+                              title="Click to copy ticket reference"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-neutral-100 hover:bg-neutral-200 dark:bg-white/10 dark:hover:bg-white/15 text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-white/10 cursor-pointer transition-colors active:scale-95"
+                            >
+                              {copiedTicketId === item.id ? (
+                                <>
+                                  <Check size={10} className="text-emerald-500" />
+                                  <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="text-neutral-400 dark:text-neutral-500">Ticket</span>
+                                  <span>#{item.id}</span>
+                                  <Copy size={9} className="opacity-50" />
+                                </>
+                              )}
+                            </button>
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${subCat.style}`}
                             >
@@ -677,42 +717,62 @@ export default function SuggestionsPage() {
                           </div>
                         )}
 
-                        <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-white/5 flex items-center gap-3">
-                          {/* Vote pill */}
-                          <button
-                            onClick={() => handleToggleAgree(item.id)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                              item.has_agreed
-                                ? "bg-primary-600 border-primary-600 text-white"
-                                : "bg-neutral-50 dark:bg-white/[0.04] border-neutral-200 dark:border-white/[0.07] text-neutral-500 dark:text-neutral-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400"
-                            }`}
-                          >
-                            <ThumbsUp size={12} className={item.has_agreed ? "fill-white" : ""} />
-                            <span>{item.has_agreed ? "Agreed" : "Agree"}</span>
-                            {item.agree_count > 0 && (
-                              <span className={`font-bold ${ item.has_agreed ? "text-white/80" : "text-neutral-400 dark:text-neutral-500" }`}>
-                                {item.agree_count}
-                              </span>
-                            )}
-                          </button>
+                        <div className="mt-3 pt-2.5 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex items-center gap-3">
+                            {/* Vote pill */}
+                            <button
+                              onClick={() => handleToggleAgree(item.id)}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                                item.has_agreed
+                                  ? "bg-primary-600 border-primary-600 text-white"
+                                  : "bg-neutral-50 dark:bg-white/[0.04] border-neutral-200 dark:border-white/[0.07] text-neutral-500 dark:text-neutral-400 hover:border-primary-400 hover:text-primary-600 dark:hover:text-primary-400"
+                              }`}
+                            >
+                              <ThumbsUp size={12} className={item.has_agreed ? "fill-white" : ""} />
+                              <span>{item.has_agreed ? "Agreed" : "Agree"}</span>
+                              {item.agree_count > 0 && (
+                                <span className={`font-bold ${ item.has_agreed ? "text-white/80" : "text-neutral-400 dark:text-neutral-500" }`}>
+                                  {item.agree_count}
+                                </span>
+                              )}
+                            </button>
 
-                          {/* Replies toggle */}
-                          <button
-                            onClick={() => handleToggleComments(item.id)}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-                          >
-                            <MessageSquare size={12} />
-                            <span>
-                              {commentsList.length > 0
-                                ? `${commentsList.length} Repl${commentsList.length === 1 ? "y" : "ies"}`
-                                : "Reply"}
-                            </span>
-                            {commentsOpen ? (
-                              <ChevronUp size={12} />
-                            ) : (
-                              <ChevronDown size={12} />
-                            )}
-                          </button>
+                            {/* Replies toggle */}
+                            <button
+                              onClick={() => handleToggleComments(item.id)}
+                              className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+                            >
+                              <MessageSquare size={12} />
+                              <span>
+                                {commentsList.length > 0
+                                  ? `${commentsList.length} Repl${commentsList.length === 1 ? "y" : "ies"}`
+                                  : "Reply"}
+                              </span>
+                              {commentsOpen ? (
+                                <ChevronUp size={12} />
+                              ) : (
+                                <ChevronDown size={12} />
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Share Ticket on WhatsApp */}
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                                `Discussing Arthavi Ticket #${item.id}: "${item.title}" - https://arthavi.com/suggestions`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-[11px] font-semibold text-neutral-400 hover:text-[#25D366] transition-colors cursor-pointer"
+                              title="Share this ticket on WhatsApp"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                              </svg>
+                              <span>Share on WhatsApp</span>
+                            </a>
+                          </div>
                         </div>
 
                         {commentsOpen && (
@@ -859,6 +919,35 @@ export default function SuggestionsPage() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Quick Support — Contact Us Directly at end of screen */}
+        <div className="mt-8 mb-12 p-5 rounded-2xl bg-white dark:bg-surface border border-neutral-200/80 dark:border-white/5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="p-2.5 rounded-xl bg-primary-500/10 text-primary-600 dark:text-primary-400 shrink-0">
+              <HelpCircle size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                  Quick Support &amp; Direct Assistance
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-500/10 text-primary-600 dark:text-primary-400 uppercase tracking-wide">
+                  Direct
+                </span>
+              </div>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                Need direct help with your portfolio, have account issues, or want to discuss something privately? Reach out directly.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowContactModal(true)}
+            className="flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-900 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 active:scale-95 cursor-pointer"
+          >
+            <MessageCircle size={14} />
+            <span>Contact Us Directly</span>
+          </button>
         </div>
       </div>
 
@@ -1219,6 +1308,12 @@ export default function SuggestionsPage() {
           </div>,
           document.body
         )}
+
+      {/* Contact Support Modal */}
+      <ContactSupportModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
     </div>
   );
 }
