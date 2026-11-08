@@ -21,6 +21,7 @@ import {
   Coins,
   Building,
   ChevronDown,
+  CalendarClock,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -78,6 +79,7 @@ export default function SideNav() {
   const mainTabs = [
     { id: "/", label: "Home", icon: Home },
     { id: "/holdings", label: "Holdings", icon: Briefcase },
+    { id: "/sips", label: "My SIPs", icon: CalendarClock },
     { id: "/activity", label: "Transactions", icon: Activity },
     { id: "/reports", label: "Reports", icon: FileSpreadsheet },
     { id: "/goals", label: "Goals", icon: Target },
