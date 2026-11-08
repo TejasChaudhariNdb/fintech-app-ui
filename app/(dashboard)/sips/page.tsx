@@ -269,6 +269,9 @@ export default function MySIPsPage() {
     try {
       if (editingSip) {
         const updated = await api.updateSIP(editingSip.id, {
+          scheme_name: formData.scheme_name,
+          folio_number: formData.folio_number || null,
+          amc: formData.amc || null,
           amount: amt,
           sip_day: Number(formData.sip_day),
           status: formData.status,
@@ -937,7 +940,7 @@ export default function MySIPsPage() {
                 {selectedSipForReminder.scheme_name}
               </h4>
               <p className="text-xs text-neutral-500 mt-1">
-                Amount: <strong>{formatCurrency(selectedSipForReminder.amount)}</strong> / month • Next debit:{" "}
+                Amount: <strong className="inline-block"><PrivacyMask>{formatCurrency(selectedSipForReminder.amount)}</PrivacyMask></strong> / month • Next debit:{" "}
                 <strong>{formatDate(selectedSipForReminder.next_sip_date)}</strong>
               </p>
             </div>
