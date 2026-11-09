@@ -65,7 +65,8 @@ class AnalyticsService {
     }
 
     const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://e.arthavi.com';
+    const uiHost = process.env.NEXT_PUBLIC_POSTHOG_UI_HOST || 'https://us.posthog.com';
 
     if (!key) {
       console.warn('PostHog Key missing. Analytics disabled in this session.');
@@ -74,6 +75,7 @@ class AnalyticsService {
 
     posthog.init(key, {
       api_host: host,
+      ui_host: uiHost,
       persistence: 'cookie',
       cross_subdomain_cookie: true,
       disable_session_recording: false,
