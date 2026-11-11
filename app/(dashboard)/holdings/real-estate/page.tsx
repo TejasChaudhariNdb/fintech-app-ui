@@ -82,6 +82,12 @@ interface RealEstateSummary {
   total_outflows?: number;
   total_net_cash_flow?: number;
   type_counts: Record<string, number>;
+  tax_estimate?: {
+    long_term_properties_count: number;
+    indexed_gain: number;
+    tax_with_indexation: number;
+    tax_without_indexation: number;
+  };
 }
 
 function formatINRShort(val: number): string {
@@ -351,6 +357,23 @@ export default function RealEstateHoldingsPage() {
                 {summary.total_gain_pct >= 0 ? "+" : ""}
                 {summary.total_gain_pct.toFixed(1)}% Appreciation
               </div>
+              {summary.tax_estimate && summary.tax_estimate.long_term_properties_count > 0 && (
+                <div className="mt-2 pt-2 border-t border-neutral-100 dark:border-white/5 text-[11px] text-neutral-500 space-y-0.5">
+                  <div>
+                    Indexed gain (est.):{" "}
+                    <PrivacyMask>{formatINRShort(summary.tax_estimate.indexed_gain)}</PrivacyMask>
+                  </div>
+                  <div>
+                    Est. LTCG tax: 20% indexed{" "}
+                    <PrivacyMask>{formatINRShort(summary.tax_estimate.tax_with_indexation)}</PrivacyMask>
+                    {" · "}12.5% flat{" "}
+                    <PrivacyMask>{formatINRShort(summary.tax_estimate.tax_without_indexation)}</PrivacyMask>
+                  </div>
+                  <div className="text-[10px] text-neutral-400">
+                    Indicative only, at today&apos;s value, for long-term property (held over 24 months). Not tax advice.
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
