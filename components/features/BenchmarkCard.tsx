@@ -6,7 +6,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 
 // BUG-028: both values are XIRRs over the same dated cash flows, so the comparison is like with like.
 interface BenchmarkCardProps {
-  portfolioXirr: number;
+  portfolioXirr: number | null;
   benchmarkXirr: number | null;
   benchmarkName?: string;
 }
@@ -16,8 +16,10 @@ export default function BenchmarkCard({
   benchmarkXirr,
   benchmarkName = "Nifty 50",
 }: BenchmarkCardProps) {
-  const hasBenchmark = benchmarkXirr !== null && benchmarkXirr !== undefined;
-  const diff = hasBenchmark ? portfolioXirr - (benchmarkXirr as number) : 0;
+  // Both XIRRs must exist to compare; a missing one is never treated as 0% (decision 2, 2026-11-12).
+  const hasBenchmark =
+    benchmarkXirr !== null && benchmarkXirr !== undefined && portfolioXirr !== null && portfolioXirr !== undefined;
+  const diff = hasBenchmark ? (portfolioXirr as number) - (benchmarkXirr as number) : 0;
   const isBeating = diff >= 0;
 
   return (
@@ -41,9 +43,9 @@ export default function BenchmarkCard({
               <p className="text-xs text-neutral-500 mb-1">Your XIRR</p>
               <p
                 className={`text-xl font-bold ${
-                  portfolioXirr >= 0 ? "text-emerald-500" : "text-red-500"
+                  (portfolioXirr as number) >= 0 ? "text-emerald-500" : "text-red-500"
                 }`}>
-                {portfolioXirr.toFixed(2)}%
+                {(portfolioXirr as number).toFixed(2)}%
               </p>
             </div>
 

@@ -16,16 +16,16 @@ interface NetWorthCardProps {
   mfReturnPct?: number;
   mfDayChange?: number;
   mfDayChangePct?: number;
-  mfXirr?: number;
-  mfLifetimeXirr?: number;
+  mfXirr?: number | null;
+  mfLifetimeXirr?: number | null;
   stockValue: number;
   stockInvested?: number;
   stockProfit?: number;
   stockReturnPct?: number;
   stockDayChange?: number;
   stockDayChangePct?: number;
-  stockXirr?: number;
-  stockLifetimeXirr?: number;
+  stockXirr?: number | null;
+  stockLifetimeXirr?: number | null;
   fixedIncomeValue?: number;
   fiInvested?: number;
   fiProfit?: number;
@@ -42,8 +42,8 @@ interface NetWorthCardProps {
   isRefreshing?: boolean;
   dayChangePct?: number;
   lastUpdated?: string;
-  xirr?: number;
-  lifetimeXirr?: number;
+  xirr?: number | null;
+  lifetimeXirr?: number | null;
   onAddMF?: () => void;
   onAddStock?: () => void;
   onAddFD?: () => void;
@@ -253,17 +253,18 @@ export default function NetWorthCard({
               </div>
             )}
 
-            {xirr !== undefined && xirr !== null && (
+            {/* null = XIRR cannot be calculated: show "--", not 0% (decision 2, 2026-11-12) */}
+            {xirr !== undefined && (
               <div
                 className={`px-2.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-md shadow-xs ${
-                  xirr >= 0
+                  xirr === null || xirr >= 0
                     ? "bg-white/15 text-white border border-white/20"
                     : "bg-rose-500/25 text-rose-100 border border-rose-400/30"
                 }`}
                 title="Annualized return across entire portfolio">
                 <span className="text-white/70 font-medium text-[11px]">Portfolio XIRR:</span>
-                <span className={xirr >= 0 ? "text-emerald-300 font-bold" : "text-rose-300 font-bold"}>
-                  {xirr.toFixed(2)}%
+                <span className={xirr === null ? "text-white/80 font-bold" : xirr >= 0 ? "text-emerald-300 font-bold" : "text-rose-300 font-bold"}>
+                  {xirr === null ? "--" : `${xirr.toFixed(2)}%`}
                 </span>
               </div>
             )}
@@ -363,7 +364,7 @@ export default function NetWorthCard({
                       <span className="flex items-center gap-1.5 truncate">
                         <ArrowDownUp size={11} className={`${(() => {
                           const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                          return val !== undefined && val < 0 ? "text-rose-300" : "text-emerald-300";
+                          return val != null && val < 0 ? "text-rose-300" : "text-emerald-300";
                         })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
                         <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
                       </span>
@@ -441,7 +442,7 @@ export default function NetWorthCard({
                       <span className="flex items-center gap-1.5 truncate">
                         <ArrowDownUp size={11} className={`${(() => {
                           const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                          return val !== undefined && val < 0 ? "text-rose-300" : "text-blue-300";
+                          return val != null && val < 0 ? "text-rose-300" : "text-blue-300";
                         })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
                         <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
                       </span>

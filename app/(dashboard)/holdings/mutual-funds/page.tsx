@@ -103,7 +103,7 @@ export default function MutualFundsPage() {
   // BUG-036: show only zero-value funds (to find old entries to clean up). Opposite of hideZeroBalance.
   const [showOnlyZero, setShowOnlyZero] = useState(false);
   // BUG-037: mutual fund XIRR shown on the summary cards
-  const [mfXirr, setMfXirr] = useState(0);
+  const [mfXirr, setMfXirr] = useState<number | null>(null);
   // Includes funds already redeemed. Shown as a secondary line under the headline XIRR.
   const [mfLifetimeXirr, setMfLifetimeXirr] = useState<number | null>(null);
   // BUG-035: category, plan and SIF filters. Saved so they stay after navigating away.
@@ -169,13 +169,14 @@ export default function MutualFundsPage() {
       .getXIRR()
       .then((res: any) => {
         if (!cancelled) {
-          setMfXirr(Number(res?.mf_xirr) || 0);
+          // null = cannot be calculated, shown as "--" (decision 2, 2026-11-12)
+          setMfXirr(res?.mf_xirr != null ? Number(res.mf_xirr) : null);
           setMfLifetimeXirr(res?.mf_lifetime_xirr != null ? Number(res.mf_lifetime_xirr) : null);
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setMfXirr(0);
+          setMfXirr(null);
           setMfLifetimeXirr(null);
         }
       });
@@ -641,8 +642,8 @@ export default function MutualFundsPage() {
           </Card>
           <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
             <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">XIRR (current holdings)</p>
-            <p className={`text-lg sm:text-2xl font-bold ${mfXirr >= 0 ? "text-green-500" : "text-red-500"}`}>
-              {fmtPct(mfXirr)}
+            <p className={`text-lg sm:text-2xl font-bold ${mfXirr === null ? "text-neutral-500" : mfXirr >= 0 ? "text-green-500" : "text-red-500"}`}>
+              {mfXirr === null ? "--" : fmtPct(mfXirr)}
             </p>
             {mfLifetimeXirr !== null && (
               <p

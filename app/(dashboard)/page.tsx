@@ -142,12 +142,13 @@ export default function HomePage() {
           api.getXIRR().catch((err) => {
             console.error("Family XIRR error:", err);
             return {
-              xirr: 0,
-              lifetime_xirr: 0,
-              mf_xirr: 0,
-              mf_lifetime_xirr: 0,
-              stock_xirr: 0,
-              stock_lifetime_xirr: 0,
+              // XIRR could not be loaded: show "--", not 0%
+              xirr: null,
+              lifetime_xirr: null,
+              mf_xirr: null,
+              mf_lifetime_xirr: null,
+              stock_xirr: null,
+              stock_lifetime_xirr: null,
             };
           }),
           api.getMarketCapAllocation().catch((err) => {
@@ -167,12 +168,13 @@ export default function HomePage() {
         if (ps) {
           setSummary({
             ...ps,
-            xirr: xirrData?.xirr ?? ps.xirr,
-            lifetime_xirr: xirrData?.lifetime_xirr ?? ps.lifetime_xirr,
-            mf_xirr: xirrData?.mf_xirr ?? ps.mf_xirr,
-            mf_lifetime_xirr: xirrData?.mf_lifetime_xirr ?? ps.mf_lifetime_xirr,
-            stock_xirr: xirrData?.stock_xirr ?? ps.stock_xirr,
-            stock_lifetime_xirr: xirrData?.stock_lifetime_xirr ?? ps.stock_lifetime_xirr,
+            // null from /portfolio/xirr means "cannot be calculated" (shown as "--"); keep it.
+            xirr: xirrData ? xirrData.xirr : ps.xirr,
+            lifetime_xirr: xirrData ? xirrData.lifetime_xirr : ps.lifetime_xirr,
+            mf_xirr: xirrData ? xirrData.mf_xirr : ps.mf_xirr,
+            mf_lifetime_xirr: xirrData ? xirrData.mf_lifetime_xirr : ps.mf_lifetime_xirr,
+            stock_xirr: xirrData ? xirrData.stock_xirr : ps.stock_xirr,
+            stock_lifetime_xirr: xirrData ? xirrData.stock_lifetime_xirr : ps.stock_lifetime_xirr,
           });
         }
         if (topH) setTopHoldings(topH.holdings || []);
@@ -224,12 +226,13 @@ export default function HomePage() {
           api.getXIRR().catch((err) => {
             console.error("XIRR error:", err);
             return {
-              xirr: 0,
-              lifetime_xirr: 0,
-              mf_xirr: 0,
-              mf_lifetime_xirr: 0,
-              stock_xirr: 0,
-              stock_lifetime_xirr: 0,
+              // XIRR could not be loaded: show "--", not 0%
+              xirr: null,
+              lifetime_xirr: null,
+              mf_xirr: null,
+              mf_lifetime_xirr: null,
+              stock_xirr: null,
+              stock_lifetime_xirr: null,
             };
           }),
           api.getInsights().catch((err) => {
@@ -259,12 +262,13 @@ export default function HomePage() {
         if (insPolicies) setInsuranceData(insPolicies);
         setSummary({
           ...ps,
-          xirr: xirrData?.xirr || 0,
-          lifetime_xirr: xirrData?.lifetime_xirr || 0,
-          mf_xirr: xirrData?.mf_xirr || 0,
-          mf_lifetime_xirr: xirrData?.mf_lifetime_xirr || 0,
-          stock_xirr: xirrData?.stock_xirr || 0,
-          stock_lifetime_xirr: xirrData?.stock_lifetime_xirr || 0,
+          // null means "cannot be calculated" and is shown as "--", not 0%
+          xirr: xirrData?.xirr ?? null,
+          lifetime_xirr: xirrData?.lifetime_xirr ?? null,
+          mf_xirr: xirrData?.mf_xirr ?? null,
+          mf_lifetime_xirr: xirrData?.mf_lifetime_xirr ?? null,
+          stock_xirr: xirrData?.stock_xirr ?? null,
+          stock_lifetime_xirr: xirrData?.stock_lifetime_xirr ?? null,
         });
         setGoals(g || []);
         setInsights(ins || []);
@@ -1082,8 +1086,8 @@ export default function HomePage() {
                     stockDayChange={summary.stock_day_change}
                     stockDayChangePct={summary.stock_day_change_pct}
                     xirr={summary.xirr}
-                    mfXirr={summary.mf_xirr || 0}
-                    stockXirr={summary.stock_xirr || 0}
+                    mfXirr={summary.mf_xirr ?? null}
+                    stockXirr={summary.stock_xirr ?? null}
                     mfProfit={summary.mf_profit || 0}
                     stockProfit={summary.stock_profit || 0}
                     fiProfit={summary.fi_profit || 0}
@@ -1153,7 +1157,7 @@ export default function HomePage() {
           {benchmark && (
             <section className="animate-fade-in">
               <BenchmarkCard
-                portfolioXirr={benchmark?.portfolio_xirr ?? summary?.xirr ?? 0}
+                portfolioXirr={benchmark?.portfolio_xirr ?? summary?.xirr ?? null}
                 benchmarkXirr={benchmark?.benchmark_xirr ?? null}
                 benchmarkName={benchmark?.name ?? "Nifty 50"}
               />
