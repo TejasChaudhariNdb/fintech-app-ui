@@ -17,9 +17,9 @@ interface PortfolioSummaryProps {
   mfDayChangePct?: number;
   stockDayChange?: number;
   stockDayChangePct?: number;
-  xirr?: number;
-  mfXirr?: number;
-  stockXirr?: number;
+  xirr?: number | null;
+  mfXirr?: number | null;
+  stockXirr?: number | null;
   mfProfit?: number;
   stockProfit?: number;
   fiProfit?: number;
@@ -395,7 +395,8 @@ export default function PortfolioSummary({
           )}
         </div>
 
-        {xirr !== undefined && xirr !== null && (
+        {/* null = cannot be calculated: show "--", not 0% (decision 2, 2026-11-12) */}
+        {xirr !== undefined && (
           <div className="flex flex-col">
             <div
               className="flex justify-between items-center group cursor-pointer select-none"
@@ -418,11 +419,13 @@ export default function PortfolioSummary({
               </span>
               <span
                 className={`font-semibold ${
-                  xirr >= 0
+                  xirr === null
+                    ? "text-neutral-500"
+                    : xirr >= 0
                     ? "text-emerald-500 dark:text-emerald-400"
                     : "text-red-500 dark:text-red-400"
                 }`}>
-                {xirr.toFixed(2)}%
+                {xirr === null ? "--" : `${xirr.toFixed(2)}%`}
               </span>
             </div>
 
@@ -434,11 +437,13 @@ export default function PortfolioSummary({
                   </span>
                   <span
                     className={`font-medium ${
-                      mfXirr >= 0
+                      mfXirr === null
+                        ? "text-neutral-500"
+                        : mfXirr >= 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-red-500 dark:text-red-400"
                     }`}>
-                    {mfXirr.toFixed(2)}%
+                    {mfXirr === null ? "--" : `${mfXirr.toFixed(2)}%`}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm">
@@ -447,11 +452,13 @@ export default function PortfolioSummary({
                   </span>
                   <span
                     className={`font-medium ${
-                      stockXirr >= 0
+                      stockXirr === null
+                        ? "text-neutral-500"
+                        : stockXirr >= 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-red-500 dark:text-red-400"
                     }`}>
-                    {stockXirr.toFixed(2)}%
+                    {stockXirr === null ? "--" : `${stockXirr.toFixed(2)}%`}
                   </span>
                 </div>
               </div>
