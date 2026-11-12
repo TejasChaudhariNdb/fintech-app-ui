@@ -40,7 +40,7 @@ All backend calls go through the `api` object. `api.fetch(endpoint, { cacheKey? 
 ### Business logic location
 
 Financial numbers (XIRR, CAGR, P&L, allocations, NAVs, capital gains) are computed by the backend; the app only displays them. Exceptions that duplicate backend logic and must be kept consistent with `../backend/app/routes/fixed_income.py` and `real_estate.py`:
-- `components/features/FixedIncomeForm.tsx` computes FD/RD/PPF maturity and sends it as `maturity_amount`. The backend stores the client value and only computes its own when it is missing or ≤ 0, so this TS code is the effective source of truth for user-entered deposits.
+- `components/features/FixedIncomeForm.tsx` shows a preview of FD/RD/PPF maturity. The backend is the source of truth (BUG-015): it calculates the stored maturity itself, ignores any `maturity_amount` the app sends, and recalculates only when a maturity input (principal, rate, compounding, dates, balance, deposits) changes. The preview must match the backend formula.
 - `components/features/RealEstateForm.tsx` computes CAGR for display.
 - `lib/assetPreferences.ts` mirrors the keys and defaults in `../backend/app/services/asset_preferences.py` (net-worth asset toggles, stored per profile in localStorage and synced to the backend `feature_flags`).
 
