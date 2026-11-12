@@ -505,8 +505,9 @@ export default function HomePage() {
           lifetimeXirr={summary?.lifetime_xirr}
           mfXirr={summary?.mf_xirr}
           mfLifetimeXirr={summary?.mf_lifetime_xirr}
-          stockXirr={summary?.stock_xirr}
-          stockLifetimeXirr={summary?.stock_lifetime_xirr}
+          // Hide the stock XIRR when stocks is switched off, the same as the stock value (BUG-056).
+          stockXirr={assetPrefs.stocks ? summary?.stock_xirr : undefined}
+          stockLifetimeXirr={assetPrefs.stocks ? summary?.stock_lifetime_xirr : undefined}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
           onAddFD={() => router.push("/holdings/fixed-income")}
