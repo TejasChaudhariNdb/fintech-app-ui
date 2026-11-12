@@ -462,9 +462,12 @@ export default function MutualFundsPage() {
 
       return sortOrder === "desc" ? comparison : -comparison;
     });
-  // BUG-037: totals for the summary cards (all funds in the profile, before the list filters)
+  // BUG-037: totals for the summary cards, before the list filters. Only funds still held (units > 0),
+  // the same basis as the XIRR. Fully redeemed funds can keep a stored cost that is not a current holding,
+  // so they are left out (they remain in the list under "Show only 0 Bal").
   const mfTotals = schemes.reduce(
     (acc, s) => {
+      if (!(Number(s.units) > 0)) return acc;
       acc.current += Number(s.current) || 0;
       acc.invested += Number(s.invested) || 0;
       return acc;
