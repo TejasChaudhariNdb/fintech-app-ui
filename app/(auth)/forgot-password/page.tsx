@@ -202,7 +202,7 @@ export default function ForgotPasswordPage() {
 
       <div className="relative grid w-full max-w-5xl items-center gap-10 lg:grid-cols-12">
         {/* ── Left: brand + how it works ── */}
-        <div className="space-y-8 lg:col-span-7">
+        <div className="hidden space-y-8 lg:col-span-7 lg:block">
           <div className="flex items-center gap-3">
             <Image
               src="/icon-512x512.png"
@@ -266,6 +266,17 @@ export default function ForgotPasswordPage() {
         {/* ── Right: form card ── */}
         <div className="w-full max-w-md justify-self-center lg:col-span-5">
           <div className="relative animate-slide-up rounded-3xl border border-neutral-200 bg-white p-8 shadow-2xl shadow-neutral-200/60 dark:border-white/5 dark:bg-[#151A23] dark:shadow-black/40 sm:p-10">
+            {/* Logo: shown on small screens only, since the brand panel is hidden there */}
+            <div className="mb-5 flex justify-center lg:hidden">
+              <Image
+                src="/icon-512x512.png"
+                alt="Arthavi Logo"
+                width={52}
+                height={52}
+                className="rounded-xl shadow-lg shadow-primary-500/25"
+              />
+            </div>
+
             {/* Step indicator */}
             <div className="mb-6 flex items-center justify-center gap-2" aria-label={`Step ${stepNumber} of 2`}>
               {[1, 2].map((n) => (
