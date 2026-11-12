@@ -20,6 +20,7 @@ import FcmManager from "@/components/FcmManager";
 import FeedbackButton from "@/components/features/FeedbackButton";
 import WhatsNewModal from "@/components/features/WhatsNewModal";
 import DemoRestrictionModal from "@/components/ui/DemoRestrictionModal";
+import StaleDataNotice from "@/components/ui/StaleDataNotice";
 import AppTour from "@/components/features/AppTour";
 
 export default function DashboardLayout({
@@ -135,6 +136,8 @@ export default function DashboardLayout({
         {/* Main content */}
         <main className="flex-1 pb-32 lg:pb-10 lg:pl-0 max-w-7xl mx-auto w-full">
           <DemoRibbon />
+          {/* BUG-021: say when figures are saved data because the server could not be reached */}
+          <StaleDataNotice />
 
           {/* Top Header Bar */}
           <header className={`flex h-16 w-full items-center justify-between border-b border-neutral-200/50 dark:border-white/5 bg-white/40 dark:bg-[#0B0E14]/40 backdrop-blur-md px-3 sm:px-4 lg:px-8 sticky z-30 transition-all duration-300 ${isDemo ? 'top-10' : 'top-0'}`}>

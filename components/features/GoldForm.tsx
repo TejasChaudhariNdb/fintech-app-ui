@@ -140,9 +140,10 @@ export default function GoldForm({
       return;
     }
 
+    // The weight is shown on its own chip. Putting it in the name goes stale when the weight is edited.
     const finalName =
       assetName.trim() ||
-      `${purity} ${assetType === "JEWELRY" ? "Jewelry" : "Gold"} (${weightNum}g)`;
+      `${purity} ${assetType === "JEWELRY" ? "Jewelry" : "Gold"}`;
 
     const resolvedProfileId = selectedProfileId
       ? parseInt(selectedProfileId)

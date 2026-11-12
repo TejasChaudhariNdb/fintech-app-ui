@@ -90,6 +90,7 @@ export default function MySIPsPage() {
     amc: "",
     amount: "",
     sip_day: 5,
+    frequency: "MONTHLY",
     status: "ACTIVE",
     reminder_days_before: 3,
     notify_push: true,
@@ -228,6 +229,8 @@ export default function MySIPsPage() {
         amc: sip.amc || "",
         amount: sip.amount.toString(),
         sip_day: sip.sip_day || 5,
+        // BUG-029: the user can correct the frequency detected from the transactions
+        frequency: (sip.frequency as string) || "MONTHLY",
         status: sip.status,
         reminder_days_before: sip.reminder_days_before ?? 3,
         notify_push: sip.notify_push,
@@ -243,6 +246,7 @@ export default function MySIPsPage() {
         amc: "",
         amount: "",
         sip_day: 5,
+        frequency: "MONTHLY",
         status: "ACTIVE",
         reminder_days_before: 3,
         notify_push: true,
@@ -274,6 +278,7 @@ export default function MySIPsPage() {
           amc: formData.amc || null,
           amount: amt,
           sip_day: Number(formData.sip_day),
+          frequency: formData.frequency,
           status: formData.status,
           reminder_days_before: Number(formData.reminder_days_before),
           notify_push: formData.notify_push,
@@ -290,6 +295,7 @@ export default function MySIPsPage() {
           amc: formData.amc || null,
           amount: amt,
           sip_day: Number(formData.sip_day),
+          frequency: formData.frequency,
           profile_id: activeProfileId && activeProfileId !== "all" ? Number(activeProfileId) : null,
           reminder_enabled: true,
           reminder_days_before: Number(formData.reminder_days_before),
@@ -1123,6 +1129,21 @@ export default function MySIPsPage() {
                   step="any"
                   className="rounded-xl text-xs sm:text-sm"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+                  Frequency
+                </label>
+                <select
+                  value={formData.frequency}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, frequency: e.target.value }))}
+                  className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-xs sm:text-sm text-neutral-900 dark:text-white"
+                >
+                  <option value="MONTHLY">Monthly</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="DAILY">Daily</option>
+                </select>
               </div>
 
               <div>

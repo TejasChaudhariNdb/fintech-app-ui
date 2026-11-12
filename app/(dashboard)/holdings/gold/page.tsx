@@ -367,7 +367,8 @@ export default function GoldHoldingsPage() {
                     {/* Top Row: Title + Action buttons */}
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h4 className="font-bold text-neutral-900 dark:text-white text-base capitalize">
-                        {item.asset_name}
+                        {/* Older names carry a weight, e.g. "24K Gold (0.01g)". The weight chip below is the real one. */}
+                        {item.asset_name.replace(/\s*\(\s*[\d.]+\s*g\s*\)\s*$/i, "")}
                       </h4>
                       <div className="flex items-center gap-1">
                         <button

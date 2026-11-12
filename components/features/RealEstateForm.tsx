@@ -33,6 +33,7 @@ export interface RealEstateFormData {
   monthly_rental_income?: number | null;
   notes?: string | null;
   profile_id?: number | null;
+  occupancy_type?: "SELF_OCCUPIED" | "LET_OUT";
 }
 
 interface RealEstateFormProps {
@@ -126,6 +127,10 @@ export default function RealEstateForm({
   );
   const [isRented, setIsRented] = useState<boolean>(
     initialData?.is_rented || false
+  );
+  // BUG-030: self-occupied vs let-out drives the tax view (the investment figures do not change)
+  const [occupancy, setOccupancy] = useState<"SELF_OCCUPIED" | "LET_OUT">(
+    initialData?.occupancy_type === "LET_OUT" ? "LET_OUT" : "SELF_OCCUPIED"
   );
   const [monthlyRentStr, setMonthlyRentStr] = useState<string>(
     initialData?.monthly_rental_income
@@ -228,6 +233,7 @@ export default function RealEstateForm({
         current_valuation: currentValuationNum,
         is_rented: isRented,
         monthly_rental_income: isRented ? monthlyRentNum : 0,
+        occupancy_type: occupancy,
         notes: notes.trim() || undefined,
         profile_id: resolvedProfileId || undefined,
       });
@@ -476,6 +482,20 @@ export default function RealEstateForm({
               }`}
             />
           </button>
+        </div>
+
+        <div className="mt-2">
+          <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+            Usage
+          </label>
+          <select
+            value={occupancy}
+            onChange={(e) => setOccupancy(e.target.value as "SELF_OCCUPIED" | "LET_OUT")}
+            className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-neutral-900 dark:text-white"
+          >
+            <option value="SELF_OCCUPIED">Self-occupied</option>
+            <option value="LET_OUT">Let-out</option>
+          </select>
         </div>
 
         {isRented && (

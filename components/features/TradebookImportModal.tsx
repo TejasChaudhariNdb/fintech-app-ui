@@ -1459,11 +1459,12 @@ export default function TradebookImportModal({
               {/* Errors banner if any */}
               {previewData.errors && previewData.errors.length > 0 && (
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-500/20 text-xs text-amber-900 dark:text-amber-200">
+                  {/* BUG-033: every problem row is listed. These rows are not imported; the rest can be. */}
                   <span className="font-bold">
-                    {previewData.errors.length} rows could not be parsed:
+                    {previewData.errors.length} row{previewData.errors.length === 1 ? "" : "s"} need attention and will not be imported:
                   </span>
-                  <div className="text-[11px] mt-1 space-y-0.5 max-h-20 overflow-y-auto">
-                    {previewData.errors.slice(0, 5).map((err, i) => (
+                  <div className="text-[11px] mt-1 space-y-0.5 max-h-48 overflow-y-auto">
+                    {previewData.errors.map((err, i) => (
                       <div key={i}>
                         Row {err.row}: {err.symbol} &bull; {err.reason}
                       </div>

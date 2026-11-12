@@ -7,6 +7,7 @@ import { analytics } from "@/lib/analytics";
 import { useProfile } from "@/context/ProfileContext";
 
 import Card from "@/components/ui/Card";
+import BenchmarkCard from "@/components/features/BenchmarkCard";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -54,6 +55,8 @@ export default function StocksPage() {
   const { profiles, activeProfileId } = useProfile();
   const [isLoading, setIsLoading] = useState(true);
   const [portfolioXirr, setPortfolioXirr] = useState(0);
+  // BUG-042: stock XIRR vs Nifty 50 on the same cash flows
+  const [stockBench, setStockBench] = useState<{ portfolio_xirr: number | null; benchmark_xirr: number | null; name: string } | null>(null);
 
   const getRelationForProfile = (profileId: number) => {
     const found = profiles.find((p) => p.id === profileId);
@@ -116,6 +119,22 @@ export default function StocksPage() {
     if (activeProfileId && activeProfileId !== "all") return activeProfileId;
     return profiles[0]?.id ? String(profiles[0].id) : "";
   });
+
+  // BUG-042: stock XIRR vs Nifty 50 on the same cash flows (profile-scoped)
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getStockBenchmarkXirr()
+      .then((res: any) => {
+        if (!cancelled) setStockBench(res ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setStockBench(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfileId]);
 
   useEffect(() => {
     if (profiles.length > 0) {
@@ -796,6 +815,14 @@ export default function StocksPage() {
               </p>
             </Card>
           </div>
+
+          {stockBench && stockBench.portfolio_xirr !== null && (
+            <BenchmarkCard
+              portfolioXirr={stockBench.portfolio_xirr}
+              benchmarkXirr={stockBench.benchmark_xirr}
+              benchmarkName={stockBench.name || "Nifty 50"}
+            />
+          )}
 
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
