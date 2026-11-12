@@ -77,15 +77,24 @@ export async function storeAssetPreferences(
   writeLocalAssetPreferences(prefs, profileId);
 
   if (!syncBackend) return true;
+  // Each save is numbered per profile. A failed save reverts only if no newer save has started, so an
+  // older failure cannot undo a later toggle. Every save sends the full set, so the last one wins.
+  const key = String(profileId);
+  const seq = (latestSaveSeq[key] ?? 0) + 1;
+  latestSaveSeq[key] = seq;
   try {
     await api.updateAssetPreferences(prefs, profileId);
     return true;
   } catch (err) {
-    console.error("Could not save asset preferences to the server. Reverting.", err);
-    writeLocalAssetPreferences(previous, profileId);
+    console.error("Could not save asset preferences to the server.", err);
+    if (latestSaveSeq[key] === seq) {
+      writeLocalAssetPreferences(previous, profileId);
+    }
     return false;
   }
 }
+
+const latestSaveSeq: Record<string, number> = {};
 
 function writeLocalAssetPreferences(prefs: NetWorthAssetPreferences, profileId: string | number): void {
   try {

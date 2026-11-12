@@ -14,9 +14,15 @@ interface Props {
   points: XirrPoint[];
 }
 
+// The backend sends "YYYY-MM-DD". new Date("YYYY-MM-DD") reads it as UTC, which shows the previous day
+// in negative-offset timezones. Build the date in local time instead.
+const parseLocalDate = (iso: string): Date => {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
+
 const fmtDate = (iso: string) => {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+  return parseLocalDate(iso).toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
 };
 
 export default function MfXirrChart({ points }: Props) {
@@ -39,7 +45,7 @@ export default function MfXirrChart({ points }: Props) {
             <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 11 }} minTickGap={24} />
             <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} width={48} />
             <Tooltip
-              labelFormatter={(label) => new Date(String(label)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+              labelFormatter={(label) => parseLocalDate(String(label)).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
               formatter={(value: any) => [`${Number(value).toFixed(2)}%`, "XIRR"]}
             />
             <Line type="monotone" dataKey="xirr_pct" stroke="#6366f1" strokeWidth={2} dot={false} />

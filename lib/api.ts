@@ -226,7 +226,8 @@ export const api = {
                 bodyNamesProfile = false;
               }
             }
-            if (!bodyNamesProfile) {
+            // "all" (family view) is never valid for a write, so it is not sent on mutations.
+            if (!bodyNamesProfile && String(activeProfileId) !== "all") {
               const separator = endpoint.includes("?") ? "&" : "?";
               finalEndpoint = `${endpoint}${separator}profile_id=${activeProfileId}`;
             }
