@@ -236,7 +236,7 @@ export default function HomePage() {
             console.error("Insights error:", err);
             return [];
           }),
-          api.getBenchmark().catch((err) => {
+          api.getBenchmarkXirr().catch((err) => {
             console.error("Benchmark error:", err);
             return null;
           }),
@@ -505,8 +505,9 @@ export default function HomePage() {
           lifetimeXirr={summary?.lifetime_xirr}
           mfXirr={summary?.mf_xirr}
           mfLifetimeXirr={summary?.mf_lifetime_xirr}
-          stockXirr={summary?.stock_xirr}
-          stockLifetimeXirr={summary?.stock_lifetime_xirr}
+          // Hide the stock XIRR when stocks is switched off, the same as the stock value (BUG-056).
+          stockXirr={assetPrefs.stocks ? summary?.stock_xirr : undefined}
+          stockLifetimeXirr={assetPrefs.stocks ? summary?.stock_lifetime_xirr : undefined}
           onAddMF={() => router.push("/holdings/mutual-funds")}
           onAddStock={() => router.push("/holdings/stocks")}
           onAddFD={() => router.push("/holdings/fixed-income")}
@@ -1133,11 +1134,12 @@ export default function HomePage() {
           </section>
 
           {/* Portfolio Health Score */}
-          {(netWorth?.mutual_funds > 0 || netWorth?.stocks > 0) && (
+          {/* BUG-043: the health score follows the Home tab's asset-class choices. A class switched off counts as zero. */}
+          {((assetPrefs.mutual_funds && netWorth?.mutual_funds > 0) || (assetPrefs.stocks && netWorth?.stocks > 0)) && (
             <section className="animate-fade-in">
               <PortfolioHealthCard
-                mfValue={netWorth?.mutual_funds || 0}
-                stockValue={netWorth?.stocks || 0}
+                mfValue={assetPrefs.mutual_funds ? netWorth?.mutual_funds || 0 : 0}
+                stockValue={assetPrefs.stocks ? netWorth?.stocks || 0 : 0}
                 returnPct={summary?.return_pct || 0}
                 dayChangePct={summary?.day_change_pct || 0}
               />
@@ -1151,8 +1153,9 @@ export default function HomePage() {
           {benchmark && (
             <section className="animate-fade-in">
               <BenchmarkCard
-                portfolioXirr={summary?.xirr || 0}
-                benchmark={benchmark}
+                portfolioXirr={benchmark?.portfolio_xirr ?? summary?.xirr ?? 0}
+                benchmarkXirr={benchmark?.benchmark_xirr ?? null}
+                benchmarkName={benchmark?.name ?? "Nifty 50"}
               />
             </section>
           )}

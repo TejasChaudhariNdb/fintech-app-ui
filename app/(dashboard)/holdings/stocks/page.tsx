@@ -7,6 +7,7 @@ import { analytics } from "@/lib/analytics";
 import { useProfile } from "@/context/ProfileContext";
 
 import Card from "@/components/ui/Card";
+import BenchmarkCard from "@/components/features/BenchmarkCard";
 import AppSkeleton from "@/components/ui/AppSkeleton";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -54,6 +55,8 @@ export default function StocksPage() {
   const { profiles, activeProfileId } = useProfile();
   const [isLoading, setIsLoading] = useState(true);
   const [portfolioXirr, setPortfolioXirr] = useState(0);
+  // BUG-042: stock XIRR vs Nifty 50 on the same cash flows
+  const [stockBench, setStockBench] = useState<{ portfolio_xirr: number | null; benchmark_xirr: number | null; name: string } | null>(null);
 
   const getRelationForProfile = (profileId: number) => {
     const found = profiles.find((p) => p.id === profileId);
@@ -117,6 +120,22 @@ export default function StocksPage() {
     return profiles[0]?.id ? String(profiles[0].id) : "";
   });
 
+  // BUG-042: stock XIRR vs Nifty 50 on the same cash flows (profile-scoped)
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getStockBenchmarkXirr()
+      .then((res: any) => {
+        if (!cancelled) setStockBench(res ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setStockBench(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfileId]);
+
   useEffect(() => {
     if (profiles.length > 0) {
       if (activeProfileId && activeProfileId !== "all") {
@@ -178,6 +197,7 @@ export default function StocksPage() {
   const abortManualTxRef = useRef<AbortController | null>(null);
   const [manualError, setManualError] = useState<string | null>(null);
   const [showTradebookModal, setShowTradebookModal] = useState(false);
+  const [tradebookInitialMode, setTradebookInitialMode] = useState<"HOLDINGS" | "TRADEBOOK">("HOLDINGS");
   const [showDematReconcileModal, setShowDematReconcileModal] = useState(false);
   const [corpActionStock, setCorpActionStock] = useState<any>(null);
 
@@ -796,6 +816,14 @@ export default function StocksPage() {
               </p>
             </Card>
           </div>
+
+          {stockBench && stockBench.portfolio_xirr !== null && (
+            <BenchmarkCard
+              portfolioXirr={stockBench.portfolio_xirr}
+              benchmarkXirr={stockBench.benchmark_xirr}
+              benchmarkName={stockBench.name || "Nifty 50"}
+            />
+          )}
 
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
@@ -1521,16 +1549,18 @@ export default function StocksPage() {
               }`}>
             Enter Manually
           </button>
+          {/* BUG-057: opens the tradebook import with preview and split/bonus confirmation,
+              not the old direct import (which saved trades without either). */}
           <button
             type="button"
-            disabled
-            title="Upload Tradebook is temporarily disabled (Beta Users Only)"
-            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 dark:text-neutral-500 cursor-not-allowed opacity-60 flex items-center justify-center gap-1.5 select-none">
+            onClick={() => {
+              closeStockModal();
+              setTradebookInitialMode("TRADEBOOK");
+              setShowTradebookModal(true);
+            }}
+            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors flex items-center justify-center gap-1.5">
             <FileSpreadsheet size={15} />
             <span>Upload Tradebook</span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              Beta Users Only
-            </span>
           </button>
         </div>
 
@@ -1947,8 +1977,8 @@ export default function StocksPage() {
               <Button
                 onClick={() => {
                   setShowImportErrorModal(false);
-                  setShowStockModal(true);
-                  setStockModalTab("IMPORT");
+                  setTradebookInitialMode("TRADEBOOK");
+                  setShowTradebookModal(true);
                 }}
                 className="w-full sm:flex-1">
                 Upload Corrected File
@@ -2017,7 +2047,11 @@ export default function StocksPage() {
 
       <TradebookImportModal
         isOpen={showTradebookModal}
-        onClose={() => setShowTradebookModal(false)}
+        initialMode={tradebookInitialMode}
+        onClose={() => {
+          setShowTradebookModal(false);
+          setTradebookInitialMode("HOLDINGS");
+        }}
         onOpenDematReconcile={() => setShowDematReconcileModal(true)}
         onSuccess={() => {
           loadData(false);

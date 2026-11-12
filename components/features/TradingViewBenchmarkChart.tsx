@@ -144,6 +144,8 @@ export default function TradingViewBenchmarkChart({
         formatter: (val: number) => `${val >= 0 ? "+" : ""}${val.toFixed(2)}%`,
       },
       title: "Portfolio",
+      crosshairMarkerRadius: 3,
+      crosshairMarkerBorderWidth: 1,
     });
 
     // 2. Selected Benchmark Line Series
@@ -155,6 +157,8 @@ export default function TradingViewBenchmarkChart({
         formatter: (val: number) => `${val >= 0 ? "+" : ""}${val.toFixed(2)}%`,
       },
       title: benchmarkName,
+      crosshairMarkerRadius: 3,
+      crosshairMarkerBorderWidth: 1,
     });
 
     chartRef.current = chart;

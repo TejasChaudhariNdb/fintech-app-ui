@@ -238,6 +238,9 @@ const TradingViewJourneyChart = forwardRef<
         formatter: (val: number) => `₹${Math.round(val).toLocaleString("en-IN")}`,
       },
       title: primaryTitle,
+      // BUG-045: smaller hover dot so it does not cover the line
+      crosshairMarkerRadius: 3,
+      crosshairMarkerBorderWidth: 1,
     });
 
     // 2. Invested Amount Line Series
@@ -250,6 +253,8 @@ const TradingViewJourneyChart = forwardRef<
         formatter: (val: number) => `₹${Math.round(val).toLocaleString("en-IN")}`,
       },
       title: investedTitle,
+      crosshairMarkerRadius: 3,
+      crosshairMarkerBorderWidth: 1,
     });
 
     chartRef.current = chart;

@@ -1,5 +1,25 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+// BUG-021: endpoints currently showing saved data because the server could not be reached.
+// Screens subscribe (see subscribeToCacheState) so they can say so.
+const servedFromCache = new Set<string>();
+
+function publishCacheState() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("arthavi-cache-state", { detail: { endpoints: Array.from(servedFromCache) } }),
+  );
+}
+
+export function subscribeToCacheState(listener: (endpoints: string[]) => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const handler = (event: Event) => {
+    listener((event as CustomEvent<{ endpoints: string[] }>).detail?.endpoints ?? []);
+  };
+  window.addEventListener("arthavi-cache-state", handler);
+  return () => window.removeEventListener("arthavi-cache-state", handler);
+}
+
 type AIChatResponse = {
   response: string;
   session_id: number;
@@ -163,6 +183,9 @@ export const api = {
           "/portfolio/scheme-allocation",
           "/portfolio/transactions",
           "/portfolio/xirr",
+          "/portfolio/benchmark-xirr",
+          "/portfolio/xirr-timeseries",
+          "/portfolio/stock-benchmark-xirr",
           "/portfolio/timeseries",
           "/portfolio/mf-journey",
           "/portfolio/insights",
@@ -186,12 +209,28 @@ export const api = {
         ];
         
         const method = (options.method || "GET").toUpperCase();
-        // Only append profile query scoping for read (GET) requests
-        if (method === "GET") {
-          const pathPart = endpoint.split("?")[0];
-          if (scopedPrefixes.some(prefix => pathPart === prefix || pathPart.startsWith(prefix + "/"))) {
+        const pathPart = endpoint.split("?")[0];
+        const isScopedPath = scopedPrefixes.some(prefix => pathPart === prefix || pathPart.startsWith(prefix + "/"));
+        if (isScopedPath) {
+          if (method === "GET") {
             const separator = endpoint.includes("?") ? "&" : "?";
             finalEndpoint = `${endpoint}${separator}profile_id=${activeProfileId}`;
+          } else {
+            // BUG-016: a write with no profile in its body would otherwise go to the default profile
+            // on the backend. Pass the active profile unless the body already names one.
+            let bodyNamesProfile = false;
+            if (typeof options.body === "string") {
+              try {
+                bodyNamesProfile = "profile_id" in JSON.parse(options.body);
+              } catch {
+                bodyNamesProfile = false;
+              }
+            }
+            // "all" (family view) is never valid for a write, so it is not sent on mutations.
+            if (!bodyNamesProfile && String(activeProfileId) !== "all") {
+              const separator = endpoint.includes("?") ? "&" : "?";
+              finalEndpoint = `${endpoint}${separator}profile_id=${activeProfileId}`;
+            }
           }
         }
       }
@@ -271,6 +310,9 @@ export const api = {
 
       const data = await res.json();
 
+      // A live answer replaces any saved-data notice for this endpoint (BUG-021)
+      if (servedFromCache.delete(endpoint)) publishCacheState();
+
       // Cache successful response if key provided
       if (options.cacheKey && typeof window !== "undefined") {
         const userEmail = localStorage.getItem("user_email") || "anonymous";
@@ -296,7 +338,13 @@ export const api = {
         throw error;
       }
 
-      // Offline Fallback: Try to return cached data
+      // BUG-021: saved data only when no response came back (offline, network error, timeout).
+      // A server error (any HTTP status) is shown as an error, never replaced by old numbers.
+      if (error?.status) {
+        throw error;
+      }
+
+      // Offline Fallback: Try to return cached data, and say so on screen
       if (options.cacheKey && typeof window !== "undefined") {
         const userEmail = localStorage.getItem("user_email") || "anonymous";
         const cacheProfileId = activeProfileId || "default";
@@ -304,6 +352,8 @@ export const api = {
         const cached = localStorage.getItem(namespacedKey);
         if (cached) {
           console.log(`[Offline] Serving cached data for ${namespacedKey}`);
+          servedFromCache.add(endpoint);
+          publishCacheState();
           return JSON.parse(cached).data;
         }
       }
@@ -612,6 +662,12 @@ export const api = {
     api.fetch(`/portfolio/mf-journey?range=${range}`),
 
   getBenchmark: () => api.fetch("/portfolio/benchmark"),
+  // BUG-028: Nifty 50 XIRR on the same cash flows as the portfolio XIRR (profile-scoped)
+  getBenchmarkXirr: () => api.fetch("/portfolio/benchmark-xirr", { cacheKey: "benchmark_xirr" }),
+  // BUG-038: mutual fund XIRR at each month end (profile-scoped)
+  getMfXirrTimeseries: () => api.fetch("/portfolio/xirr-timeseries", { cacheKey: "mf_xirr_timeseries" }),
+  // BUG-042: stock XIRR vs Nifty 50 on the same cash flows (profile-scoped)
+  getStockBenchmarkXirr: () => api.fetch("/portfolio/stock-benchmark-xirr", { cacheKey: "stock_benchmark_xirr" }),
   getBenchmarkGrowth: (range: string = "1Y", baseAmount: number = 10000, profileId?: string) => {
     const params = new URLSearchParams({
       range,
@@ -845,6 +901,22 @@ export const api = {
     api.clearPortfolioCache();
     return res;
   },
+  // BUG-030: optional home loan per property
+  saveRealEstateLoan: async (holdingId: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/loan`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteRealEstateLoan: async (holdingId: number) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/loan`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
   getPropertyTransactions: (holdingId: number) => {
     return api.fetch(`/real-estate/holdings/${holdingId}/transactions`);
   },
@@ -881,13 +953,17 @@ export const api = {
   },
 
   // CAS Upload
-  uploadCAS: async (file: File, password: string, profileId?: string, pan?: string) => {
+  uploadCAS: async (file: File, password: string, profileId?: string, pan?: string, forceReimport?: boolean) => {
     checkDemoRestriction();
     const formData = new FormData();
     formData.append("file", file);
     formData.append("password", password);
     if (pan && pan.trim()) {
       formData.append("pan", pan.trim().toUpperCase());
+    }
+    // BUG-031: re-import a statement already seen, to restore funds deleted in the app
+    if (forceReimport) {
+      formData.append("force_reimport", "true");
     }
     const token = localStorage.getItem("access_token");
     const url = profileId 
@@ -957,7 +1033,13 @@ export const api = {
     return r.json();
   },
 
-  commitTradebook: async (trades: any[], broker: string = "BROKER_IMPORT", profileId?: string) => {
+  commitTradebook: async (
+    trades: any[],
+    broker: string = "BROKER_IMPORT",
+    profileId?: string,
+    // BUG-057: splits/bonus issues confirmed in the preview (share multiplier per ex-date)
+    corporateActions?: { symbol: string; date: string; ratio: number }[],
+  ) => {
     const token = localStorage.getItem("access_token");
     const url = profileId
       ? `${API_URL}/equity/import-commit?profile_id=${profileId}`
@@ -968,7 +1050,11 @@ export const api = {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: JSON.stringify({ trades, broker }),
+      body: JSON.stringify({
+        trades,
+        broker,
+        ...(corporateActions ? { corporate_actions: corporateActions } : {}),
+      }),
     });
 
     if (!r.ok) {

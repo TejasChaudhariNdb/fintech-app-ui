@@ -51,6 +51,7 @@ export default function OnboardingWizard({
   onSuccess,
 }: OnboardingWizardProps) {
   const router = useRouter();
+  const [reimporting, setReimporting] = useState(false); // BUG-031
   const [step, setStep] = useState(initialStep); // 1: Intro, 2: Upload
   const [file, setFile] = useState<File | null>(null);
   const [uploadFormat, setUploadFormat] = useState<"CAS" | "CSV">("CAS");
@@ -704,6 +705,24 @@ export default function OnboardingWizard({
     );
   }
 
+  // BUG-031: re-import the same statement to restore funds the user deleted in the app
+  const handleForceReimport = async () => {
+    if (!file || !selectedProfileId) {
+      setError("Please select the statement file and profile again.");
+      return;
+    }
+    setReimporting(true);
+    setError("");
+    try {
+      const res = await api.uploadCAS(file, password, selectedProfileId, manualPan || undefined, true);
+      setImportResult(res);
+    } catch (err: any) {
+      setError(err?.message || "Re-import failed. Please try again.");
+    } finally {
+      setReimporting(false);
+    }
+  };
+
   // SUCCESS STATE: Already Imported (Duplicate File)
   if (success && importResult?.status === "already_imported") {
     return (
@@ -730,6 +749,21 @@ export default function OnboardingWizard({
           <p className="text-xs text-neutral-500 dark:text-neutral-400 pt-2 border-t border-neutral-200/60 dark:border-white/5">
             💡 If you have another statement from a different email address or from KFintech, you can upload it now.
           </p>
+        </div>
+
+        <div className="w-full mb-4 text-left">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
+            Funds missing from the portfolio? (For example, a fund you deleted by mistake.) Re-import this statement. Transactions already in your portfolio are not duplicated.
+          </p>
+          <Button
+            type="button"
+            onClick={handleForceReimport}
+            disabled={reimporting}
+            variant="outline"
+            className="w-full py-3 text-sm font-semibold"
+          >
+            {reimporting ? "Re-importing..." : "Re-import this statement"}
+          </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full">

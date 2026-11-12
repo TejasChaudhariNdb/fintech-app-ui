@@ -62,43 +62,57 @@ export function getStoredAssetPreferences(profileId: string | number = "all"): N
 }
 
 /**
- * Saves preferences to localStorage for a specific profile, broadcasts an update event,
- * and syncs to backend to invalidate Redis cache keys immediately.
+ * Saves preferences for a profile. The backend is the source of truth, so the save waits for it.
+ * If the backend save fails, the previous values are restored everywhere (no silent mismatch
+ * between the toggles and the Home numbers). Resolves true on success, false if it was reverted.
  */
-export function storeAssetPreferences(
+export async function storeAssetPreferences(
   prefs: NetWorthAssetPreferences,
   profileId: string | number = "all",
   syncBackend = true
-): void {
-  if (typeof window === "undefined") return;
+): Promise<boolean> {
+  if (typeof window === "undefined") return true;
 
+  const previous = getStoredAssetPreferences(profileId);
+  writeLocalAssetPreferences(prefs, profileId);
+
+  if (!syncBackend) return true;
+  // Each save is numbered per profile. A failed save reverts only if no newer save has started, so an
+  // older failure cannot undo a later toggle. Every save sends the full set, so the last one wins.
+  const key = String(profileId);
+  const seq = (latestSaveSeq[key] ?? 0) + 1;
+  latestSaveSeq[key] = seq;
+  try {
+    await api.updateAssetPreferences(prefs, profileId);
+    return true;
+  } catch (err) {
+    console.error("Could not save asset preferences to the server.", err);
+    if (latestSaveSeq[key] === seq) {
+      writeLocalAssetPreferences(previous, profileId);
+    }
+    return false;
+  }
+}
+
+const latestSaveSeq: Record<string, number> = {};
+
+function writeLocalAssetPreferences(prefs: NetWorthAssetPreferences, profileId: string | number): void {
   try {
     const key = getProfileStorageKey(profileId);
     localStorage.setItem(key, JSON.stringify(prefs));
     if (profileId === "all") {
       localStorage.setItem(ASSET_STORAGE_KEY, JSON.stringify(prefs));
     }
-    window.dispatchEvent(
-      new CustomEvent(`${ASSET_CHANGE_EVENT}_${profileId}`, { detail: prefs })
-    );
-    window.dispatchEvent(
-      new CustomEvent(ASSET_CHANGE_EVENT, { detail: { profileId, prefs } })
-    );
-
-    if (syncBackend) {
-      // Async sync to backend to update feature_flags and wipe Redis cache keys
-      api.updateAssetPreferences(prefs, profileId).catch((err) => {
-        console.warn("Could not sync asset preferences to backend:", err);
-      });
-    }
+    window.dispatchEvent(new CustomEvent(`${ASSET_CHANGE_EVENT}_${profileId}`, { detail: prefs }));
+    window.dispatchEvent(new CustomEvent(ASSET_CHANGE_EVENT, { detail: { profileId, prefs } }));
   } catch (e) {
     console.error("Error saving asset preferences to localStorage:", e);
   }
 }
 
 /**
- * Initial hydration helper from backend User profile.
- * Adopts preferences saved on backend per profile and for family ("all").
+ * Hydrates preferences from the backend on page load. The backend value always wins (it is what the
+ * Home numbers use), so a stale value saved in this browser cannot override it.
  */
 export function syncPreferencesFromBackend(
   backendPrefs?: Partial<NetWorthAssetPreferences>,
@@ -106,38 +120,25 @@ export function syncPreferencesFromBackend(
 ): void {
   if (typeof window === "undefined") return;
   try {
+    const toFull = (p: any): NetWorthAssetPreferences => ({
+      mutual_funds: typeof p.mutual_funds === "boolean" ? p.mutual_funds : true,
+      stocks: typeof p.stocks === "boolean" ? p.stocks : true,
+      fixed_income: typeof p.fixed_income === "boolean" ? p.fixed_income : true,
+      gold: typeof p.gold === "boolean" ? p.gold : true,
+      real_estate: typeof p.real_estate === "boolean" ? p.real_estate : true,
+      show_insurance_cover: typeof p.show_insurance_cover === "boolean" ? p.show_insurance_cover : false,
+    });
+
     if (byProfile && typeof byProfile === "object") {
       for (const [pId, pPrefs] of Object.entries(byProfile)) {
         if (pPrefs && typeof pPrefs === "object") {
-          const key = getProfileStorageKey(pId);
-          if (!localStorage.getItem(key)) {
-            const merged: NetWorthAssetPreferences = {
-              mutual_funds: typeof pPrefs.mutual_funds === "boolean" ? pPrefs.mutual_funds : true,
-              stocks: typeof pPrefs.stocks === "boolean" ? pPrefs.stocks : true,
-              fixed_income: typeof pPrefs.fixed_income === "boolean" ? pPrefs.fixed_income : true,
-              gold: typeof pPrefs.gold === "boolean" ? pPrefs.gold : true,
-              real_estate: typeof pPrefs.real_estate === "boolean" ? pPrefs.real_estate : true,
-              show_insurance_cover: typeof pPrefs.show_insurance_cover === "boolean" ? pPrefs.show_insurance_cover : false,
-            };
-            storeAssetPreferences(merged, pId, false);
-          }
+          writeLocalAssetPreferences(toFull(pPrefs), pId);
         }
       }
     }
 
     if (backendPrefs && typeof backendPrefs === "object") {
-      const allKey = getProfileStorageKey("all");
-      if (!localStorage.getItem(allKey)) {
-        const merged: NetWorthAssetPreferences = {
-          mutual_funds: typeof backendPrefs.mutual_funds === "boolean" ? backendPrefs.mutual_funds : true,
-          stocks: typeof backendPrefs.stocks === "boolean" ? backendPrefs.stocks : true,
-          fixed_income: typeof backendPrefs.fixed_income === "boolean" ? backendPrefs.fixed_income : true,
-          gold: typeof backendPrefs.gold === "boolean" ? backendPrefs.gold : true,
-          real_estate: typeof backendPrefs.real_estate === "boolean" ? backendPrefs.real_estate : true,
-          show_insurance_cover: typeof backendPrefs.show_insurance_cover === "boolean" ? backendPrefs.show_insurance_cover : false,
-        };
-        storeAssetPreferences(merged, "all", false);
-      }
+      writeLocalAssetPreferences(toFull(backendPrefs), "all");
     }
   } catch (e) {
     console.error("Error hydrating asset preferences from backend:", e);
@@ -215,10 +216,12 @@ export function useAssetPreferences(profileId: string | number = "all") {
     };
   }, [profileId]);
 
+  // Optimistic update. If the server save fails, storeAssetPreferences broadcasts the previous values
+  // and the handler above reverts the toggles.
   const updatePreferences = useCallback(
     (newPrefs: NetWorthAssetPreferences) => {
       setPreferences(newPrefs);
-      storeAssetPreferences(newPrefs, profileId);
+      void storeAssetPreferences(newPrefs, profileId);
     },
     [profileId]
   );

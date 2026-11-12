@@ -6,6 +6,7 @@ import { useProfile } from "@/context/ProfileContext";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import RealEstateModal from "@/components/features/RealEstateModal";
+import PropertyLoanModal, { PropertyLoanView } from "@/components/features/PropertyLoanModal";
 import PropertyCashFlowModal from "@/components/features/PropertyCashFlowModal";
 import { RealEstateFormData } from "@/components/features/RealEstateForm";
 import {
@@ -30,6 +31,8 @@ import {
   ArrowDownRight,
   Receipt,
   Wallet,
+  CreditCard,
+  ChevronDown,
 } from "lucide-react";
 
 interface RealEstateItem {
@@ -67,6 +70,9 @@ interface RealEstateItem {
   net_cash_flow?: number;
   notes?: string | null;
   created_at?: string | null;
+  // BUG-030
+  occupancy_type?: "SELF_OCCUPIED" | "LET_OUT";
+  loan?: PropertyLoanView | null;
 }
 
 interface RealEstateSummary {
@@ -82,6 +88,13 @@ interface RealEstateSummary {
   total_outflows?: number;
   total_net_cash_flow?: number;
   type_counts: Record<string, number>;
+  tax_estimate?: {
+    long_term_properties_count: number;
+    indexed_gain: number;
+    tax_with_indexation: number;
+    tax_without_indexation: number;
+    recommended_tax_total: number;
+  };
 }
 
 function formatINRShort(val: number): string {
@@ -156,6 +169,8 @@ export default function RealEstateHoldingsPage() {
   // Modal State for Property Add/Edit
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<RealEstateItem | null>(null);
+  const [loanModalFor, setLoanModalFor] = useState<RealEstateItem | null>(null);
+  const [taxOpen, setTaxOpen] = useState(false);
 
   // Modal State for Cash Flow & Transactions
   const [cashFlowModalOpen, setCashFlowModalOpen] = useState(false);
@@ -349,8 +364,60 @@ export default function RealEstateHoldingsPage() {
               </div>
               <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
                 {summary.total_gain_pct >= 0 ? "+" : ""}
-                {summary.total_gain_pct.toFixed(1)}% Appreciation
+                {summary.total_gain_pct.toFixed(1)}% total
+                {/* BUG-041: annualised too. Property CAGRs weighted by cost. Approximate for a mixed portfolio. */}
+                {(() => {
+                  const invested = holdings.reduce((s, h) => s + (h.total_invested || 0), 0);
+                  if (invested <= 0) return null;
+                  const weighted = holdings.reduce((s, h) => s + (h.cagr_pct || 0) * (h.total_invested || 0), 0) / invested;
+                  return <> · {weighted.toFixed(1)}% p.a.</>;
+                })()}
               </div>
+              {summary.tax_estimate && summary.tax_estimate.long_term_properties_count > 0 && (
+                <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-white/5 text-[11px] text-neutral-500 space-y-1.5">
+                  {/* Summary always visible; the breakdown is collapsed to keep the card short (BUG-027 UI) */}
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-200">Suggested tax (lower option)</span>
+                    <PrivacyMask>
+                      <span className="font-mono font-semibold text-neutral-900 dark:text-white">{formatINRShort(summary.tax_estimate.recommended_tax_total)}</span>
+                    </PrivacyMask>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTaxOpen((open) => !open)}
+                    aria-expanded={taxOpen}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    {taxOpen ? "Hide tax details" : "Show tax details"}
+                    <ChevronDown size={13} className={`transition-transform ${taxOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {taxOpen && (
+                    <>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span>Indexed gain (est.)</span>
+                        <PrivacyMask>
+                          <span className="font-mono">{summary.tax_estimate.indexed_gain ? formatINRShort(summary.tax_estimate.indexed_gain) : "—"}</span>
+                        </PrivacyMask>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span>Tax at 12.5% (no indexation)</span>
+                        <PrivacyMask>
+                          <span className="font-mono">{formatINRShort(summary.tax_estimate.tax_without_indexation)}</span>
+                        </PrivacyMask>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <span>Tax at 20% (indexed, bought before 23 Jul 2024)</span>
+                        <PrivacyMask>
+                          <span className="font-mono">{summary.tax_estimate.tax_with_indexation ? formatINRShort(summary.tax_estimate.tax_with_indexation) : "—"}</span>
+                        </PrivacyMask>
+                      </div>
+                      <p className="text-[10px] text-neutral-400 leading-snug pt-1">
+                        Indicative, at today&apos;s value, for property held over 24 months. Excludes surcharge, cess and transfer expenses. Not tax advice.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 
@@ -507,6 +574,16 @@ export default function RealEstateHoldingsPage() {
                     </div>
 
                     <div className="flex items-center gap-1">
+                      {/* Text label so the loan action is clear on mobile (no hover tooltips on touch) */}
+                      <button
+                        onClick={() => setLoanModalFor(prop)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
+                        title={prop.loan ? "View or edit the home loan on this property" : "Add a home loan to this property (optional)"}
+                        aria-label={prop.loan ? "View or edit home loan" : "Add home loan"}
+                      >
+                        <CreditCard size={14} />
+                        {prop.loan ? "Loan" : "Add loan"}
+                      </button>
                       <button
                         onClick={() => handleOpenEdit(prop)}
                         className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors"
@@ -625,6 +702,19 @@ export default function RealEstateHoldingsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* ── HOME LOAN MODAL (BUG-030) ── */}
+      {loanModalFor && (
+        <PropertyLoanModal
+          key={loanModalFor.id}
+          isOpen={!!loanModalFor}
+          onClose={() => setLoanModalFor(null)}
+          holdingId={loanModalFor.id}
+          propertyName={loanModalFor.property_name}
+          loan={loanModalFor.loan ?? null}
+          onChanged={() => { loadData(); }}
+        />
       )}
 
       {/* ── PROPERTY ADD / EDIT MODAL ── */}

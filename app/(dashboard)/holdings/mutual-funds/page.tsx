@@ -3,6 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
+import {
+  MF_CATEGORY_OPTIONS,
+  EMPTY_MF_FILTERS,
+  MfFilterState,
+  matchesMfFilters,
+  mfPlanOf,
+  isMfFilterActive,
+  loadMfFilters,
+  saveMfFilters,
+} from "@/lib/mfFilters";
+import MfXirrChart from "@/components/features/MfXirrChart";
 import SchemeCard from "@/components/features/SchemeCard";
 import Card from "@/components/ui/Card";
 import AppSkeleton from "@/components/ui/AppSkeleton";
@@ -89,7 +100,17 @@ export default function MutualFundsPage() {
   >("xirr");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [hideZeroBalance, setHideZeroBalance] = useState(false);
-  const [allocationView, setAllocationView] = useState<"amc" | "scheme">("amc");
+  // BUG-036: show only zero-value funds (to find old entries to clean up). Opposite of hideZeroBalance.
+  const [showOnlyZero, setShowOnlyZero] = useState(false);
+  // BUG-037: mutual fund XIRR shown on the summary cards
+  const [mfXirr, setMfXirr] = useState(0);
+  // Includes funds already redeemed. Shown as a secondary line under the headline XIRR.
+  const [mfLifetimeXirr, setMfLifetimeXirr] = useState<number | null>(null);
+  // BUG-035: category, plan and SIF filters. Saved so they stay after navigating away.
+  const [mfFilters, setMfFilters] = useState<MfFilterState>(EMPTY_MF_FILTERS);
+  const [filtersLoaded, setFiltersLoaded] = useState(false);
+  // BUG-040: "category" = cap size / hybrid / SIF etc. "plan" = Direct / Regular.
+  const [allocationView, setAllocationView] = useState<"amc" | "scheme" | "category" | "plan">("amc");
   const [showAddTx, setShowAddTx] = useState(false);
   const [addTxInitialTab, setAddTxInitialTab] = useState<"MANUAL" | "IMPORT">("MANUAL");
   const [prefillSchemeId, setPrefillSchemeId] = useState<number | null>(null);
@@ -117,6 +138,68 @@ export default function MutualFundsPage() {
   const [selectedFy, setSelectedFy] = useState("2025-26");
   const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
+  // BUG-038: XIRR over time, from the backend's month-end series
+  const [xirrPoints, setXirrPoints] = useState<{ date: string; xirr_pct: number }[]>([]);
+  const [xirrFirstInvestment, setXirrFirstInvestment] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getMfXirrTimeseries()
+      .then((res: any) => {
+        if (!cancelled) {
+          setXirrPoints(Array.isArray(res?.points) ? res.points : []);
+          setXirrFirstInvestment(res?.first_investment ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setXirrPoints([]);
+          setXirrFirstInvestment(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfileId]);
+
+  // BUG-037: mutual fund XIRR for the summary cards (profile-scoped)
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getXIRR()
+      .then((res: any) => {
+        if (!cancelled) {
+          setMfXirr(Number(res?.mf_xirr) || 0);
+          setMfLifetimeXirr(res?.mf_lifetime_xirr != null ? Number(res.mf_lifetime_xirr) : null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMfXirr(0);
+          setMfLifetimeXirr(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfileId]);
+
+  // BUG-035: save filters only after they have been loaded, so an empty first render never overwrites them
+  useEffect(() => {
+    if (filtersLoaded) saveMfFilters(mfFilters);
+  }, [mfFilters, filtersLoaded]);
+
+  // BUG-044: the sort choice is saved too, so it survives opening a fund and going back
+  useEffect(() => {
+    if (!filtersLoaded) return;
+    try {
+      localStorage.setItem("mf_sort_by", sortBy);
+      localStorage.setItem("mf_sort_order", sortOrder);
+    } catch {
+      // storage unavailable: sort still works for this visit
+    }
+  }, [sortBy, sortOrder, filtersLoaded]);
+
   useEffect(() => {
     const savedTab = localStorage.getItem("mf_holding_view_tab");
     if (savedTab === "holdings" || savedTab === "analytics") {
@@ -130,6 +213,25 @@ export default function MutualFundsPage() {
     if (savedHideZero !== null) {
       setHideZeroBalance(savedHideZero === "true");
     }
+    const savedOnlyZero = localStorage.getItem("mf_show_only_zero");
+    if (savedOnlyZero !== null) {
+      setShowOnlyZero(savedOnlyZero === "true");
+    }
+    setMfFilters(loadMfFilters());
+    // BUG-044: restore the saved sort
+    const savedSort = localStorage.getItem("mf_sort_by");
+    const allowedSorts = [
+      "xirr", "cagr", "dayChangePct", "dayChange", "gains", "profit",
+      "value", "name", "rank", "categoryRank", "overallRank",
+    ];
+    if (savedSort && allowedSorts.includes(savedSort)) {
+      setSortBy(savedSort as typeof sortBy);
+    }
+    const savedOrder = localStorage.getItem("mf_sort_order");
+    if (savedOrder === "asc" || savedOrder === "desc") {
+      setSortOrder(savedOrder);
+    }
+    setFiltersLoaded(true);
   }, []);
 
   const handleToggleViewMode = () => {
@@ -142,6 +244,20 @@ export default function MutualFundsPage() {
     const nextVal = !hideZeroBalance;
     setHideZeroBalance(nextVal);
     localStorage.setItem("mf_hide_zero_balance", String(nextVal));
+    if (nextVal && showOnlyZero) {
+      setShowOnlyZero(false);
+      localStorage.setItem("mf_show_only_zero", "false");
+    }
+  };
+
+  const handleToggleShowOnlyZero = () => {
+    const nextVal = !showOnlyZero;
+    setShowOnlyZero(nextVal);
+    localStorage.setItem("mf_show_only_zero", String(nextVal));
+    if (nextVal && hideZeroBalance) {
+      setHideZeroBalance(false);
+      localStorage.setItem("mf_hide_zero_balance", "false");
+    }
   };
 
   const handleDownloadTaxReport = async () => {
@@ -298,9 +414,14 @@ export default function MutualFundsPage() {
       const q = searchQuery.toLowerCase();
       const matchesSearch = (s.scheme || "").toLowerCase().includes(q) || (s.amc || "").toLowerCase().includes(q);
       if (!matchesSearch) return false;
+      if (!matchesMfFilters(s, mfFilters)) return false;
       if (hideZeroBalance) {
         const isZero = (s.units <= 0 && s.current <= 0) || (s.units < 0.001 && s.current < 1);
         if (isZero) return false;
+      }
+      if (showOnlyZero) {
+        const isZero = (s.units <= 0 && s.current <= 0) || (s.units < 0.001 && s.current < 1);
+        if (!isZero) return false;
       }
       return true;
     })
@@ -341,12 +462,70 @@ export default function MutualFundsPage() {
 
       return sortOrder === "desc" ? comparison : -comparison;
     });
+  // BUG-037: totals for the summary cards, before the list filters. Only funds still held (units > 0),
+  // the same basis as the XIRR. Fully redeemed funds can keep a stored cost that is not a current holding,
+  // so they are left out (they remain in the list under "Show only 0 Bal").
+  const mfTotals = schemes.reduce(
+    (acc, s) => {
+      if (!(Number(s.units) > 0)) return acc;
+      acc.current += Number(s.current) || 0;
+      acc.invested += Number(s.invested) || 0;
+      return acc;
+    },
+    { current: 0, invested: 0 },
+  );
+  const mfPnl = mfTotals.current - mfTotals.invested;
+  const mfPnlPct = mfTotals.invested > 0 ? (mfPnl / mfTotals.invested) * 100 : 0;
+  const fmtInr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
+  const fmtPct = (v: number) => `${(v || 0).toFixed(2)}%`;
+
+  // BUG-040: grouped totals for the category and plan views (share of current value)
+  const groupAllocation = (keyOf: (s: any) => string) => {
+    const totals = new Map<string, number>();
+    schemes.forEach((s) => {
+      const key = keyOf(s);
+      totals.set(key, (totals.get(key) || 0) + (Number(s.current) || 0));
+    });
+    const total = Array.from(totals.values()).reduce((a, b) => a + b, 0);
+    return Array.from(totals.entries())
+      .filter(([, value]) => value > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([label, value]) => ({
+        label,
+        current: value,
+        percent: total > 0 ? Number(((value / total) * 100).toFixed(2)) : 0,
+      }));
+  };
+  const categoryAllocation = groupAllocation((s) => s.category_label || "Other");
+  const planAllocation = groupAllocation((s) => {
+    const plan = mfPlanOf(s.scheme);
+    return plan === "DIRECT" ? "Direct" : plan === "REGULAR" ? "Regular" : "Plan not stated";
+  });
+
   const allocationData =
-    allocationView === "amc" ? amcAllocation : schemeAllocationChartData;
-  const allocationNameKey = allocationView === "amc" ? "amc" : "scheme";
-  const allocationCenterLabel = allocationView === "amc" ? "AMCs" : "Funds";
+    allocationView === "amc"
+      ? amcAllocation
+      : allocationView === "category"
+      ? categoryAllocation
+      : allocationView === "plan"
+      ? planAllocation
+      : schemeAllocationChartData;
+  const allocationNameKey =
+    allocationView === "amc" ? "amc" : allocationView === "scheme" ? "scheme" : "label";
+  const allocationCenterLabel =
+    allocationView === "amc"
+      ? "AMCs"
+      : allocationView === "scheme"
+      ? "Funds"
+      : allocationView === "category"
+      ? "Categories"
+      : "Plans";
   const allocationLegendData =
-    allocationView === "amc" ? amcAllocation : schemeAllocation.slice(0, 6);
+    allocationView === "amc"
+      ? amcAllocation
+      : allocationView === "scheme"
+      ? schemeAllocation.slice(0, 6)
+      : allocationData;
 
   const handleWizardSuccess = async (targetProfileId?: string) => {
     setShowImportWizard(false);
@@ -430,6 +609,74 @@ export default function MutualFundsPage() {
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
 
+      {/* BUG-037: summary cards, same layout as the stocks summary */}
+      {schemes.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total Value</p>
+            <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
+              <PrivacyMask>{fmtInr(mfTotals.current)}</PrivacyMask>
+            </p>
+          </Card>
+          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total Investment</p>
+            <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
+              <PrivacyMask>{fmtInr(mfTotals.invested)}</PrivacyMask>
+            </p>
+          </Card>
+          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total P&amp;L</p>
+            <div className={`flex items-baseline gap-1.5 flex-wrap ${mfPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
+              <p className="text-lg sm:text-2xl font-bold">
+                <PrivacyMask>
+                  {mfPnl >= 0 ? "+" : ""}
+                  {fmtInr(Math.abs(mfPnl))}
+                </PrivacyMask>
+              </p>
+              <p className="text-xs sm:text-sm font-medium">
+                ({mfPnl >= 0 ? "+" : ""}
+                {fmtPct(mfPnlPct)})
+              </p>
+            </div>
+          </Card>
+          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">XIRR (current holdings)</p>
+            <p className={`text-lg sm:text-2xl font-bold ${mfXirr >= 0 ? "text-green-500" : "text-red-500"}`}>
+              {fmtPct(mfXirr)}
+            </p>
+            {mfLifetimeXirr !== null && (
+              <p
+                className="text-xs text-neutral-500 mt-1"
+                title="Includes funds you have fully redeemed, so their past returns count too."
+              >
+                Incl. redeemed funds:{" "}
+                <span className={`font-semibold ${mfLifetimeXirr >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                  {mfLifetimeXirr === 0 ? "—" : fmtPct(mfLifetimeXirr)}
+                </span>
+              </p>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* BUG-038: XIRR over time */}
+      {schemes.length > 0 && xirrPoints.length > 1 && (
+        <div className="mb-6">
+          <MfXirrChart points={xirrPoints} />
+        </div>
+      )}
+      {/* The chart starts one year after the first investment. Say so, rather than showing nothing. */}
+      {schemes.length > 0 && xirrPoints.length <= 1 && xirrFirstInvestment && (
+        <div className="mb-6 rounded-2xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-surface p-4 text-sm text-neutral-600 dark:text-neutral-300">
+          <p className="font-semibold text-neutral-800 dark:text-neutral-100">XIRR over time</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            The chart appears one year after your first investment (
+            {new Date(xirrFirstInvestment).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+            ). Until then, the XIRR above is the only figure.
+          </p>
+        </div>
+      )}
+
       {/* Sub-navigation: Holdings vs Visual Analytics */}
       <div className="flex items-center justify-between pb-1">
         <div className="inline-flex p-1 bg-neutral-100 dark:bg-white/5 rounded-2xl border border-neutral-200/60 dark:border-white/5">
@@ -494,7 +741,11 @@ export default function MutualFundsPage() {
                   <span className="text-xs text-neutral-500 dark:text-neutral-400">
                     {allocationView === "amc"
                       ? "Compare concentration by fund house"
-                      : "Compare concentration fund by fund"}
+                      : allocationView === "scheme"
+                      ? "Compare concentration fund by fund"
+                      : allocationView === "category"
+                      ? "Split by category: cap size, hybrid, SIF and more"
+                      : "Split by plan: Direct or Regular"}
                   </span>
                 </div>
               </div>
@@ -526,7 +777,7 @@ export default function MutualFundsPage() {
             </div>
 
             <div className="flex w-full rounded-2xl bg-neutral-100 p-1 dark:bg-white/5 sm:w-fit">
-              {(["amc", "scheme"] as const).map((view) => (
+              {(["amc", "scheme", "category", "plan"] as const).map((view) => (
                 <button
                   key={view}
                   onClick={() => setAllocationView(view)}
@@ -535,7 +786,13 @@ export default function MutualFundsPage() {
                       ? "bg-white dark:bg-[#1A1F2B] text-primary-600 dark:text-primary-400 shadow-sm"
                       : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
                   }`}>
-                  {view === "amc" ? "AMC Wise" : "Scheme Wise"}
+                  {view === "amc"
+                    ? "AMC Wise"
+                    : view === "scheme"
+                    ? "Scheme Wise"
+                    : view === "category"
+                    ? "Category"
+                    : "Direct / Regular"}
                 </button>
               ))}
             </div>
@@ -586,7 +843,7 @@ export default function MutualFundsPage() {
                       {(totalMFValue / 100000).toFixed(1)}L
                     </PrivacyMask>
                   ) : (
-                    `${schemeAllocation.length} ${allocationCenterLabel}`
+                    `${allocationView === "scheme" ? schemeAllocation.length : allocationData.length} ${allocationCenterLabel}`
                   )}
                 </p>
               </div>
@@ -605,9 +862,9 @@ export default function MutualFundsPage() {
                     <p
                       className="truncate text-sm font-medium text-neutral-700 dark:text-neutral-300"
                       title={
-                        allocationView === "amc" ? entry.amc : entry.scheme
+                        allocationView === "amc" ? entry.amc : allocationView === "scheme" ? entry.scheme : entry.label
                       }>
-                      {allocationView === "amc" ? entry.amc : entry.scheme}
+                      {allocationView === "amc" ? entry.amc : allocationView === "scheme" ? entry.scheme : entry.label}
                     </p>
                     <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                       {entry.percent}%
@@ -737,6 +994,25 @@ export default function MutualFundsPage() {
               )}
             </button>
 
+            {/* BUG-036: show only zero-value funds, to find old entries to delete */}
+            <button
+              onClick={handleToggleShowOnlyZero}
+              aria-pressed={showOnlyZero}
+              title={showOnlyZero ? "Showing only 0-value funds (click to show all)" : "Show only 0-value funds, to clean up old entries"}
+              className={`px-3 py-2 border rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm dark:shadow-none shrink-0 ${
+                showOnlyZero
+                  ? "bg-primary-600/10 border-primary-600/30 text-primary-700 dark:text-primary-400"
+                  : "bg-neutral-100 dark:bg-white/5 border-transparent text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/10"
+              }`}
+            >
+              <span>{showOnlyZero ? "Only 0 Bal" : "Show only 0 Bal"}</span>
+              {zeroBalanceCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-200 dark:bg-white/10 text-neutral-600 dark:text-neutral-400">
+                  {zeroBalanceCount}
+                </span>
+              )}
+            </button>
+
             {/* View Mode Toggle: Segmented Control */}
             <div className="flex items-center p-0.5 bg-neutral-100 dark:bg-white/5 border border-neutral-200/80 dark:border-white/10 rounded-xl text-xs font-semibold shrink-0">
               <button
@@ -839,6 +1115,64 @@ export default function MutualFundsPage() {
         </div>
 
         <div className="space-y-4">
+          {/* BUG-035: filter chips. Saved with the list view so they stay after navigating away. */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {MF_CATEGORY_OPTIONS.map((opt) => {
+              const on = mfFilters.categories.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    setMfFilters((f) => ({
+                      ...f,
+                      categories: on ? f.categories.filter((c) => c !== opt.value) : [...f.categories, opt.value],
+                    }))
+                  }
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                    on
+                      ? "bg-primary-600 text-white border-primary-600"
+                      : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-transparent"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+            <select
+              value={mfFilters.plan}
+              onChange={(e) => setMfFilters((f) => ({ ...f, plan: e.target.value as MfFilterState["plan"] }))}
+              aria-label="Filter by plan"
+              className="px-2.5 py-1 bg-neutral-100 dark:bg-white/5 rounded-lg text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 outline-none cursor-pointer"
+            >
+              <option value="ALL">Direct and Regular</option>
+              <option value="DIRECT">Direct only</option>
+              <option value="REGULAR">Regular only</option>
+            </select>
+            <button
+              type="button"
+              aria-pressed={mfFilters.sifOnly}
+              onClick={() => setMfFilters((f) => ({ ...f, sifOnly: !f.sifOnly }))}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                mfFilters.sifOnly
+                  ? "bg-primary-600 text-white border-primary-600"
+                  : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-transparent"
+              }`}
+            >
+              SIF only
+            </button>
+            {isMfFilterActive(mfFilters) && (
+              <button
+                type="button"
+                onClick={() => setMfFilters(EMPTY_MF_FILTERS)}
+                className="text-[11px] font-semibold text-primary-600 dark:text-primary-400 hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+
           {filteredSchemes.length > 0 ? (
             viewMode === "compact" ? (
               <div className="space-y-2">
