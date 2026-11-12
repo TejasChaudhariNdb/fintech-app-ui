@@ -529,7 +529,15 @@ function AuthForm() {
                 <div className="flex justify-end mt-2">
                   <button
                     type="button"
-                    onClick={() => router.push("/forgot-password")}
+                    onClick={() => {
+                      // Keep the email out of the URL; the reset page reads it from sessionStorage.
+                      try {
+                        sessionStorage.setItem("reset_email", email);
+                      } catch {
+                        /* storage unavailable: the reset page will ask for the email */
+                      }
+                      router.push("/forgot-password");
+                    }}
                     className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors font-medium"
                   >
                     Forgot password?
