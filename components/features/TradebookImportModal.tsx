@@ -59,6 +59,32 @@ interface PreviewResponse {
   unique_symbols: string[];
   trades: TradeRecord[];
   errors: { row?: number; symbol?: string; reason: string }[];
+  // BUG-057: splits and bonus issues to confirm, and quantity warnings
+  corporate_actions?: CorporateActionProposal[];
+  warnings?: { symbol: string; date: string; reason: string }[];
+}
+
+interface CorporateActionProposal {
+  symbol: string;
+  date: string;
+  ratio: number;
+  shares_before: number;
+  shares_added: number;
+  source: "yahoo" | "saved" | "manual";
+  kind: "SPLIT" | "BONUS";
+  price_hint?: number;
+}
+
+interface CorporateActionRow extends CorporateActionProposal {
+  key: string;
+  ratioText: string;
+  include: boolean;
+}
+
+// Extra shares after a multiplier; whole holdings stay whole (fractions are paid in cash).
+function sharesAfter(before: number, ratio: number): number {
+  const total = before * ratio;
+  return Number.isInteger(before) ? Math.floor(total + 1e-6) : total;
 }
 
 interface TradebookImportModalProps {
@@ -66,6 +92,7 @@ interface TradebookImportModalProps {
   onClose: () => void;
   onSuccess: () => void;
   onOpenDematReconcile?: () => void;
+  initialMode?: "HOLDINGS" | "TRADEBOOK";
 }
 
 const SUPPORTED_BROKERS = [
@@ -132,6 +159,7 @@ export default function TradebookImportModal({
   onClose,
   onSuccess,
   onOpenDematReconcile,
+  initialMode = "HOLDINGS",
 }: TradebookImportModalProps) {
   const { profiles, activeProfileId } = useProfile();
   const [mounted, setMounted] = useState(false);
@@ -182,6 +210,13 @@ export default function TradebookImportModal({
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // BUG-057: split/bonus rows the user confirms before import
+  const [caRows, setCaRows] = useState<CorporateActionRow[]>([]);
+  const [caNewSymbol, setCaNewSymbol] = useState("");
+  const [caNewDate, setCaNewDate] = useState("");
+  const [caNewRatio, setCaNewRatio] = useState("");
+  const [caNewKind, setCaNewKind] = useState<"SPLIT" | "BONUS">("BONUS");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleHoldingsFileSelected = async (f: File) => {
@@ -213,6 +248,11 @@ export default function TradebookImportModal({
       if (def) setTargetProfileId(String(def.id));
     }
   }, [activeProfileId, profiles, isOpen]);
+
+  // Open on the requested tab (the Add Stock dialog opens it on Tradebook Orders)
+  useEffect(() => {
+    if (isOpen) setImportMode(initialMode);
+  }, [isOpen, initialMode]);
 
   // Reset state on open/close
   useEffect(() => {
@@ -322,6 +362,14 @@ export default function TradebookImportModal({
     try {
       const res: PreviewResponse = await api.previewTradebook(file, targetProfileId);
       setPreviewData(res);
+      setCaRows(
+        (res.corporate_actions || []).map((a, i) => ({
+          ...a,
+          key: `ca_${i}_${a.symbol}_${a.date}`,
+          ratioText: String(a.ratio),
+          include: true,
+        }))
+      );
 
       // Pre-select all NON-DUPLICATE trades
       const nonDupes = new Set<string>();
@@ -498,10 +546,17 @@ export default function TradebookImportModal({
         company_name: t.company_name,
       }));
 
+      // BUG-057: send the confirmed splits/bonus issues. The list replaces earlier automatic
+      // entries for the stocks in this import, so unticked rows are simply left out.
+      const corporateActions = caRows
+        .filter((r) => r.include && parseFloat(r.ratioText) > 0 && parseFloat(r.ratioText) !== 1)
+        .map((r) => ({ symbol: r.symbol, date: r.date, ratio: parseFloat(r.ratioText), kind: r.kind }));
+
       const res = await api.commitTradebook(
         payloadTrades,
         previewData.broker_detected || "BROKER_IMPORT",
-        targetProfileId
+        targetProfileId,
+        corporateActions
       );
 
       setCommitResult({
@@ -606,14 +661,17 @@ export default function TradebookImportModal({
             </button>
             <button
               type="button"
-              disabled
-              title="Tradebook order import is temporarily disabled (Beta Users Only)"
-              className="pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 border-transparent text-neutral-400 dark:text-neutral-500 flex items-center gap-2 cursor-not-allowed opacity-60 select-none">
+              onClick={() => {
+                setImportMode("TRADEBOOK");
+                setErrorMessage(null);
+              }}
+              className={`pb-3 px-3 text-xs sm:text-sm font-bold border-b-2 flex items-center gap-2 transition-all ${
+                importMode === "TRADEBOOK"
+                  ? "border-primary-600 text-primary-600 dark:text-primary-400"
+                  : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+              }`}>
               <FileSpreadsheet size={16} />
               <span>Tradebook Orders</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                Beta Users Only
-              </span>
             </button>
           </div>
         )}
@@ -1162,6 +1220,200 @@ export default function TradebookImportModal({
                     {targetProfileName}
                   </div>
                 </div>
+              </div>
+
+              {/* BUG-057: splits and bonus issues. A tradebook never lists them, so they are
+                  proposed from market data and the user confirms the multiplier. */}
+              <div className="rounded-2xl border border-neutral-200 dark:border-white/10 p-3.5 space-y-2.5">
+                <div className="flex items-start gap-2.5">
+                  <Gift size={16} className="shrink-0 mt-0.5 text-primary-600 dark:text-primary-400" />
+                  <div className="text-xs text-neutral-700 dark:text-neutral-300">
+                    <span className="font-bold text-neutral-900 dark:text-white">Splits &amp; bonus issues</span>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Your tradebook does not list them. Check each multiplier: 1:1 bonus = 2, 1:5 split = 5,
+                      4:1 bonus with a 1:2 split = 10. Your invested amount does not change. Pick Split or
+                      Bonus from the company&apos;s announcement: it changes your capital gains (bonus shares
+                      cost ₹0 from the allotment date; split shares keep your original cost and date).
+                    </p>
+                  </div>
+                </div>
+
+                {caRows.length === 0 ? (
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    None found for these stocks. If you know of one, add it below.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {caRows.map((r) => {
+                      const ratio = parseFloat(r.ratioText);
+                      const valid = ratio > 0 && ratio !== 1;
+                      return (
+                        <div
+                          key={r.key}
+                          className={`flex flex-wrap items-center gap-x-3 gap-y-1.5 px-2.5 py-2 rounded-xl bg-neutral-50 dark:bg-white/5 text-xs ${
+                            r.include ? "" : "opacity-50"
+                          }`}
+                        >
+                          <label className="flex items-center gap-2 font-bold text-neutral-900 dark:text-white min-w-[7rem]">
+                            <input
+                              type="checkbox"
+                              checked={r.include}
+                              onChange={(e) =>
+                                setCaRows((rows) =>
+                                  rows.map((x) => (x.key === r.key ? { ...x, include: e.target.checked } : x))
+                                )
+                              }
+                            />
+                            {r.symbol}
+                          </label>
+                          <span className="text-neutral-500 dark:text-neutral-400">{r.date}</span>
+                          <label className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span>×</span>
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              aria-label={`Share multiplier for ${r.symbol} on ${r.date}`}
+                              value={r.ratioText}
+                              onChange={(e) =>
+                                setCaRows((rows) =>
+                                  rows.map((x) => (x.key === r.key ? { ...x, ratioText: e.target.value } : x))
+                                )
+                              }
+                              className="w-16 px-2 py-1 rounded-lg bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none"
+                            />
+                          </label>
+                          <div className="flex rounded-lg bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 p-0.5 text-[11px] font-semibold">
+                            {(["SPLIT", "BONUS"] as const).map((k) => (
+                              <button
+                                key={k}
+                                type="button"
+                                aria-pressed={r.kind === k}
+                                onClick={() =>
+                                  setCaRows((rows) => rows.map((x) => (x.key === r.key ? { ...x, kind: k } : x)))
+                                }
+                                className={`px-2 py-0.5 rounded-md ${
+                                  r.kind === k
+                                    ? "bg-primary-600 text-white"
+                                    : "text-neutral-500 dark:text-neutral-400"
+                                }`}
+                              >
+                                {k === "SPLIT" ? "Split" : "Bonus"}
+                              </button>
+                            ))}
+                          </div>
+                          {r.source !== "manual" && valid && (
+                            <span className="text-neutral-600 dark:text-neutral-300">
+                              {r.shares_before} → {sharesAfter(r.shares_before, ratio)} shares
+                            </span>
+                          )}
+                          <span className="text-[10px] text-neutral-400">
+                            {r.source === "saved" ? "confirmed earlier" : r.source === "manual" ? "added by you" : "from market data"}
+                          </span>
+                          {r.price_hint && Math.abs(r.price_hint - ratio) > 0.05 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCaRows((rows) =>
+                                  rows.map((x) =>
+                                    x.key === r.key ? { ...x, ratioText: String(Math.round(r.price_hint!)) } : x
+                                  )
+                                )
+                              }
+                              className="text-[11px] font-bold text-amber-700 dark:text-amber-400 underline"
+                            >
+                              Your prices suggest ×{r.price_hint}. Use ×{Math.round(r.price_hint)}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Add a split/bonus the market data missed */}
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                  <select
+                    value={caNewSymbol}
+                    onChange={(e) => setCaNewSymbol(e.target.value)}
+                    aria-label="Stock"
+                    className="px-2 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white"
+                  >
+                    <option value="">Stock…</option>
+                    {previewData.unique_symbols.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="date"
+                    value={caNewDate}
+                    onChange={(e) => setCaNewDate(e.target.value)}
+                    aria-label="Ex-date"
+                    className="px-2 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="× e.g. 2"
+                    value={caNewRatio}
+                    onChange={(e) => setCaNewRatio(e.target.value)}
+                    aria-label="Share multiplier"
+                    className="w-24 px-2 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white"
+                  />
+                  <select
+                    value={caNewKind}
+                    onChange={(e) => setCaNewKind(e.target.value as "SPLIT" | "BONUS")}
+                    aria-label="Split or bonus"
+                    className="px-2 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white"
+                  >
+                    <option value="BONUS">Bonus</option>
+                    <option value="SPLIT">Split</option>
+                  </select>
+                  <button
+                    type="button"
+                    disabled={!caNewSymbol || !caNewDate || !(parseFloat(caNewRatio) > 0) || parseFloat(caNewRatio) === 1}
+                    onClick={() => {
+                      setCaRows((rows) => [
+                        ...rows,
+                        {
+                          key: `ca_manual_${Date.now()}`,
+                          symbol: caNewSymbol,
+                          date: caNewDate,
+                          ratio: parseFloat(caNewRatio),
+                          ratioText: caNewRatio,
+                          shares_before: 0,
+                          shares_added: 0,
+                          source: "manual",
+                          kind: caNewKind,
+                          include: true,
+                        },
+                      ]);
+                      setCaNewDate("");
+                      setCaNewRatio("");
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-bold bg-white dark:bg-white/10 border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-200 disabled:opacity-50"
+                  >
+                    <Plus size={13} />
+                    Add split / bonus
+                  </button>
+                </div>
+
+                {previewData.warnings && previewData.warnings.length > 0 && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 dark:text-amber-200 space-y-0.5 max-h-40 overflow-y-auto">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle size={13} />
+                      Check these before importing
+                    </div>
+                    {previewData.warnings.map((w, i) => (
+                      <div key={i}>
+                        {w.symbol} ({w.date}): {w.reason}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Informational Banner for Duplicate Trades */}

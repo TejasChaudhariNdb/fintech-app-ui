@@ -1033,7 +1033,13 @@ export const api = {
     return r.json();
   },
 
-  commitTradebook: async (trades: any[], broker: string = "BROKER_IMPORT", profileId?: string) => {
+  commitTradebook: async (
+    trades: any[],
+    broker: string = "BROKER_IMPORT",
+    profileId?: string,
+    // BUG-057: splits/bonus issues confirmed in the preview (share multiplier per ex-date)
+    corporateActions?: { symbol: string; date: string; ratio: number }[],
+  ) => {
     const token = localStorage.getItem("access_token");
     const url = profileId
       ? `${API_URL}/equity/import-commit?profile_id=${profileId}`
@@ -1044,7 +1050,11 @@ export const api = {
         "Content-Type": "application/json",
         ...(token && { Authorization: `Bearer ${token}` }),
       },
-      body: JSON.stringify({ trades, broker }),
+      body: JSON.stringify({
+        trades,
+        broker,
+        ...(corporateActions ? { corporate_actions: corporateActions } : {}),
+      }),
     });
 
     if (!r.ok) {

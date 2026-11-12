@@ -197,6 +197,7 @@ export default function StocksPage() {
   const abortManualTxRef = useRef<AbortController | null>(null);
   const [manualError, setManualError] = useState<string | null>(null);
   const [showTradebookModal, setShowTradebookModal] = useState(false);
+  const [tradebookInitialMode, setTradebookInitialMode] = useState<"HOLDINGS" | "TRADEBOOK">("HOLDINGS");
   const [showDematReconcileModal, setShowDematReconcileModal] = useState(false);
   const [corpActionStock, setCorpActionStock] = useState<any>(null);
 
@@ -1548,16 +1549,18 @@ export default function StocksPage() {
               }`}>
             Enter Manually
           </button>
+          {/* BUG-057: opens the tradebook import with preview and split/bonus confirmation,
+              not the old direct import (which saved trades without either). */}
           <button
             type="button"
-            disabled
-            title="Upload Tradebook is temporarily disabled (Beta Users Only)"
-            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-400 dark:text-neutral-500 cursor-not-allowed opacity-60 flex items-center justify-center gap-1.5 select-none">
+            onClick={() => {
+              closeStockModal();
+              setTradebookInitialMode("TRADEBOOK");
+              setShowTradebookModal(true);
+            }}
+            className="flex-1 pb-3 text-sm font-medium border-b-2 border-transparent text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors flex items-center justify-center gap-1.5">
             <FileSpreadsheet size={15} />
             <span>Upload Tradebook</span>
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              Beta Users Only
-            </span>
           </button>
         </div>
 
@@ -1974,8 +1977,8 @@ export default function StocksPage() {
               <Button
                 onClick={() => {
                   setShowImportErrorModal(false);
-                  setShowStockModal(true);
-                  setStockModalTab("IMPORT");
+                  setTradebookInitialMode("TRADEBOOK");
+                  setShowTradebookModal(true);
                 }}
                 className="w-full sm:flex-1">
                 Upload Corrected File
@@ -2044,7 +2047,11 @@ export default function StocksPage() {
 
       <TradebookImportModal
         isOpen={showTradebookModal}
-        onClose={() => setShowTradebookModal(false)}
+        initialMode={tradebookInitialMode}
+        onClose={() => {
+          setShowTradebookModal(false);
+          setTradebookInitialMode("HOLDINGS");
+        }}
         onOpenDematReconcile={() => setShowDematReconcileModal(true)}
         onSuccess={() => {
           loadData(false);
