@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
+import React, { useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef } from "react";
 import {
   createChart,
-  AreaSeries,
   LineSeries,
   ColorType,
   CrosshairMode,
@@ -11,7 +10,12 @@ import {
   ISeriesApi,
   LineStyle,
 } from "lightweight-charts";
-import { RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
+import { RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  RangeDot,
+  RangeSelectOverlay,
+  useRangeSelect,
+} from "@/components/features/chartRangeSelect";
 
 export interface TradingViewJourneyPoint {
   date: string;
@@ -37,13 +41,19 @@ interface TradingViewJourneyChartProps {
   showControls?: boolean;
 }
 
-interface JourneyTooltipData {
-  x: number;
-  y: number;
-  date: string;
+interface JourneyRow {
+  time: string;
   value: number;
   invested: number;
 }
+
+const rupees = (v: number) => `₹${Math.round(Math.abs(v)).toLocaleString("en-IN")}`;
+const signedRupees = (v: number) => `${v >= 0 ? "+" : "−"}${rupees(v)}`;
+const signedPct = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}%`;
+const gainTone = (v: number) =>
+  v >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 const TradingViewJourneyChart = forwardRef<
   TradingViewJourneyChartHandle,
@@ -64,10 +74,19 @@ const TradingViewJourneyChart = forwardRef<
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const valueSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  const valueSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const investedSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const [canReset, setCanReset] = useState(false);
-  const [tooltip, setTooltip] = useState<JourneyTooltipData | null>(null);
+  const [rows, setRows] = useState<JourneyRow[]>([]);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [picked, setPicked] = useState<{ from: number; to: number } | null>(null);
+  const [pinIndex, setPinIndex] = useState<number | null>(null);
+  const scrubbingRef = useRef(false);
+
+  const live = useRef({ rows, onHoverPoint, primaryColor, investedColor });
+  useEffect(() => {
+    live.current = { rows, onHoverPoint, primaryColor, investedColor };
+  }, [rows, onHoverPoint, primaryColor, investedColor]);
 
   // Expose zoom/reset actions to parent components
   useImperativeHandle(ref, () => ({
@@ -113,30 +132,6 @@ const TradingViewJourneyChart = forwardRef<
       chartRef.current.timeScale().fitContent();
       setCanReset(false);
     }
-  };
-
-  // Responsive floating tooltip positioning
-  const getTooltipStyle = (x: number, y: number): React.CSSProperties => {
-    const containerWidth = containerRef.current?.clientWidth || 360;
-    const isMobile = containerWidth < 520;
-
-    if (isMobile) {
-      // On mobile screens, flip between left and right corners based on touch coordinate
-      // This ensures the user's thumb NEVER covers the tooltip!
-      const isRightSide = x > containerWidth / 2;
-      return {
-        top: 8,
-        ...(isRightSide ? { left: 8 } : { right: 8 }),
-      };
-    }
-
-    // On tablet / desktop: float smoothly next to the crosshair
-    const tooltipWidth = 210;
-    const isTooFarRight = x + tooltipWidth + 24 > containerWidth;
-    const left = isTooFarRight ? Math.max(8, x - tooltipWidth - 12) : x + 16;
-    const top = Math.max(8, Math.min(y - 35, height - 110));
-
-    return { left, top };
   };
 
   // Initialize chart
@@ -210,34 +205,31 @@ const TradingViewJourneyChart = forwardRef<
           return `₹${Math.round(val).toLocaleString("en-IN")}`;
         },
       },
+      // Dragging compares two dates (see chartRangeSelect), so it does not pan with the mouse.
       handleScroll: {
         mouseWheel: true,
-        pressedMouseMove: true,
-        horzTouchDrag: true,
+        pressedMouseMove: false,
+        horzTouchDrag: false, // switched on by chartRangeSelect while the chart is zoomed in
         vertTouchDrag: false,
       },
       handleScale: {
-        axisPressedMouseMove: true,
+        axisPressedMouseMove: false,
         mouseWheel: true,
-        pinch: true,
+        pinch: false, // two fingers compare two dates; zoom with the buttons
       },
     });
 
-    // 1. Current / Portfolio Value Area Series
-    const valueSeries = chart.addSeries(AreaSeries, {
-      lineColor: primaryColor,
-      topColor: primaryColor.startsWith("#10b981")
-        ? "rgba(16, 185, 129, 0.28)"
-        : primaryColor.startsWith("#3b82f6")
-        ? "rgba(59, 130, 246, 0.28)"
-        : "rgba(16, 185, 129, 0.25)",
-      bottomColor: "rgba(0, 0, 0, 0.0)",
+    // No on-chart titles or last-value tags: the legend above the chart names the lines.
+    // 1. Current / Portfolio Value: a plain line, no fill
+    const valueSeries = chart.addSeries(LineSeries, {
+      color: live.current.primaryColor,
       lineWidth: 2,
       priceFormat: {
         type: "custom",
         formatter: (val: number) => `₹${Math.round(val).toLocaleString("en-IN")}`,
       },
-      title: primaryTitle,
+      lastValueVisible: false,
+      priceLineVisible: false,
       // BUG-045: smaller hover dot so it does not cover the line
       crosshairMarkerRadius: 3,
       crosshairMarkerBorderWidth: 1,
@@ -245,14 +237,15 @@ const TradingViewJourneyChart = forwardRef<
 
     // 2. Invested Amount Line Series
     const investedSeries = chart.addSeries(LineSeries, {
-      color: investedColor,
+      color: live.current.investedColor,
       lineWidth: 2,
       lineStyle: LineStyle.Dashed,
       priceFormat: {
         type: "custom",
         formatter: (val: number) => `₹${Math.round(val).toLocaleString("en-IN")}`,
       },
-      title: investedTitle,
+      lastValueVisible: false,
+      priceLineVisible: false,
       crosshairMarkerRadius: 3,
       crosshairMarkerBorderWidth: 1,
     });
@@ -262,63 +255,39 @@ const TradingViewJourneyChart = forwardRef<
     investedSeriesRef.current = investedSeries;
 
     let rAFId: number | null = null;
+    let lastIndex: number | null = null;
 
-    // Crosshair movement listener throttled to animation frames for 60/120 FPS fluid mobile scrubbing
+    // Crosshair → index of the hovered date. The readout is drawn above the chart, not over it.
     chart.subscribeCrosshairMove((param) => {
-      if (rAFId !== null) return;
+      if (rAFId !== null) cancelAnimationFrame(rAFId);
       rAFId = requestAnimationFrame(() => {
         rAFId = null;
-        if (
-          !param.time ||
-          !param.point ||
-          param.point.x < 0 ||
-          param.point.x > container.clientWidth ||
-          param.point.y < 0 ||
-          param.point.y > height
-        ) {
-          onHoverPoint?.(null);
-          setTooltip(null);
-          return;
-        }
-
-        const vData = param.seriesData.get(valueSeries) as
-          | { value: number; time: string }
-          | undefined;
-        const iData = param.seriesData.get(investedSeries) as
-          | { value: number; time: string }
-          | undefined;
-
-        const vVal = vData?.value ?? 0;
-        const iVal = iData?.value ?? 0;
-        const timeStr = typeof param.time === "string" ? param.time : "";
-
-        if (timeStr && vData) {
-          const formattedDate = new Date(timeStr).toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "short",
-          });
-          onHoverPoint?.({
-            date: timeStr,
-            value: vVal,
-            invested: iVal,
-          });
-          setTooltip({
-            x: param.point.x,
-            y: param.point.y,
-            date: formattedDate,
-            value: vVal,
-            invested: iVal,
-          });
-        } else {
-          onHoverPoint?.(null);
-          setTooltip(null);
-        }
+        const data = live.current.rows;
+        const inside =
+          param.point !== undefined &&
+          param.logical !== undefined &&
+          param.point.x >= 0 &&
+          param.point.y >= 0 &&
+          param.point.y <= height;
+        const index =
+          inside && data.length > 0
+            ? Math.max(0, Math.min(Math.round(param.logical as number), data.length - 1))
+            : null;
+        if (scrubbingRef.current) return; // a sliding finger is reporting the date
+        if (index === lastIndex) return;
+        lastIndex = index;
+        setHoverIndex(index);
+        const row = index !== null ? data[index] : null;
+        live.current.onHoverPoint?.(
+          row ? { date: row.time, value: row.value, invested: row.invested } : null
+        );
       });
     });
 
     // Range change listener to toggle reset button visibility
-    chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
-      setCanReset((prev) => (prev ? prev : true));
+    chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+      const n = live.current.rows.length;
+      setCanReset(range !== null && n > 1 && range.to - range.from < n - 1.5);
     });
 
     // Handle container resize
@@ -337,7 +306,9 @@ const TradingViewJourneyChart = forwardRef<
       valueSeriesRef.current = null;
       investedSeriesRef.current = null;
     };
-  }, [height, primaryTitle, investedTitle]);
+    // Theme, colours and data are applied by the effects below without rebuilding the chart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [height]);
 
   // Dynamically update theme styling without destroying chart or losing data
   useEffect(() => {
@@ -379,22 +350,9 @@ const TradingViewJourneyChart = forwardRef<
 
   // Update series colors if primaryColor or investedColor changes
   useEffect(() => {
-    if (valueSeriesRef.current) {
-      valueSeriesRef.current.applyOptions({
-        lineColor: primaryColor,
-        topColor: primaryColor.startsWith("#10b981")
-          ? "rgba(16, 185, 129, 0.28)"
-          : primaryColor.startsWith("#3b82f6") || primaryColor.startsWith("#2563EB")
-          ? "rgba(37, 99, 235, 0.28)"
-          : "rgba(16, 185, 129, 0.25)",
-      });
-    }
-    if (investedSeriesRef.current) {
-      investedSeriesRef.current.applyOptions({
-        color: investedColor,
-      });
-    }
-  }, [primaryColor, investedColor]);
+    valueSeriesRef.current?.applyOptions({ color: primaryColor });
+    investedSeriesRef.current?.applyOptions({ color: investedColor });
+  }, [primaryColor, investedColor, height]);
 
   // Update data when props change
   useEffect(() => {
@@ -404,6 +362,7 @@ const TradingViewJourneyChart = forwardRef<
     if (!data || data.length === 0) {
       valueSeriesRef.current.setData([]);
       investedSeriesRef.current.setData([]);
+      setRows([]);
       return;
     }
 
@@ -440,10 +399,68 @@ const TradingViewJourneyChart = forwardRef<
 
     valueSeriesRef.current.setData(cleanValues);
     investedSeriesRef.current.setData(cleanInvested);
+    setRows(
+      cleanValues.map((v, i) => ({ time: v.time, value: v.value, invested: cleanInvested[i].value }))
+    );
+    setHoverIndex(null);
 
     chartRef.current.timeScale().fitContent();
-    setCanReset(false);
-  }, [data]);
+  }, [data, height]);
+
+  const getDots = useCallback((index: number): RangeDot[] => {
+    const row = live.current.rows[index];
+    if (!row) return [];
+    const dots: RangeDot[] = [];
+    const iy = investedSeriesRef.current?.priceToCoordinate(row.invested);
+    if (iy !== null && iy !== undefined) dots.push({ y: iy, color: live.current.investedColor });
+    const vy = valueSeriesRef.current?.priceToCoordinate(row.value);
+    if (vy !== null && vy !== undefined) dots.push({ y: vy, color: live.current.primaryColor });
+    return dots;
+  }, []);
+
+  const handleScrub = useCallback((index: number | null) => {
+    scrubbingRef.current = index !== null;
+    chartRef.current?.clearCrosshairPosition();
+    setHoverIndex(index);
+    const row = index !== null ? live.current.rows[index] : null;
+    live.current.onHoverPoint?.(
+      row ? { date: row.time, value: row.value, invested: row.invested } : null
+    );
+  }, []);
+
+  const { state: selection, clear: clearSelection } = useRangeSelect({
+    containerRef,
+    chartRef,
+    count: rows.length,
+    getDots,
+    onChange: setPicked,
+    onPin: setPinIndex,
+    onScrub: handleScrub,
+  });
+
+  // A pinned first date reads like a hovered one, plus the prompt for the second date.
+  const shownIndex = pinIndex ?? hoverIndex;
+  const hovered = shownIndex !== null ? rows[shownIndex] ?? null : null;
+  const clearButton = (
+    <button
+      type="button"
+      onClick={clearSelection}
+      aria-label="Clear selected dates"
+      className="shrink-0 ml-auto w-7 h-7 flex items-center justify-center rounded-full bg-neutral-100 hover:bg-neutral-200 dark:bg-white/10 dark:hover:bg-white/20 text-neutral-600 dark:text-neutral-300 transition-colors"
+    >
+      <X size={14} />
+    </button>
+  );
+  const range =
+    picked && rows[picked.from] && rows[picked.to]
+      ? { a: rows[picked.from], b: rows[picked.to] }
+      : null;
+  // Between two dates: how the value moved, how much of that was new money, and the rest (market).
+  const valueChange = range ? range.b.value - range.a.value : 0;
+  const investedChange = range ? range.b.invested - range.a.invested : 0;
+  const marketChange = valueChange - investedChange;
+  const marketBase = range ? range.a.value + Math.max(investedChange, 0) : 0;
+  const hoveredGain = hovered ? hovered.value - hovered.invested : 0;
 
   return (
     <div className="relative w-full" style={{ touchAction: "pan-y" }}>
@@ -483,95 +500,98 @@ const TradingViewJourneyChart = forwardRef<
           </div>
 
           <div className="text-[11px] text-neutral-400 hidden sm:inline">
-            Pinch / Scroll to zoom • Drag to pan
+            Scroll to zoom
           </div>
         </div>
       )}
 
-      {/* Floating Interactive Tooltip Card matching user's design */}
-      {tooltip && (
-        <div
-          style={getTooltipStyle(tooltip.x, tooltip.y)}
-          className="absolute z-20 pointer-events-none transition-all duration-75 ease-out select-none"
-        >
-          <div className="bg-white/95 dark:bg-[#151922]/95 backdrop-blur-md border border-neutral-200/90 dark:border-white/10 rounded-2xl p-3 shadow-xl text-xs space-y-2 min-w-[195px] max-w-[240px]">
-            <div className="font-bold text-neutral-900 dark:text-white border-b border-neutral-100 dark:border-white/10 pb-1.5 flex justify-between items-center gap-2">
-              <span className="font-bold text-neutral-900 dark:text-white text-xs">
-                {tooltip.date}
+      {/* Fixed readout above the chart, left aligned: legend → hovered date → compared dates.
+          It never floats over the lines. */}
+      <div className="min-h-[60px] sm:min-h-[40px] flex items-center gap-2 px-1 text-xs tabular-nums">
+        {range ? (
+          <>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
+            <span className="font-bold text-neutral-900 dark:text-white whitespace-nowrap">
+              {shortDate(range.a.time)} – {shortDate(range.b.time)}
+            </span>
+            <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+              <span className="whitespace-nowrap">
+                <span className="text-neutral-500 dark:text-neutral-400">Value </span>
+                <span className="font-bold text-neutral-900 dark:text-white">{signedRupees(valueChange)}</span>
               </span>
-              {tooltip.invested > 0 && (
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                    tooltip.value >= tooltip.invested
-                      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                      : "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                  }`}
-                >
-                  {tooltip.value >= tooltip.invested ? "+" : ""}
-                  {(
-                    ((tooltip.value - tooltip.invested) / tooltip.invested) *
-                    100
-                  ).toFixed(2)}
-                  %
+              <span className="whitespace-nowrap">
+                <span className="text-neutral-500 dark:text-neutral-400">Invested </span>
+                <span className="font-bold text-neutral-900 dark:text-white">{signedRupees(investedChange)}</span>
+              </span>
+              <span className="whitespace-nowrap">
+                <span className="text-neutral-500 dark:text-neutral-400">Gain </span>
+                <span className={`font-bold ${gainTone(marketChange)}`}>
+                  {signedRupees(marketChange)}
+                  {marketBase > 0 && ` (${signedPct((marketChange / marketBase) * 100)})`}
+                </span>
+              </span>
+            </div>
+          </div>
+          {clearButton}
+          </>
+        ) : hovered ? (
+          <>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1">
+            <span className="font-bold text-neutral-900 dark:text-white whitespace-nowrap">
+              {shortDate(hovered.time)}
+              {pinIndex !== null && (
+                <span className="ml-2 font-medium text-primary-600 dark:text-primary-400">
+                  Now pick a second date
+                </span>
+              )}
+            </span>
+            <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: primaryColor }} />
+                <span className="text-neutral-500 dark:text-neutral-400">{primaryTitle}</span>
+                <span className="font-bold text-neutral-900 dark:text-white">{rupees(hovered.value)}</span>
+              </span>
+              <span className="flex items-center gap-1.5 whitespace-nowrap">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: investedColor }} />
+                <span className="text-neutral-500 dark:text-neutral-400">{investedTitle}</span>
+                <span className="font-bold text-neutral-900 dark:text-white">{rupees(hovered.invested)}</span>
+              </span>
+              {hovered.invested > 0 && (
+                <span className={`font-bold whitespace-nowrap ${gainTone(hoveredGain)}`}>
+                  {signedRupees(hoveredGain)} ({signedPct((hoveredGain / hovered.invested) * 100)})
                 </span>
               )}
             </div>
-            <div className="space-y-1.5 pt-0.5">
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 font-bold text-neutral-800 dark:text-neutral-200">
-                  <span
-                    className="w-2 h-2 rounded-full shrink-0"
-                    style={{ backgroundColor: primaryColor }}
-                  />
-                  {primaryTitle}:
-                </span>
-                <span className="font-mono font-bold text-neutral-900 dark:text-white">
-                  ₹{Math.round(tooltip.value).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 font-medium text-neutral-600 dark:text-neutral-300">
-                  <span
-                    className="w-2 h-1 rounded-sm border-b-2 border-dashed shrink-0"
-                    style={{ borderColor: investedColor }}
-                  />
-                  {investedTitle}:
-                </span>
-                <span className="font-mono font-medium text-neutral-700 dark:text-neutral-300">
-                  ₹{Math.round(tooltip.invested).toLocaleString("en-IN")}
-                </span>
-              </div>
-            </div>
           </div>
-        </div>
-      )}
+          {pinIndex !== null && clearButton}
+          </>
+        ) : (
+          <div className="flex items-center gap-4 font-semibold text-neutral-700 dark:text-neutral-200">
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-[3px] rounded-full" style={{ backgroundColor: primaryColor }} />
+              {primaryTitle}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 border-b-2 border-dashed" style={{ borderColor: investedColor }} />
+              {investedTitle}
+            </span>
+          </div>
+        )}
+      </div>
 
-      {/* Canvas container */}
-      <div
-        ref={containerRef}
-        className="w-full relative select-none"
-        style={{ touchAction: "pan-y" }}
-      />
+      {/* Canvas container, with the two-date comparison band on top */}
+      <div className="relative w-full" style={{ touchAction: "pan-y" }}>
+        <RangeSelectOverlay state={selection} positive={marketChange >= 0} isDark={isDark} />
+        <div
+          ref={containerRef}
+          className="w-full relative select-none cursor-crosshair"
+          style={{ touchAction: "pan-y", WebkitTouchCallout: "none" }}
+        />
+      </div>
 
-      {/* Legend / Status footer */}
-      <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400 mt-2 px-1">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: primaryColor }}
-            />
-            {primaryTitle}
-          </span>
-          <span className="flex items-center gap-1.5 font-medium">
-            <span
-              className="w-2.5 h-1 rounded-sm border-b-2 border-dashed"
-              style={{ borderColor: investedColor }}
-            />
-            {investedTitle}
-          </span>
-        </div>
-        <span className="text-neutral-400">Live Crosshair Tracker</span>
+      <div className="text-[11px] text-neutral-400 mt-2 px-1">
+        <span className="[@media(hover:hover)]:hidden">Slide to read a date • Tap two dates to compare</span>
+        <span className="hidden [@media(hover:hover)]:inline">Hover to read a date • Click two dates or drag to compare</span>
       </div>
     </div>
   );
