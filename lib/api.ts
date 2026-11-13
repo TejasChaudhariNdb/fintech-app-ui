@@ -113,6 +113,31 @@ function checkDemoRestriction() {
   }
 }
 
+/** FastAPI validation errors ([{loc, msg}, ...]) as plain words, e.g. "Annual rate should be 30 or less". */
+function formatErrorDetail(detail: unknown): string {
+  if (Array.isArray(detail)) {
+    const parts = detail.map((d) => {
+      const item = d as { loc?: unknown[]; msg?: string };
+      const field = Array.isArray(item.loc) ? String(item.loc[item.loc.length - 1] ?? "") : "";
+      const label = field ? field.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()) : "";
+      const msg = (item.msg || "is not valid")
+        .replace(/^Value error, /, "")
+        .replace(/^Input should be less than or equal to (\S+)/, "should be $1 or less")
+        .replace(/^Input should be greater than or equal to (\S+)/, "should be $1 or more")
+        .replace(/^Input should be greater than (\S+)/, "should be more than $1")
+        .replace(/^Input should be less than (\S+)/, "should be less than $1")
+        .replace(/^Field required$/, "is required")
+        .replace(/^Input should be /, "should be ");
+      return label ? `${label} ${msg}` : msg;
+    });
+    return parts.join(". ") || "Please check the values you entered.";
+  }
+  if (detail && typeof detail === "object" && "message" in detail) {
+    return String((detail as { message: unknown }).message);
+  }
+  return "Please check the values you entered.";
+}
+
 function handleUnauthorized(endpoint: string) {
   if (typeof window === "undefined") return;
   const isAuthEndpoint = endpoint.startsWith("/auth");
@@ -288,7 +313,7 @@ export const api = {
             const parsed = JSON.parse(text);
             if (parsed && typeof parsed === "object") {
               if (parsed.detail) {
-                errMsg = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
+                errMsg = typeof parsed.detail === "string" ? parsed.detail : formatErrorDetail(parsed.detail);
               } else if (parsed.message) {
                 errMsg = parsed.message;
               }
@@ -932,6 +957,68 @@ export const api = {
     });
     api.clearPortfolioCache();
     return res;
+  },
+  // Real estate feedback: amortization schedule, What-If sale simulator (GET, no side effects), Nifty comparison
+  getRealEstateLoanSchedule: (holdingId: number) => {
+    return api.fetch(`/real-estate/holdings/${holdingId}/loan/schedule`);
+  },
+  // Fix one EMI month: what was actually paid (0 = missed), or reset it to the schedule
+  setLoanPayment: async (holdingId: number, dueDate: string, paidAmount: number, note?: string) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/loan/payments`, {
+      method: "PUT",
+      body: JSON.stringify({ due_date: dueDate, paid_amount: paidAmount, note: note || null }),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  setLoanPaymentsBulk: async (
+    holdingId: number,
+    data: { from_date: string; to_date: string; paid_amount?: number | null; reset?: boolean }
+  ) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/loan/payments/bulk`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  bulkPropertyTransactions: async (holdingId: number, data: { ids: number[]; action: "SET_AMOUNT" | "DELETE"; amount?: number }) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions/bulk`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  // Floating-rate history: replaces the whole list (empty list clears it)
+  saveLoanRateChanges: async (
+    holdingId: number,
+    changes: { effective_date: string; annual_rate: number; new_emi?: number | null }[]
+  ) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/loan/rate-changes`, {
+      method: "PUT",
+      body: JSON.stringify({ changes }),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  resetLoanPayment: async (holdingId: number, dueDate: string) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/loan/payments/${dueDate}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  simulatePropertySale: (holdingId: number, saleValue: number, saleDate: string, assumeRent: boolean) => {
+    const q = new URLSearchParams({
+      sale_value: String(Math.round(saleValue)),
+      sale_date: saleDate,
+      assume_rent: String(assumeRent),
+    });
+    return api.fetch(`/real-estate/holdings/${holdingId}/simulate?${q.toString()}`);
+  },
+  getPropertyBenchmark: (holdingId: number) => {
+    return api.fetch(`/real-estate/holdings/${holdingId}/benchmark`);
   },
   getPropertyTransactions: (holdingId: number) => {
     return api.fetch(`/real-estate/holdings/${holdingId}/transactions`);
