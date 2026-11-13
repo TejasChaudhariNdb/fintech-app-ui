@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useProfile } from "@/context/ProfileContext";
@@ -579,10 +580,9 @@ export default function GoldForm({
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             Purchase Date
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={purchaseDate}
-            onChange={(e) => setPurchaseDate(e.target.value)}
+            onChange={(v) => setPurchaseDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all"
           />
         </div>

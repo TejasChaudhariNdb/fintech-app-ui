@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState } from "react";
 import Modal from "@/components/ui/Modal";
@@ -176,7 +177,7 @@ export default function PropertyLoanModal({
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">First EMI date *</label>
-              <input type="date" value={emiStart} onChange={(e) => setEmiStart(e.target.value)} className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm" />
+              <DatePicker value={emiStart} onChange={(v) => setEmiStart(v)} className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm" />
             </div>
           </div>
           <div>

@@ -1,4 +1,5 @@
 "use client";
+import DatePicker, { todayString } from "@/components/ui/DatePicker";
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
@@ -1693,14 +1694,13 @@ export default function StocksPage() {
                 required
               />
             </div>
-            <Input
+            <DatePicker
               label="Date"
-              type="date"
               value={stockForm.date}
-              onChange={(e) =>
-                setStockForm({ ...stockForm, date: e.target.value })
+              onChange={(v) =>
+                setStockForm({ ...stockForm, date: v })
               }
-              max={new Date().toISOString().split("T")[0]}
+              max={todayString()}
               required
             />
             {manualError && (
@@ -2023,15 +2023,14 @@ export default function StocksPage() {
             required
             autoComplete="off"
           />
-          <Input
+          <DatePicker
             label="Investment Date"
-            type="date"
             value={editingStock?.acquisition_date || ""}
-            onChange={(e) =>
-              setEditingStock({ ...editingStock, acquisition_date: e.target.value })
+            onChange={(v) =>
+              setEditingStock({ ...editingStock, acquisition_date: v })
             }
             required
-            max={new Date().toISOString().split("T")[0]}
+            max={todayString()}
           />
           <Button type="submit" className="w-full">
             Update Holding

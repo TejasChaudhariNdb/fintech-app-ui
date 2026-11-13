@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -424,10 +425,9 @@ export default function DematReconcileModal({
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
                         Credit Date
                       </label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={syncDate}
-                        onChange={(e) => setSyncDate(e.target.value)}
+                        onChange={(v) => setSyncDate(v)}
                         className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-amber-500"
                       />
                     </div>

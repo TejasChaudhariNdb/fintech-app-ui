@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -244,10 +245,9 @@ export default function CorporateActionModal({
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Record / Ex-Date
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={actionDate}
-                onChange={(e) => setActionDate(e.target.value)}
+                onChange={(v) => setActionDate(v)}
                 className="w-full px-3 py-2 rounded-xl text-xs bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-cyan-500"
                 required
               />
