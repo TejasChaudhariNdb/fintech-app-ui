@@ -7,6 +7,8 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import GoldModal from "@/components/features/GoldModal";
+import { GoldCategoryTile } from "@/components/features/GoldCategoryIcon";
+import GoldPurchaseModal, { GoldPurchaseSave } from "@/components/features/GoldPurchaseModal";
 import GoldRateSource, { GoldRateInfo } from "@/components/features/GoldRateSource";
 import {
   Coins,
@@ -16,6 +18,7 @@ import {
   RefreshCw,
   Loader2,
   ChevronDown,
+  StickyNote,
 } from "lucide-react";
 
 interface GoldHoldingItem {
@@ -58,6 +61,23 @@ interface GoldPurchaseItem {
   gain: number;
   return_pct: number;
   xirr: number | null;
+  notes?: string | null;
+}
+
+/** A remark the user wrote (shop, platform, who it is for), set apart from the figures. */
+function NoteLine({ text }: { text?: string | null }) {
+  if (!text?.trim()) return null;
+  return (
+    <div className="mt-1 flex items-start gap-1 text-[11px] font-medium text-sky-700 dark:text-sky-400 break-words">
+      <StickyNote size={11} className="mt-[2px] shrink-0" />
+      <span>{text}</span>
+    </div>
+  );
+}
+
+/** Grams without float noise: 0.30000000000000004 -> 0.3. */
+function grams(g: number): string {
+  return String(Number(g.toFixed(4)));
 }
 
 interface ReturnStats {
@@ -141,6 +161,7 @@ export default function GoldHoldingsPage() {
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [openHistory, setOpenHistory] = useState<Record<number, boolean>>({});
+  const [editingPurchase, setEditingPurchase] = useState<{ holdingId: number; purchase: GoldPurchaseItem } | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -236,6 +257,29 @@ export default function GoldHoldingsPage() {
       showToast("Gold added");
     }
     await loadData();
+  };
+
+  const handleSavePurchase = async (data: GoldPurchaseSave) => {
+    if (!editingPurchase) return;
+    await api.updateGoldPurchase(editingPurchase.holdingId, editingPurchase.purchase.id, data);
+    showToast("Purchase updated");
+    await loadData();
+  };
+
+  const handleDeletePurchase = async (holdingId: number, purchase: GoldPurchaseItem) => {
+    if (
+      !confirm(
+        `Remove the ${formatDatePretty(purchase.purchase_date)} purchase of ${grams(purchase.weight_grams)}g? The holding's weight and invested amount will be reduced.`
+      )
+    )
+      return;
+    try {
+      await api.deleteGoldPurchase(holdingId, purchase.id);
+      showToast("Purchase removed");
+      await loadData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to remove purchase");
+    }
   };
 
   const handleDeleteHolding = async (id: number) => {
@@ -428,9 +472,7 @@ export default function GoldHoldingsPage() {
                       aria-expanded={isOpen}
                       className="w-full text-left p-4 sm:p-5 flex items-center gap-3 hover:bg-neutral-50/70 dark:hover:bg-white/[0.02] transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-black text-sm">
-                        {cat.category.charAt(0)}
-                      </div>
+                      <GoldCategoryTile category={cat.category} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <h4 className="font-bold text-neutral-900 dark:text-white text-sm sm:text-base">{cat.category}</h4>
@@ -477,7 +519,7 @@ export default function GoldHoldingsPage() {
                                     {item.purity}
                                   </span>
                                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/10 text-neutral-700 dark:text-neutral-300">
-                                    {item.weight_grams}g
+                                    {grams(item.weight_grams)}g
                                   </span>
                                 </div>
                                 <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 tabular-nums flex gap-x-2 flex-wrap">
@@ -491,6 +533,8 @@ export default function GoldHoldingsPage() {
                                   </span>
                                   <ReturnLine stats={item} absPct={item.return_pct} />
                                 </div>
+                                {/* The holding's own note; for a multi-purchase holding it is shown unless a purchase already carries it. */}
+                                {!item.purchases?.some((p) => p.notes === item.notes) && <NoteLine text={item.notes} />}
                                 {item.purchases?.length > 1 && (
                                   <button
                                     onClick={() => setOpenHistory((prev) => ({ ...prev, [item.id]: !prev[item.id] }))}
@@ -537,21 +581,40 @@ export default function GoldHoldingsPage() {
                               {item.purchases?.length > 1 && openHistory[item.id] && (
                                 <ol className="mt-2.5 ml-1 pl-3 border-l-2 border-amber-500/30 space-y-2">
                                   {item.purchases.map((p) => (
-                                    <li key={p.id} className="flex items-start justify-between gap-3 text-[11px] tabular-nums">
-                                      <div className="min-w-0">
+                                    <li key={p.id} className="flex items-start justify-between gap-2 text-[11px] tabular-nums">
+                                      <div className="min-w-0 flex-1">
                                         <div className="font-semibold text-neutral-800 dark:text-neutral-200">
-                                          {formatDatePretty(p.purchase_date)} · {p.weight_grams}g
+                                          {formatDatePretty(p.purchase_date)} · {grams(p.weight_grams)}g
                                         </div>
                                         <div className="text-neutral-500 dark:text-neutral-400">
                                           @ ₹{Math.round(p.price_per_gram).toLocaleString("en-IN")}/g · Invested{" "}
                                           <PrivacyMask>₹{formatINRShort(p.amount)}</PrivacyMask>
                                         </div>
+                                        <NoteLine text={p.notes} />
                                       </div>
                                       <div className="text-right shrink-0">
                                         <div className="font-semibold text-neutral-900 dark:text-white">
                                           <PrivacyMask>₹{formatINRShort(p.current_value)}</PrivacyMask>
                                         </div>
                                         <ReturnLine stats={p} absPct={p.return_pct} />
+                                      </div>
+                                      <div className="flex items-center gap-0.5 shrink-0 -mr-1.5">
+                                        <button
+                                          onClick={() => setEditingPurchase({ holdingId: item.id, purchase: p })}
+                                          className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors"
+                                          title="Edit purchase"
+                                          aria-label={`Edit purchase of ${formatDatePretty(p.purchase_date)}`}
+                                        >
+                                          <Edit2 size={13} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeletePurchase(item.id, p)}
+                                          className="p-1.5 text-neutral-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                                          title="Remove purchase"
+                                          aria-label={`Remove purchase of ${formatDatePretty(p.purchase_date)}`}
+                                        >
+                                          <Trash2 size={13} />
+                                        </button>
                                       </div>
                                     </li>
                                   ))}
@@ -576,6 +639,7 @@ export default function GoldHoldingsPage() {
         onSave={handleSaveHolding}
         rates={rates}
         existingCategories={categories.map((c) => c.category)}
+        amountsLocked={(editingItem?.purchases?.length || 0) > 1}
         initialData={
           editingItem
             ? {
@@ -593,6 +657,12 @@ export default function GoldHoldingsPage() {
               }
             : null
         }
+      />
+
+      <GoldPurchaseModal
+        purchase={editingPurchase?.purchase ?? null}
+        onClose={() => setEditingPurchase(null)}
+        onSave={handleSavePurchase}
       />
 
       {/* ── FLOATING TOAST NOTIFICATION (MATCHING SCREENSHOT 4) ── */}

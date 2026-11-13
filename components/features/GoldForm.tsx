@@ -1,5 +1,7 @@
 "use client";
 import DatePicker from "@/components/ui/DatePicker";
+import GoldWeightInput from "@/components/features/GoldWeightInput";
+import GoldCategoryIcon from "@/components/features/GoldCategoryIcon";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useProfile } from "@/context/ProfileContext";
@@ -38,15 +40,9 @@ interface GoldFormProps {
   isSubmitting?: boolean;
   /** Categories the user already has, offered first in the picker. */
   existingCategories?: string[];
+  /** A holding made of several purchases: its weight, price and date are edited on each purchase. */
+  amountsLocked?: boolean;
 }
-
-const WEIGHT_CHIPS = [
-  { label: "+1g", add: 1 },
-  { label: "+5g", add: 5 },
-  { label: "+10g", add: 10 },
-  { label: "+20g", add: 20 },
-  { label: "+50g", add: 50 },
-];
 
 export default function GoldForm({
   initialData,
@@ -55,6 +51,7 @@ export default function GoldForm({
   onCancel,
   isSubmitting = false,
   existingCategories = [],
+  amountsLocked = false,
 }: GoldFormProps) {
   const { profiles, activeProfileId } = useProfile();
 
@@ -99,7 +96,6 @@ export default function GoldForm({
   }, [activeProfileId, profiles, initialData]);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
 
   const categoryOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -171,12 +167,6 @@ export default function GoldForm({
 
   const handleUseLiveRate = () => {
     setPriceStr(String(Math.round(currentLiveRate)));
-  };
-
-  const handleWeightChip = (addGrams: number) => {
-    const cur = parseFloat(weightStr) || 0;
-    const next = Math.round((cur + addGrams) * 100) / 100;
-    setWeightStr(String(next));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -315,7 +305,10 @@ export default function GoldForm({
                     : "text-neutral-700 dark:text-neutral-300"
                 }`}
               >
-                <span>{opt}</span>
+                <span className="flex items-center gap-2.5">
+                  <GoldCategoryIcon category={opt} size={16} className="text-amber-600 dark:text-amber-400" />
+                  {opt}
+                </span>
                 {exactOption === opt && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
               </li>
             ))}
@@ -342,6 +335,12 @@ export default function GoldForm({
         )}
       </div>
 
+      {amountsLocked ? (
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl px-3.5 py-2.5">
+          This holding has several purchases. Edit the weight, price or date on each purchase in the list.
+        </p>
+      ) : (
+      <>
       {/* ── PURITY SELECTOR ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -414,59 +413,8 @@ export default function GoldForm({
         </div>
       </div>
 
-      {/* ── WEIGHT (GRAMS) ── */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-            Weight in Grams <span className="text-red-500">*</span>
-          </label>
-          <span className="text-[11px] text-neutral-500">
-            {weightNum > 0 ? `${(weightNum / 8).toFixed(2)} Sovereigns` : ""}
-          </span>
-        </div>
-
-        <div className="relative">
-          <input
-            type="number"
-            step="any"
-            min="0.01"
-            inputMode="decimal"
-            placeholder="0.00"
-            value={weightStr}
-            onChange={(e) => setWeightStr(e.target.value)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl px-4 py-3 text-lg font-bold text-neutral-900 dark:text-white outline-none transition-all tabular-nums placeholder:text-neutral-300 dark:placeholder:text-neutral-600 pr-12"
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-400">
-            grams
-          </span>
-        </div>
-
-        {/* Quick Weight Chips */}
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span className="text-[10px] text-neutral-400 uppercase font-medium mr-1">
-            Add:
-          </span>
-          {WEIGHT_CHIPS.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => handleWeightChip(chip.add)}
-              className="px-2.5 py-1 rounded-lg text-xs font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 transition-colors"
-            >
-              {chip.label}
-            </button>
-          ))}
-          {weightStr && (
-            <button
-              type="button"
-              onClick={() => setWeightStr("")}
-              className="text-[11px] text-neutral-400 hover:text-red-500 ml-auto transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
+      {/* ── WEIGHT (grams or milligrams; stored in grams) ── */}
+      <GoldWeightInput grams={weightStr} onChange={setWeightStr} />
 
       {/* ── PURCHASE PRICE & MAKING CHARGES ── */}
       <div className={`grid grid-cols-1 gap-3.5 ${isPure24K ? "" : "sm:grid-cols-2"}`}>
@@ -574,8 +522,12 @@ export default function GoldForm({
         </div>
       )}
 
+      </>
+      )}
+
       {/* ── PURCHASE DATE & NOTES ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className={`grid grid-cols-1 gap-3.5 ${amountsLocked ? "" : "sm:grid-cols-2"}`}>
+        {!amountsLocked && (
         <div>
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             Purchase Date
@@ -586,6 +538,7 @@ export default function GoldForm({
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all"
           />
         </div>
+        )}
 
         <div>
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
