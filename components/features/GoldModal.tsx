@@ -14,6 +14,7 @@ interface GoldModalProps {
     rate_18k_per_gram?: number;
   } | null;
   initialData?: GoldHoldingFormData | null;
+  existingCategories?: string[];
 }
 
 export default function GoldModal({
@@ -22,6 +23,7 @@ export default function GoldModal({
   onSave,
   rates,
   initialData,
+  existingCategories,
 }: GoldModalProps) {
   const isEditing = Boolean(initialData?.id);
 
@@ -35,6 +37,7 @@ export default function GoldModal({
         <GoldForm
           initialData={initialData}
           rates={rates}
+          existingCategories={existingCategories}
           onSave={async (data) => {
             await onSave(data);
             onClose();
