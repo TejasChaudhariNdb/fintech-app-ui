@@ -7,6 +7,7 @@ import Link from "next/link";
 import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import GoldModal from "@/components/features/GoldModal";
+import { GoldCategoryTile } from "@/components/features/GoldCategoryIcon";
 import GoldPurchaseModal, { GoldPurchaseSave } from "@/components/features/GoldPurchaseModal";
 import GoldRateSource, { GoldRateInfo } from "@/components/features/GoldRateSource";
 import {
@@ -471,9 +472,7 @@ export default function GoldHoldingsPage() {
                       aria-expanded={isOpen}
                       className="w-full text-left p-4 sm:p-5 flex items-center gap-3 hover:bg-neutral-50/70 dark:hover:bg-white/[0.02] transition-colors"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 font-black text-sm">
-                        {cat.category.charAt(0)}
-                      </div>
+                      <GoldCategoryTile category={cat.category} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-2 flex-wrap">
                           <h4 className="font-bold text-neutral-900 dark:text-white text-sm sm:text-base">{cat.category}</h4>

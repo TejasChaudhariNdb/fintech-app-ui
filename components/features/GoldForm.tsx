@@ -1,6 +1,7 @@
 "use client";
 import DatePicker from "@/components/ui/DatePicker";
 import GoldWeightInput from "@/components/features/GoldWeightInput";
+import GoldCategoryIcon from "@/components/features/GoldCategoryIcon";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useProfile } from "@/context/ProfileContext";
@@ -304,7 +305,10 @@ export default function GoldForm({
                     : "text-neutral-700 dark:text-neutral-300"
                 }`}
               >
-                <span>{opt}</span>
+                <span className="flex items-center gap-2.5">
+                  <GoldCategoryIcon category={opt} size={16} className="text-amber-600 dark:text-amber-400" />
+                  {opt}
+                </span>
                 {exactOption === opt && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
               </li>
             ))}
