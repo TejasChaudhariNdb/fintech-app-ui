@@ -610,74 +610,6 @@ export default function MutualFundsPage() {
         onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
       />
 
-      {/* BUG-037: summary cards, same layout as the stocks summary */}
-      {schemes.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total Value</p>
-            <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
-              <PrivacyMask>{fmtInr(mfTotals.current)}</PrivacyMask>
-            </p>
-          </Card>
-          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total Investment</p>
-            <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
-              <PrivacyMask>{fmtInr(mfTotals.invested)}</PrivacyMask>
-            </p>
-          </Card>
-          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total P&amp;L</p>
-            <div className={`flex items-baseline gap-1.5 flex-wrap ${mfPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
-              <p className="text-lg sm:text-2xl font-bold">
-                <PrivacyMask>
-                  {mfPnl >= 0 ? "+" : ""}
-                  {fmtInr(Math.abs(mfPnl))}
-                </PrivacyMask>
-              </p>
-              <p className="text-xs sm:text-sm font-medium">
-                ({mfPnl >= 0 ? "+" : ""}
-                {fmtPct(mfPnlPct)})
-              </p>
-            </div>
-          </Card>
-          <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
-            <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">XIRR (current holdings)</p>
-            <p className={`text-lg sm:text-2xl font-bold ${mfXirr === null ? "text-neutral-500" : mfXirr >= 0 ? "text-green-500" : "text-red-500"}`}>
-              {mfXirr === null ? "--" : fmtPct(mfXirr)}
-            </p>
-            {mfLifetimeXirr !== null && (
-              <p
-                className="text-xs text-neutral-500 mt-1"
-                title="Includes funds you have fully redeemed, so their past returns count too."
-              >
-                Incl. redeemed funds:{" "}
-                <span className={`font-semibold ${mfLifetimeXirr >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                  {mfLifetimeXirr === 0 ? "—" : fmtPct(mfLifetimeXirr)}
-                </span>
-              </p>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* BUG-038: XIRR over time */}
-      {schemes.length > 0 && xirrPoints.length > 1 && (
-        <div className="mb-6">
-          <MfXirrChart points={xirrPoints} />
-        </div>
-      )}
-      {/* The chart starts one year after the first investment. Say so, rather than showing nothing. */}
-      {schemes.length > 0 && xirrPoints.length <= 1 && xirrFirstInvestment && (
-        <div className="mb-6 rounded-2xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-surface p-4 text-sm text-neutral-600 dark:text-neutral-300">
-          <p className="font-semibold text-neutral-800 dark:text-neutral-100">XIRR over time</p>
-          <p className="mt-1 text-xs text-neutral-500">
-            The chart appears one year after your first investment (
-            {new Date(xirrFirstInvestment).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-            ). Until then, the XIRR above is the only figure.
-          </p>
-        </div>
-      )}
-
       {/* Sub-navigation: Holdings vs Visual Analytics */}
       <div className="flex items-center justify-between pb-1">
         <div className="inline-flex p-1 bg-neutral-100 dark:bg-white/5 rounded-2xl border border-neutral-200/60 dark:border-white/5">
@@ -720,6 +652,24 @@ export default function MutualFundsPage() {
             selectedRange={journeyRange}
             isRefetching={isJourneyRefetching}
           />
+
+          {/* BUG-038: XIRR over time */}
+          {schemes.length > 0 && xirrPoints.length > 1 && (
+            <div className="mb-6">
+              <MfXirrChart points={xirrPoints} />
+            </div>
+          )}
+          {/* The chart starts one year after the first investment. Say so, rather than showing nothing. */}
+          {schemes.length > 0 && xirrPoints.length <= 1 && xirrFirstInvestment && (
+            <div className="mb-6 rounded-2xl border border-neutral-200 dark:border-white/5 bg-white dark:bg-surface p-4 text-sm text-neutral-600 dark:text-neutral-300">
+              <p className="font-semibold text-neutral-800 dark:text-neutral-100">XIRR over time</p>
+              <p className="mt-1 text-xs text-neutral-500">
+                The chart appears one year after your first investment (
+                {new Date(xirrFirstInvestment).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                ). Until then, the XIRR on the Holdings tab is the only figure.
+              </p>
+            </div>
+          )}
 
           <Card className="p-6 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
             <div className="flex flex-col gap-5">
@@ -947,6 +897,56 @@ export default function MutualFundsPage() {
             </button>
           </div>
         </div>
+
+        {/* BUG-037: summary cards, same layout as the stocks summary */}
+        {schemes.length > 0 && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 px-1">
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total Value</p>
+              <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
+                <PrivacyMask>{fmtInr(mfTotals.current)}</PrivacyMask>
+              </p>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total Investment</p>
+              <p className="text-lg sm:text-2xl font-bold text-neutral-900 dark:text-white">
+                <PrivacyMask>{fmtInr(mfTotals.invested)}</PrivacyMask>
+              </p>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">Total P&amp;L</p>
+              <div className={`flex items-baseline gap-1.5 flex-wrap ${mfPnl >= 0 ? "text-green-500" : "text-red-500"}`}>
+                <p className="text-lg sm:text-2xl font-bold">
+                  <PrivacyMask>
+                    {mfPnl >= 0 ? "+" : ""}
+                    {fmtInr(Math.abs(mfPnl))}
+                  </PrivacyMask>
+                </p>
+                <p className="text-xs sm:text-sm font-medium">
+                  ({mfPnl >= 0 ? "+" : ""}
+                  {fmtPct(mfPnlPct)})
+                </p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">XIRR (current holdings)</p>
+              <p className={`text-lg sm:text-2xl font-bold ${mfXirr === null ? "text-neutral-500" : mfXirr >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {mfXirr === null ? "--" : fmtPct(mfXirr)}
+              </p>
+              {mfLifetimeXirr !== null && (
+                <p
+                  className="text-xs text-neutral-500 mt-1"
+                  title="Includes funds you have fully redeemed, so their past returns count too."
+                >
+                  Incl. redeemed funds:{" "}
+                  <span className={`font-semibold ${mfLifetimeXirr >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                    {mfLifetimeXirr === 0 ? "—" : fmtPct(mfLifetimeXirr)}
+                  </span>
+                </p>
+              )}
+            </Card>
+          </div>
+        )}
 
         {/* Search and Filter */}
         <div className="flex flex-col md:flex-row gap-2 px-1 items-stretch md:items-center">
