@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -907,12 +908,11 @@ export default function StockDetailPage() {
               }
               required
             />
-            <Input
+            <DatePicker
               label="Date"
-              type="date"
               value={editingTx.date}
-              onChange={(e) =>
-                setEditingTx({ ...editingTx, date: e.target.value })
+              onChange={(v) =>
+                setEditingTx({ ...editingTx, date: v })
               }
               required
             />
@@ -984,12 +984,11 @@ export default function StockDetailPage() {
             }
             required
           />
-          <Input
+          <DatePicker
             label="Transaction Date"
-            type="date"
             value={newTxForm.date}
-            onChange={(e) =>
-              setNewTxForm({ ...newTxForm, date: e.target.value })
+            onChange={(v) =>
+              setNewTxForm({ ...newTxForm, date: v })
             }
             required
           />

@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import { useState, useEffect } from "react";
 import Modal from "../ui/Modal";
@@ -536,13 +537,11 @@ export default function AddTransactionModal({
             )}
           </div>
 
-          <Input
-            type="date"
+          <DatePicker
             label="Date"
             value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            onChange={(v) => setFormData({ ...formData, date: v })}
             required
-            className="dark:bg-white/5"
           />
 
           <div className="grid grid-cols-2 gap-4">

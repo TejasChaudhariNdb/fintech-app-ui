@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState } from "react";
 import { X, Check, Loader2, Calendar, Building2, IndianRupee } from "lucide-react";
@@ -164,10 +165,9 @@ export default function InterestReceiptEditModal({
               <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1">
                 Date Received
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={dateReceived}
-                onChange={(e) => setDateReceived(e.target.value)}
+                onChange={(v) => setDateReceived(v)}
                 className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3 py-2 text-xs font-medium text-neutral-900 dark:text-white outline-none"
               />
             </div>

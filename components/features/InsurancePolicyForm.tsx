@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect } from "react";
 import { useProfile } from "@/context/ProfileContext";
@@ -386,10 +387,9 @@ export default function InsurancePolicyForm({
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             Policy Start Date <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(v) => setStartDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
           />
         </div>
@@ -398,10 +398,10 @@ export default function InsurancePolicyForm({
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             Next Premium Due Date
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={nextDueDate}
-            onChange={(e) => setNextDueDate(e.target.value)}
+            clearable
+            onChange={(v) => setNextDueDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
           />
         </div>
@@ -410,10 +410,10 @@ export default function InsurancePolicyForm({
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             Coverage End Date
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            clearable
+            onChange={(v) => setEndDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
           />
         </div>

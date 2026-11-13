@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect } from "react";
 import { useProfile } from "@/context/ProfileContext";
@@ -11,7 +12,6 @@ import {
   MapPin,
   TrendingUp,
   Percent,
-  Calendar,
   Sparkles,
   Check,
   AlertCircle,
@@ -349,12 +349,10 @@ export default function RealEstateForm({
             Purchase Date <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" size={16} />
-            <input
-              type="date"
+            <DatePicker
               value={purchaseDate}
-              onChange={(e) => setPurchaseDate(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
+              onChange={(v) => setPurchaseDate(v)}
+              className="w-full px-3 py-2 rounded-xl bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 text-sm font-semibold outline-none transition-all dark:text-white"
               required
             />
           </div>

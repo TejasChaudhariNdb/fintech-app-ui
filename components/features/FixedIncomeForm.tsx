@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect } from "react";
 import { useProfile } from "@/context/ProfileContext";
@@ -602,10 +603,9 @@ export default function FixedIncomeForm({
               <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5 uppercase tracking-wider">
                 Balance As-Of Date <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={balanceAsOfDate}
-                onChange={(e) => setBalanceAsOfDate(e.target.value)}
+                onChange={(v) => setBalanceAsOfDate(v)}
                 className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
               />
               <p className="text-[11px] text-neutral-500 mt-1">
@@ -821,10 +821,9 @@ export default function FixedIncomeForm({
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             {isPPF ? "Account Opening Date" : "Deposit Start Date"} <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(v) => setStartDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
           />
         </div>
@@ -833,10 +832,9 @@ export default function FixedIncomeForm({
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
             {isPPF ? "Maturity / Extension Date" : "Maturity Date"} <span className="text-red-500">*</span>
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={maturityDate}
-            onChange={(e) => setMaturityDate(e.target.value)}
+            onChange={(v) => setMaturityDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
           />
         </div>

@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -1346,12 +1347,13 @@ export default function TradebookImportModal({
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={caNewDate}
-                    onChange={(e) => setCaNewDate(e.target.value)}
+                    onChange={(v) => setCaNewDate(v)}
                     aria-label="Ex-date"
-                    className="px-2 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white"
+                    placeholder="Ex-date"
+                    wrapperClassName="!w-auto"
+                    className="min-w-[9.5rem] px-2 py-1.5 rounded-lg bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white"
                   />
                   <input
                     type="number"
@@ -1545,10 +1547,9 @@ export default function TradebookImportModal({
                       <label className="block text-[10px] font-bold text-neutral-500 uppercase mb-1">
                         Trade Date
                       </label>
-                      <input
-                        type="date"
+                      <DatePicker
                         value={manualDate}
-                        onChange={(e) => setManualDate(e.target.value)}
+                        onChange={(v) => setManualDate(v)}
                         className="w-full px-2.5 py-1.5 rounded-xl text-xs bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-primary-500"
                       />
                     </div>

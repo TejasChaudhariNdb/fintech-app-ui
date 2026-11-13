@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -875,11 +876,10 @@ export default function PropertyCashFlowModal({
                 <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
                   TRANSACTION DATE *
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   required
                   value={dateStr}
-                  onChange={(e) => setDateStr(e.target.value)}
+                  onChange={(v) => setDateStr(v)}
                   className="w-full px-3.5 py-2.5 bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-sm font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -1011,11 +1011,10 @@ export default function PropertyCashFlowModal({
                   <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
                     FROM (START MONTH) *
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     required
                     value={recurringStartDate}
-                    onChange={(e) => setRecurringStartDate(e.target.value)}
+                    onChange={(v) => setRecurringStartDate(v)}
                     className="w-full px-3 py-2.5 bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -1024,11 +1023,10 @@ export default function PropertyCashFlowModal({
                   <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5">
                     TO (END MONTH) *
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     required
                     value={recurringEndDate}
-                    onChange={(e) => setRecurringEndDate(e.target.value)}
+                    onChange={(v) => setRecurringEndDate(v)}
                     className="w-full px-3 py-2.5 bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-xs font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>

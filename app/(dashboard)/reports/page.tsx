@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
@@ -657,10 +658,10 @@ export default function ReportsPage() {
                         <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
                           Buy Date
                         </label>
-                        <input
-                          type="date"
+                        <DatePicker
                           value={editBoughtDate}
-                          onChange={(e) => setEditBoughtDate(e.target.value)}
+                          clearable
+                          onChange={(v) => setEditBoughtDate(v)}
                           className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
                         />
                       </div>
@@ -670,10 +671,10 @@ export default function ReportsPage() {
                         <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
                           Sale Date
                         </label>
-                        <input
-                          type="date"
+                        <DatePicker
                           value={editSoldDate}
-                          onChange={(e) => setEditSoldDate(e.target.value)}
+                          clearable
+                          onChange={(v) => setEditSoldDate(v)}
                           className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
                         />
                       </div>

@@ -1,4 +1,5 @@
 "use client";
+import DatePicker from "@/components/ui/DatePicker";
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
@@ -450,12 +451,11 @@ export default function SchemeDetailPage({
                     }
                     required
                 />
-                <Input
+                <DatePicker
                     label="Date"
-                    type="date"
                     value={editingTx.date}
-                    onChange={(e) =>
-                        setEditingTx({ ...editingTx, date: e.target.value })
+                    onChange={(v) =>
+                        setEditingTx({ ...editingTx, date: v })
                     }
                     required
                 />
