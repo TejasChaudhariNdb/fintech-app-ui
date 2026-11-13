@@ -757,6 +757,22 @@ export const api = {
     api.clearPortfolioCache();
     return res;
   },
+  // One purchase (top-up) inside a digital gold holding; the holding's totals follow on the backend.
+  updateGoldPurchase: async (holdingId: number, purchaseId: number, data: Record<string, unknown>) => {
+    const res = await api.fetch(`/gold/holdings/${holdingId}/purchases/${purchaseId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteGoldPurchase: async (holdingId: number, purchaseId: number) => {
+    const res = await api.fetch(`/gold/holdings/${holdingId}/purchases/${purchaseId}`, {
+      method: "DELETE",
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
 
   // Fixed Income & Deposits
   getFixedIncomeHoldings: (profileId?: string) => {

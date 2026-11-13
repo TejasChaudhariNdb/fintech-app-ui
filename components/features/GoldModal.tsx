@@ -15,6 +15,7 @@ interface GoldModalProps {
   } | null;
   initialData?: GoldHoldingFormData | null;
   existingCategories?: string[];
+  amountsLocked?: boolean;
 }
 
 export default function GoldModal({
@@ -24,6 +25,7 @@ export default function GoldModal({
   rates,
   initialData,
   existingCategories,
+  amountsLocked,
 }: GoldModalProps) {
   const isEditing = Boolean(initialData?.id);
 
@@ -38,6 +40,7 @@ export default function GoldModal({
           initialData={initialData}
           rates={rates}
           existingCategories={existingCategories}
+          amountsLocked={amountsLocked}
           onSave={async (data) => {
             await onSave(data);
             onClose();
