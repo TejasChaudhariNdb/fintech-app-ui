@@ -1,13 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useProfile } from "@/context/ProfileContext";
-import { Sparkles, TrendingUp, TrendingDown, Check, Coins } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Check, Coins, ChevronDown, Plus } from "lucide-react";
+import {
+  COMMON_GOLD_CATEGORIES,
+  assetTypeForCategory,
+  cleanGoldCategory,
+  inferGoldCategory,
+  isPure24KCategory,
+} from "@/lib/goldCategories";
 
 export interface GoldHoldingFormData {
   id?: number;
   asset_name: string;
   asset_type: string;
+  category?: string;
   purity: "24K" | "22K" | "18K";
   weight_grams: number;
   purchase_price_per_gram: number;
@@ -27,22 +35,13 @@ interface GoldFormProps {
   onSave: (data: GoldHoldingFormData) => Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
+  /** Categories the user already has, offered first in the picker. */
+  existingCategories?: string[];
 }
-
-const PRESET_NAMES = [
-  "Wedding Chain",
-  "Gold Bar",
-  "Sovereign Coin",
-  "Bangles",
-  "Earrings",
-  "Mangalsutra",
-  "Gold Ring",
-];
 
 const WEIGHT_CHIPS = [
   { label: "+1g", add: 1 },
   { label: "+5g", add: 5 },
-  { label: "+8g (1 Sov)", add: 8 },
   { label: "+10g", add: 10 },
   { label: "+20g", add: 20 },
   { label: "+50g", add: 50 },
@@ -54,15 +53,20 @@ export default function GoldForm({
   onSave,
   onCancel,
   isSubmitting = false,
+  existingCategories = [],
 }: GoldFormProps) {
   const { profiles, activeProfileId } = useProfile();
 
-  const [purity, setPurity] = useState<"24K" | "22K" | "18K">(
-    initialData?.purity || "22K"
+  const [chosenPurity, setPurity] = useState<"24K" | "22K" | "18K">(
+    initialData?.purity || "24K"
   );
-  const [assetType, setAssetType] = useState<string>(
-    initialData?.asset_type || "JEWELRY"
-  );
+  // One field for what the gold is. Picking from the list ("Chain") or typing ("Wedding chain") both work:
+  // the category is the picked option, a keyword in the text, or else the typed text as a new category.
+  const initialItem = initialData?.asset_name || "";
+  const [item, setItem] = useState<string>(initialItem);
+  const [listOpen, setListOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const itemInputRef = useRef<HTMLInputElement>(null);
   const [weightStr, setWeightStr] = useState<string>(
     initialData ? String(initialData.weight_grams) : ""
   );
@@ -71,9 +75,6 @@ export default function GoldForm({
   );
   const [makingChargesStr, setMakingChargesStr] = useState<string>(
     initialData?.making_charges !== undefined ? String(initialData.making_charges) : "0"
-  );
-  const [assetName, setAssetName] = useState<string>(
-    initialData?.asset_name || ""
   );
   const [purchaseDate, setPurchaseDate] = useState<string>(
     initialData?.purchase_date || new Date().toISOString().split("T")[0]
@@ -98,6 +99,56 @@ export default function GoldForm({
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of [...existingCategories, ...COMMON_GOLD_CATEGORIES]) {
+      if (c && !seen.has(c.toLowerCase())) {
+        seen.add(c.toLowerCase());
+        out.push(c);
+      }
+    }
+    return out;
+  }, [existingCategories]);
+
+  const query = item.trim().toLowerCase();
+  const filteredOptions = query ? categoryOptions.filter((c) => c.toLowerCase().includes(query)) : categoryOptions;
+  const exactOption = categoryOptions.find((c) => c.toLowerCase() === query);
+
+  const category = useMemo(() => {
+    // An unchanged name keeps the category already saved on the holding.
+    if (initialData?.category && item.trim() === initialItem.trim()) return initialData.category;
+    if (!query) return "";
+    return exactOption || inferGoldCategory(item) || cleanGoldCategory(item);
+  }, [item, query, exactOption, initialData?.category, initialItem]);
+
+  // Digital gold and SGBs are always 24K with no making charges.
+  const isPure24K = isPure24KCategory(category);
+  const purity = isPure24K ? "24K" : chosenPurity;
+
+  const chooseOption = (value: string) => {
+    setItem(value);
+    setListOpen(false);
+  };
+
+  const handleItemKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setListOpen(true);
+      setHighlight((h) => Math.min(h + 1, Math.max(filteredOptions.length - 1, 0)));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === "Enter" && listOpen) {
+      e.preventDefault();
+      if (filteredOptions[highlight]) chooseOption(filteredOptions[highlight]);
+      else setListOpen(false);
+    } else if (e.key === "Escape") {
+      setListOpen(false);
+    }
+  };
+
   // Live rates based on selected purity
   const currentLiveRate =
     purity === "24K"
@@ -110,7 +161,7 @@ export default function GoldForm({
 
   const weightNum = parseFloat(weightStr) || 0;
   const priceNum = parseFloat(priceStr) || 0;
-  const makingNum = parseFloat(makingChargesStr) || 0;
+  const makingNum = isPure24K ? 0 : parseFloat(makingChargesStr) || 0;
 
   const totalInvested = weightNum * priceNum + makingNum;
   const currentMarketValue = weightNum * currentLiveRate;
@@ -141,9 +192,12 @@ export default function GoldForm({
     }
 
     // The weight is shown on its own chip. Putting it in the name goes stale when the weight is edited.
-    const finalName =
-      assetName.trim() ||
-      `${purity} ${assetType === "JEWELRY" ? "Jewelry" : "Gold"}`;
+    if (!item.trim()) {
+      setErrorMsg("Please choose or type what this gold is, e.g. Chain or Digital Gold.");
+      return;
+    }
+    const finalCategory = category || "Other Jewellery";
+    const finalName = item.trim();
 
     const resolvedProfileId = selectedProfileId
       ? parseInt(selectedProfileId)
@@ -155,7 +209,8 @@ export default function GoldForm({
       await onSave({
         id: initialData?.id,
         asset_name: finalName,
-        asset_type: assetType,
+        asset_type: assetTypeForCategory(finalCategory),
+        category: finalCategory,
         purity,
         weight_grams: weightNum,
         purchase_price_per_gram: priceNum,
@@ -191,6 +246,101 @@ export default function GoldForm({
         </div>
       )}
 
+      {/* ── WHAT IS IT: one type-ahead field for the name and category ── */}
+      <div className="relative">
+        <label
+          htmlFor="gold-item"
+          className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider"
+        >
+          Gold Item <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <input
+            id="gold-item"
+            ref={itemInputRef}
+            type="text"
+            role="combobox"
+            aria-expanded={listOpen}
+            aria-controls="gold-item-list"
+            aria-autocomplete="list"
+            autoComplete="off"
+            maxLength={60}
+            placeholder="Type or pick: Chain, Ring, Coin, Digital Gold..."
+            value={item}
+            onChange={(e) => {
+              setItem(e.target.value);
+              setListOpen(true);
+              setHighlight(0);
+            }}
+            onFocus={() => setListOpen(true)}
+            onBlur={() => setListOpen(false)}
+            onKeyDown={handleItemKeyDown}
+            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl pl-4 pr-10 py-3 text-sm font-semibold text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400 placeholder:font-normal"
+          />
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Show options"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setListOpen((o) => !o);
+              itemInputRef.current?.focus();
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+          >
+            <ChevronDown size={16} className={`transition-transform ${listOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
+        {listOpen && (filteredOptions.length > 0 || (query && !exactOption)) && (
+          <ul
+            id="gold-item-list"
+            role="listbox"
+            className="absolute z-20 left-0 right-0 mt-1.5 max-h-60 overflow-y-auto rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#1A202C] shadow-lg py-1"
+          >
+            {filteredOptions.map((opt, i) => (
+              <li
+                key={opt}
+                role="option"
+                aria-selected={i === highlight}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  chooseOption(opt);
+                }}
+                onMouseEnter={() => setHighlight(i)}
+                className={`px-4 py-2 text-sm cursor-pointer flex items-center justify-between ${
+                  i === highlight
+                    ? "bg-amber-50 dark:bg-amber-500/10 text-neutral-900 dark:text-white"
+                    : "text-neutral-700 dark:text-neutral-300"
+                }`}
+              >
+                <span>{opt}</span>
+                {exactOption === opt && <Check size={14} className="text-amber-600 dark:text-amber-400" />}
+              </li>
+            ))}
+            {query && !exactOption && (
+              <li
+                role="option"
+                aria-selected={false}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  setListOpen(false);
+                }}
+                className="px-4 py-2 text-sm cursor-pointer text-amber-700 dark:text-amber-400 flex items-center gap-1.5 border-t border-neutral-100 dark:border-white/5"
+              >
+                <Plus size={13} /> Use &ldquo;{item.trim()}&rdquo;
+              </li>
+            )}
+          </ul>
+        )}
+
+        {query && category && category.toLowerCase() !== query && (
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1.5">
+            Grouped under <span className="font-semibold text-neutral-700 dark:text-neutral-200">{category}</span>
+          </p>
+        )}
+      </div>
+
       {/* ── PURITY SELECTOR ── */}
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -199,11 +349,16 @@ export default function GoldForm({
           </label>
           <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
             <Coins size={13} />
-            Live: ₹{liveRateFormatted}/g
+            Today: ₹{liveRateFormatted}/g
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2.5">
+        {isPure24K && (
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-2">
+            {category} is always 24K (99.9%) gold.
+          </p>
+        )}
+        <div className={`grid gap-2.5 ${isPure24K ? "grid-cols-1" : "grid-cols-3"}`}>
           {(
             [
               {
@@ -225,7 +380,9 @@ export default function GoldForm({
                 rate: rates?.rate_18k_per_gram,
               },
             ] as const
-          ).map((item) => {
+          )
+            .filter((item) => !isPure24K || item.id === "24K")
+            .map((item) => {
             const isSelected = purity === item.id;
             return (
               <button
@@ -253,33 +410,6 @@ export default function GoldForm({
               </button>
             );
           })}
-        </div>
-      </div>
-
-      {/* ── ASSET CATEGORY ── */}
-      <div>
-        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-          Asset Type
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { id: "JEWELRY", label: "Jewelry" },
-            { id: "PHYSICAL_BAR_COIN", label: "Coin / Bar" },
-            { id: "DIGITAL_GOLD", label: "Digital / SGB" },
-          ].map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              onClick={() => setAssetType(type.id)}
-              className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
-                assetType === type.id
-                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-xs"
-                  : "bg-neutral-50 dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10"
-              }`}
-            >
-              {type.label}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -338,7 +468,7 @@ export default function GoldForm({
       </div>
 
       {/* ── PURCHASE PRICE & MAKING CHARGES ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className={`grid grid-cols-1 gap-3.5 ${isPure24K ? "" : "sm:grid-cols-2"}`}>
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
@@ -349,7 +479,7 @@ export default function GoldForm({
               onClick={handleUseLiveRate}
               className="text-[11px] text-amber-600 dark:text-amber-400 font-bold hover:underline flex items-center gap-0.5"
             >
-              <Sparkles size={11} /> Use Live Rate
+              <Sparkles size={11} /> Use Today&apos;s Rate
             </button>
           </div>
 
@@ -370,6 +500,7 @@ export default function GoldForm({
           </div>
         </div>
 
+        {!isPure24K && (
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
@@ -394,6 +525,7 @@ export default function GoldForm({
             />
           </div>
         </div>
+        )}
       </div>
 
       {/* ── LIVE INVESTMENT PREVIEW CARD ── */}
@@ -402,7 +534,7 @@ export default function GoldForm({
           <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
             <span>Holding Summary</span>
             <span className="font-semibold text-neutral-800 dark:text-neutral-200">
-              {weightNum}g · {purity} Gold
+              {weightNum}g · {purity} {category || "Gold"}
             </span>
           </div>
 
@@ -441,33 +573,6 @@ export default function GoldForm({
         </div>
       )}
 
-      {/* ── ASSET NAME & SUGGESTIONS ── */}
-      <div>
-        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-          Asset Name / Label
-        </label>
-        <input
-          type="text"
-          placeholder="e.g. Wedding chain, Tanishq coin"
-          value={assetName}
-          onChange={(e) => setAssetName(e.target.value)}
-          className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-2xl px-4 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
-        />
-
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          {PRESET_NAMES.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setAssetName(name)}
-              className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 font-medium transition-colors"
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* ── PURCHASE DATE & NOTES ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
@@ -488,7 +593,7 @@ export default function GoldForm({
           </label>
           <input
             type="text"
-            placeholder="e.g. Stored in SBI locker, receipt saved"
+            placeholder="e.g. Tanishq, wedding gift, in SBI locker"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-amber-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none transition-all placeholder:text-neutral-400"
