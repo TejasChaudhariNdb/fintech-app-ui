@@ -15,6 +15,7 @@ import AddTransactionModal from "@/components/features/AddTransactionModal";
 import Toast, { ToastType } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
+import GiftDetailsCard, { giftCounterpartyLabel, GiftInfo } from "@/components/features/GiftDetailsCard";
 
 export default function SchemeDetailPage({
   params,
@@ -123,6 +124,10 @@ export default function SchemeDetailPage({
     light();
     setShowShareModal(true);
   };
+
+  const gifts: GiftInfo[] = (scheme?.transactions || [])
+    .map((t: any) => t.gift)
+    .filter(Boolean);
 
   if (loading && !scheme) return <AppSkeleton />;
 
@@ -336,6 +341,23 @@ export default function SchemeDetailPage({
             </Button>
           </div>
 
+          {gifts.length > 0 && (
+            <div className="space-y-3 mb-4">
+              {gifts.map((g) => (
+                <GiftDetailsCard
+                  key={g.tx_id}
+                  gift={g}
+                  linkingAvailable={!!scheme.gift_linking_available}
+                  notify={showToast}
+                  onChanged={() => {
+                    clearSchemeCache();
+                    loadScheme();
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
           <div className="space-y-3">
             {scheme.transactions && scheme.transactions.length > 0 ? (
               scheme.transactions.map((tx: any, i: number) => (
@@ -348,6 +370,7 @@ export default function SchemeDetailPage({
                   units={tx.units}
                   schemeName={scheme.scheme}
                   amc={scheme.amc}
+                  note={tx.gift ? giftCounterpartyLabel(tx.gift) : undefined}
                   onEdit={tx.id ? () => {
                     setEditingTx({
                       ...tx,
