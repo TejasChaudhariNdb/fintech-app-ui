@@ -1040,6 +1040,10 @@ export const api = {
   getPropertyBenchmark: (holdingId: number) => {
     return api.fetch(`/real-estate/holdings/${holdingId}/benchmark`);
   },
+  // Every dated cash movement of one property, as used by its XIRR (EMIs split, valuation rows).
+  getPropertyCashFlow: (holdingId: number) => {
+    return api.fetch(`/real-estate/holdings/${holdingId}/cash-flow`);
+  },
   getPropertyTransactions: (holdingId: number) => {
     return api.fetch(`/real-estate/holdings/${holdingId}/transactions`);
   },

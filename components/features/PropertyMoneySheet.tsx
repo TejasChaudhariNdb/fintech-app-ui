@@ -3,15 +3,23 @@
 // Real estate feedback (2026-11-13, round 2): one simple sheet per task instead of the tabbed
 // cash-flow modal. RENT = add rent (every month or one payment), EXPENSE = add a cost (once,
 // monthly or yearly), HISTORY = everything logged, with delete. EMIs come from the loan schedule.
+// 2026-11-14: own heads (sub-category) under each type like gold categories, a note on every entry,
+// electricity / gas / brokerage types, and a "counts for capital gains" flag on improvements.
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import DatePicker from "@/components/ui/DatePicker";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import { api } from "@/lib/api";
+import Link from "next/link";
 import {
   Building,
   Car,
+  Copy,
   CreditCard,
+  Flame,
+  Handshake,
+  Landmark,
+  ListTree,
   Key,
   Loader2,
   MoreHorizontal,
@@ -23,9 +31,25 @@ import {
   Trash2,
   Wifi,
   Wrench,
+  Zap,
 } from "lucide-react";
 
 export type MoneySheetMode = "RENT" | "EXPENSE" | "HISTORY";
+
+/** An existing entry to open the form with: `edit` saves over it, otherwise it is a duplicate to add. */
+export interface MoneySheetStart {
+  edit: boolean;
+  tx: {
+    id: number;
+    transaction_type: string;
+    category: "INFLOW" | "OUTFLOW";
+    amount: number;
+    transaction_date: string;
+    description?: string | null;
+    sub_category?: string | null;
+    adds_to_tax_cost?: boolean;
+  };
+}
 
 export interface MoneySheetProperty {
   id: number;
@@ -42,17 +66,56 @@ const INCOME_KINDS: { id: string; label: string; icon: Icon }[] = [
   { id: "RENT_INCOME", label: "Rent", icon: Key },
   { id: "SHORT_STAY_AIRBNB", label: "Airbnb / short stay", icon: Sparkles },
   { id: "PARKING_AMENITY_INCOME", label: "Parking", icon: Car },
-  { id: "OTHER_INCOME", label: "Other income", icon: Plus },
+  { id: "DEPOSIT_DEDUCTION_RECOVERY", label: "Deposit kept", icon: Landmark },
+  { id: "OTHER_INCOME", label: "Miscellaneous", icon: MoreHorizontal },
 ];
 
 const EXPENSE_KINDS: { id: string; label: string; icon: Icon; usual: Repeat }[] = [
   { id: "MAINTENANCE", label: "Society maintenance", icon: Building, usual: "MONTHLY" },
   { id: "PROPERTY_TAX", label: "Property tax", icon: Receipt, usual: "YEARLY" },
-  { id: "REPAIRS_RENOVATION", label: "Repairs / painting", icon: Wrench, usual: "ONCE" },
+  { id: "ELECTRICITY_BILL", label: "Electricity", icon: Zap, usual: "MONTHLY" },
+  { id: "GAS_BILL", label: "Piped gas", icon: Flame, usual: "MONTHLY" },
+  { id: "REPAIRS_RENOVATION", label: "Repairs / renovation", icon: Wrench, usual: "ONCE" },
   { id: "INSURANCE", label: "Insurance", icon: Shield, usual: "YEARLY" },
-  { id: "UTILITIES_BILLS", label: "Bills (power, water)", icon: Wifi, usual: "MONTHLY" },
-  { id: "OTHER_EXPENSE", label: "Other", icon: MoreHorizontal, usual: "ONCE" },
+  { id: "BROKERAGE_COMMISSION", label: "Brokerage", icon: Handshake, usual: "ONCE" },
+  { id: "UTILITIES_BILLS", label: "Water / Wi-Fi bills", icon: Wifi, usual: "MONTHLY" },
+  { id: "OTHER_EXPENSE", label: "Miscellaneous", icon: MoreHorizontal, usual: "ONCE" },
 ];
+
+// Ready-made heads per type; the owner can type their own (kept for next time, like gold categories).
+const SUGGESTED_SUBS: Record<string, string[]> = {
+  OTHER_EXPENSE: ["Staff salary", "Cleaning", "Supplies", "Laundry", "Wi-Fi", "Legal fees", "Pest control"],
+  OTHER_INCOME: ["Late fee", "Interest on deposit", "Event booking", "Hoarding / signage"],
+  SHORT_STAY_AIRBNB: ["Airbnb", "Booking.com", "MakeMyTrip", "Direct booking"],
+  REPAIRS_RENOVATION: ["Painting", "Plumbing", "Electrical", "Bathroom", "Kitchen", "Waterproofing"],
+  ELECTRICITY_BILL: ["Fixed / meter charge", "Usage"],
+  GAS_BILL: ["Minimum charge", "Usage"],
+  UTILITIES_BILLS: ["Water", "Wi-Fi", "DTH"],
+  BROKERAGE_COMMISSION: ["On purchase", "Tenant search", "On sale"],
+};
+
+// Lump-sum loan prepayment: offered only when the property has a loan on record.
+const PREPAYMENT_KIND = { id: "LOAN_REPAYMENT", label: "Loan prepayment", icon: CreditCard, usual: "ONCE" as Repeat };
+
+// Entries the owner may count as cost of improvement / purchase cost for capital gains (backend TAX_COST_TYPES).
+const TAX_COST_KINDS = new Set(["REPAIRS_RENOVATION", "BROKERAGE_COMMISSION", "OTHER_EXPENSE"]);
+
+const KIND_HINTS: Record<string, string> = {
+  ELECTRICITY_BILL:
+    "Flat empty? You still pay the fixed / meter charge: add it every month. If a tenant pays the bill, don't add it.",
+  GAS_BILL:
+    "Flat empty? The gas company still bills a minimum charge: add it every month. If a tenant pays the bill, don't add it.",
+  OTHER_EXPENSE: "Pick or type what it was for, so each head shows up separately in the cash flow.",
+  OTHER_INCOME: "Pick or type what it was for, so each head shows up separately in the cash flow.",
+  LOAN_REPAYMENT:
+    "A lump sum paid to the bank on top of EMIs. It counts in your return once you enter today's loan outstanding (from the bank statement) under EMI / Loan.",
+};
+
+const NOTE_PLACEHOLDER: Record<string, string> = {
+  REPAIRS_RENOVATION: "e.g. Painting, bathroom refurbish",
+  BROKERAGE_COMMISSION: "e.g. Paid to broker when buying",
+  OTHER_EXPENSE: "e.g. Cook's salary for March",
+};
 
 const LABELS: Record<string, string> = {
   ...Object.fromEntries(INCOME_KINDS.map((k) => [k.id, k.label])),
@@ -76,6 +139,8 @@ interface Tx {
   amount: number;
   transaction_date: string;
   description?: string | null;
+  sub_category?: string | null;
+  adds_to_tax_cost?: boolean;
 }
 
 const todayIso = () => {
@@ -140,12 +205,67 @@ function Field({ label, children, hint }: { label: string; children: React.React
     <div>
       <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">{label}</label>
       {children}
-      {hint && <p className="text-[10px] text-neutral-400 mt-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-neutral-400 mt-1">{hint}</p>}
     </div>
   );
 }
 
 const inputCls = "w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2.5 text-sm";
+
+/** Chips for common heads plus a free-text box (typed heads are saved and offered next time). */
+function SubPicker({ value, onChange, options, listId }: { value: string; onChange: (v: string) => void; options: string[]; listId: string }) {
+  return (
+    <div className="space-y-1.5">
+      {options.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {options.slice(0, 10).map((o) => {
+            const on = value.trim().toLowerCase() === o.toLowerCase();
+            return (
+              <button
+                key={o}
+                type="button"
+                onClick={() => onChange(on ? "" : o)}
+                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                  on ? "border-indigo-600 bg-indigo-600 text-white" : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300"
+                }`}
+              >
+                {o}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={40}
+        list={listId}
+        placeholder="Or type your own, e.g. Gardener"
+        className={inputCls}
+        aria-label="Head"
+      />
+      <datalist id={listId}>
+        {options.map((o) => <option key={o} value={o} />)}
+      </datalist>
+    </div>
+  );
+}
+
+function TaxCostToggle({ checked, onChange, kind }: { checked: boolean; onChange: (v: boolean) => void; kind: string }) {
+  return (
+    <label className="flex items-start gap-2 rounded-xl border border-neutral-200 dark:border-white/10 px-3 py-2 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 accent-indigo-600" />
+      <span className="text-xs text-neutral-600 dark:text-neutral-300 leading-snug">
+        <b className="text-neutral-900 dark:text-white">Count in capital gains cost</b>
+        <br />
+        {kind === "BROKERAGE_COMMISSION"
+          ? "Tick for brokerage paid when buying. Brokerage for finding a tenant does not count."
+          : "Tick for improvements that add to the property (renovation, extension, new kitchen, keep the bills). Routine repairs and painting do not count."}{" "}
+        Ticked costs are indexed from the year you paid them.
+      </span>
+    </label>
+  );
+}
 
 export default function PropertyMoneySheet({
   isOpen,
@@ -154,6 +274,7 @@ export default function PropertyMoneySheet({
   onClose,
   onSaved,
   onOpenLoan,
+  start = null,
 }: {
   isOpen: boolean;
   mode: MoneySheetMode;
@@ -161,6 +282,7 @@ export default function PropertyMoneySheet({
   onClose: () => void;
   onSaved: (message: string) => void;
   onOpenLoan: () => void;
+  start?: MoneySheetStart | null;
 }) {
   const [mode, setMode] = useState<MoneySheetMode>(initialMode);
   const [kind, setKind] = useState("RENT_INCOME");
@@ -169,14 +291,26 @@ export default function PropertyMoneySheet({
   const [onDate, setOnDate] = useState(todayIso());
   const [from, setFrom] = useState("");
   const [till, setTill] = useState(todayIso());
+  const [sub, setSub] = useState("");
+  const [note, setNote] = useState("");
+  const [taxCost, setTaxCost] = useState(false);
+  const [usedSubs, setUsedSubs] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Stay on the form after adding (feedback 2026-11-14: owners enter many past bills in a row).
+  const [flash, setFlash] = useState("");
+  const [justAdded, setJustAdded] = useState<Set<number>>(new Set());
+  const amountRef = React.useRef<HTMLInputElement>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [txs, setTxs] = useState<Tx[] | null>(null);
   const [filter, setFilter] = useState<"ALL" | "INFLOW" | "OUTFLOW">("ALL");
   const [editId, setEditId] = useState<number | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editDate, setEditDate] = useState("");
+  const [editSub, setEditSub] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editTax, setEditTax] = useState(false);
   const [editBusy, setEditBusy] = useState(false);
   // Select mode: change the amount of, or delete, many entries at once.
   const [selecting, setSelecting] = useState(false);
@@ -225,6 +359,11 @@ export default function PropertyMoneySheet({
       setError("");
       setOnDate(todayIso());
       setTill(todayIso());
+      setSub("");
+      setNote("");
+      setTaxCost(false);
+      setFlash("");
+      setEditingId(null);
       if (m === "RENT") {
         setKind("RENT_INCOME");
         setRepeat("MONTHLY");
@@ -245,6 +384,7 @@ export default function PropertyMoneySheet({
     try {
       const res = await api.getPropertyTransactions(property.id);
       setTxs(res?.transactions ?? []);
+      setUsedSubs(res?.sub_categories ?? {});
     } catch {
       setTxs([]);
     }
@@ -252,12 +392,27 @@ export default function PropertyMoneySheet({
 
   useEffect(() => {
     if (isOpen && property) {
-      startForm(initialMode);
+      if (start) {
+        // Duplicate or edit: same form, filled from the entry.
+        const t = start.tx;
+        startForm(t.category === "INFLOW" ? "RENT" : "EXPENSE");
+        setKind(t.transaction_type);
+        setRepeat("ONCE");
+        setAmount(String(t.amount));
+        setOnDate(t.transaction_date.slice(0, 10));
+        setSub(t.sub_category ?? "");
+        const d = (t.description ?? "").trim();
+        setNote(d && d !== (LABELS[t.transaction_type] ?? "") && !/ - [A-Z][a-z]{2} \d{4}$/.test(d) ? d : "");
+        setTaxCost(!!t.adds_to_tax_cost);
+        setEditingId(start.edit ? t.id : null);
+      } else {
+        startForm(initialMode);
+      }
       setTxs(null);
       setFilter("ALL");
       loadHistory();
     }
-  }, [isOpen, property?.id, initialMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, property?.id, initialMode, start]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Latest entry already logged for this kind: repeating entries start after it, so nothing is added twice.
   const lastOfKind = useMemo(() => {
@@ -277,8 +432,35 @@ export default function PropertyMoneySheet({
 
   const pickExpense = (id: string) => {
     setKind(id);
-    const usual = EXPENSE_KINDS.find((k) => k.id === id)?.usual;
+    setSub("");
+    setTaxCost(false);
+    const usual = [...EXPENSE_KINDS, PREPAYMENT_KIND].find((k) => k.id === id)?.usual;
     if (usual) setRepeat(usual);
+  };
+
+  const pickIncome = (id: string) => {
+    setKind(id);
+    setSub("");
+  };
+
+  // Auto notes ("Rent - Jan 2025", or just the type name) add nothing; show only what the owner wrote.
+  const shownNote = (t: Tx) => {
+    const d = (t.description ?? "").trim();
+    if (!d) return "";
+    const label = LABELS[t.transaction_type] ?? t.type_label;
+    if (d === label || d === t.type_label) return "";
+    if (/ - [A-Z][a-z]{2} \d{4}$/.test(d) && (d.startsWith(label) || d.startsWith(t.type_label))) return "";
+    return d;
+  };
+
+  const subOptions = (k: string) => {
+    const seen = new Set<string>();
+    return [...(usedSubs[k] ?? []), ...(SUGGESTED_SUBS[k] ?? [])].filter((x) => {
+      const key = x.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   };
 
   const save = async () => {
@@ -295,14 +477,33 @@ export default function PropertyMoneySheet({
     const label = LABELS[kind] ?? "Entry";
     setSaving(true);
     try {
-      if (repeat === "ONCE") {
-        await api.addPropertyTransaction(property.id, {
+      if (editingId != null) {
+        await api.updatePropertyTransaction(property.id, editingId, {
           transaction_type: kind,
           amount: amt,
           transaction_date: onDate,
-          description: label,
+          description: note.trim() || label,
+          sub_category: sub.trim(),
+          ...(TAX_COST_KINDS.has(kind) ? { adds_to_tax_cost: taxCost } : {}),
         });
-        onSaved(`${label} of ${inr(amt)} added`);
+        onSaved(`${label} updated`);
+        onClose();
+        return;
+      }
+      if (repeat === "ONCE") {
+        const res = await api.addPropertyTransaction(property.id, {
+          transaction_type: kind,
+          amount: amt,
+          transaction_date: onDate,
+          description: note.trim() || label,
+          sub_category: sub.trim() || undefined,
+          adds_to_tax_cost: TAX_COST_KINDS.has(kind) ? taxCost : undefined,
+        });
+        const msg = `${label} of ${inr(amt)} added for ${new Date(onDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+        onSaved(msg);
+        setFlash(msg);
+        const newId = res?.transaction?.id;
+        setJustAdded((prev) => (newId ? new Set(prev).add(newId) : prev));
       } else {
         await api.generateRecurringPropertyTransactions(property.id, {
           transaction_type: kind,
@@ -311,11 +512,19 @@ export default function PropertyMoneySheet({
           end_date: till,
           day_of_month: Math.min(28, Number(from.split("-")[2]) || 1),
           every_months: everyMonths,
-          notes_prefix: label,
+          notes_prefix: note.trim() || label,
+          sub_category: sub.trim() || undefined,
+          adds_to_tax_cost: TAX_COST_KINDS.has(kind) ? taxCost : undefined,
         });
-        onSaved(`${count} ${label.toLowerCase()} entries added (${inr(amt * count)})`);
+        const msg = `${count} ${label.toLowerCase()} entries added (${inr(amt * count)})`;
+        onSaved(msg);
+        setFlash(msg);
       }
-      onClose();
+      // Ready for the next one (feedback 2026-11-14): everything stays filled, so the same entry can be
+      // added again in one tap; the amount is selected to type over it.
+      amountRef.current?.focus();
+      amountRef.current?.select();
+      await loadHistory();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Could not save. Please try again.");
     } finally {
@@ -338,6 +547,9 @@ export default function PropertyMoneySheet({
     setEditId(t.id);
     setEditAmount(String(t.amount));
     setEditDate(t.transaction_date.slice(0, 10));
+    setEditSub(t.sub_category ?? "");
+    setEditNote(t.description ?? "");
+    setEditTax(!!t.adds_to_tax_cost);
   };
 
   const saveEdit = async (t: Tx) => {
@@ -346,8 +558,16 @@ export default function PropertyMoneySheet({
     if (!(amtNew > 0) || !editDate) return;
     setEditBusy(true);
     try {
-      await api.updatePropertyTransaction(property.id, t.id, { amount: amtNew, transaction_date: editDate });
-      setTxs((list) => (list ? list.map((x) => (x.id === t.id ? { ...x, amount: amtNew, transaction_date: editDate } : x)) : list));
+      const changes = {
+        amount: amtNew,
+        transaction_date: editDate,
+        sub_category: editSub.trim(),
+        description: editNote.trim(),
+        ...(TAX_COST_KINDS.has(t.transaction_type) ? { adds_to_tax_cost: editTax } : {}),
+      };
+      const res = await api.updatePropertyTransaction(property.id, t.id, changes);
+      const saved: Tx = res?.transaction ?? { ...t, ...changes };
+      setTxs((list) => (list ? list.map((x) => (x.id === t.id ? { ...x, ...saved } : x)) : list));
       setEditId(null);
       onSaved("Entry updated");
     } catch (e: unknown) {
@@ -378,19 +598,26 @@ export default function PropertyMoneySheet({
   const totalIn = (txs ?? []).filter((t) => t.category === "INFLOW").reduce((s, t) => s + t.amount, 0);
   const totalOut = (txs ?? []).filter((t) => t.category === "OUTFLOW").reduce((s, t) => s + t.amount, 0);
 
-  const title =
-    mode === "RENT" ? `Add rent · ${property.property_name}` : mode === "EXPENSE" ? `Add expense · ${property.property_name}` : `All entries · ${property.property_name}`;
+  const title = editingId != null
+    ? `Edit entry · ${property.property_name}`
+    : mode === "RENT" ? `Add income · ${property.property_name}` : mode === "EXPENSE" ? `Add expense · ${property.property_name}` : `All entries · ${property.property_name}`;
 
   const isRent = mode === "RENT";
-  const kinds = isRent ? INCOME_KINDS : EXPENSE_KINDS;
+  const kinds = isRent ? INCOME_KINDS : property.has_loan ? [...EXPENSE_KINDS, PREPAYMENT_KIND] : EXPENSE_KINDS;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       {mode === "HISTORY" ? (
         <div className="space-y-3">
+          <Link
+            href={`/holdings/real-estate/${property.id}/cash-flow`}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/5 py-2.5 text-xs font-bold text-indigo-700 dark:text-indigo-300"
+          >
+            <ListTree size={14} /> Full cash flow (EMIs, rent, every cost) ›
+          </Link>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => startForm("RENT")} className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-white py-2.5 text-xs font-bold">
-              <Plus size={14} /> Add rent
+              <Plus size={14} /> Add income
             </button>
             <button type="button" onClick={() => startForm("EXPENSE")} className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 text-white py-2.5 text-xs font-bold">
               <Plus size={14} /> Add expense
@@ -405,12 +632,12 @@ export default function PropertyMoneySheet({
             <>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-xl bg-emerald-500/5 p-2">
-                  <div className="text-[10px] uppercase font-bold text-neutral-400">Money in</div>
+                  <div className="text-[11px] uppercase font-bold text-neutral-400">Money in</div>
                   <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400"><PrivacyMask>+{inr(totalIn)}</PrivacyMask></div>
                 </div>
-                <div className="rounded-xl bg-rose-500/5 p-2">
-                  <div className="text-[10px] uppercase font-bold text-neutral-400">Money out</div>
-                  <div className="text-sm font-bold font-mono text-rose-600 dark:text-rose-400"><PrivacyMask>-{inr(totalOut)}</PrivacyMask></div>
+                <div className="rounded-xl bg-neutral-500/5 p-2">
+                  <div className="text-[11px] uppercase font-bold text-neutral-400">Money out</div>
+                  <div className="text-sm font-semibold font-mono text-neutral-700 dark:text-neutral-200"><PrivacyMask>−{inr(totalOut)}</PrivacyMask></div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -432,7 +659,7 @@ export default function PropertyMoneySheet({
                 </button>
               </div>
               {selecting && (
-                <div className="flex items-center justify-between text-[11px] text-neutral-600 dark:text-neutral-400">
+                <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
                   <span>{selected.size} selected · tap entries to pick</span>
                   <button
                     type="button"
@@ -449,7 +676,7 @@ export default function PropertyMoneySheet({
               <div className="space-y-3">
                 {grouped.map((g) => (
                   <div key={g.key}>
-                    <div className="text-[10px] uppercase font-bold text-neutral-400 mb-1">{g.label}</div>
+                    <div className="text-[11px] uppercase font-bold text-neutral-400 mb-1">{g.label}</div>
                     <div className="rounded-xl border border-neutral-200 dark:border-white/10 divide-y divide-neutral-100 dark:divide-white/5">
                       {g.items.map((t) => editId === t.id ? (
                         <div key={t.id} className="px-3 py-2 space-y-2 bg-indigo-500/5">
@@ -458,6 +685,9 @@ export default function PropertyMoneySheet({
                             <input type="number" inputMode="numeric" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} className={inputCls} aria-label="Amount" />
                             <DatePicker value={editDate} onChange={setEditDate} className={inputCls} />
                           </div>
+                          <SubPicker value={editSub} onChange={setEditSub} options={subOptions(t.transaction_type)} listId={`subs-edit-${t.id}`} />
+                          <input value={editNote} onChange={(e) => setEditNote(e.target.value)} maxLength={300} placeholder="Note (optional)" className={inputCls} aria-label="Note" />
+                          {TAX_COST_KINDS.has(t.transaction_type) && <TaxCostToggle checked={editTax} onChange={setEditTax} kind={t.transaction_type} />}
                           <div className="flex justify-end gap-2">
                             <button type="button" onClick={() => setEditId(null)} className="px-3 py-1.5 text-xs text-neutral-500">Cancel</button>
                             <button type="button" disabled={editBusy} onClick={() => saveEdit(t)} className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-60">
@@ -482,16 +712,41 @@ export default function PropertyMoneySheet({
                             />
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold text-neutral-900 dark:text-white truncate">{LABELS[t.transaction_type] ?? t.type_label}</div>
-                            <div className="text-[10px] text-neutral-400">
+                            <div className="text-xs font-semibold text-neutral-900 dark:text-white truncate">
+                              {LABELS[t.transaction_type] ?? t.type_label}
+                              {t.sub_category && <span className="font-normal text-neutral-500"> · {t.sub_category}</span>}
+                              {t.adds_to_tax_cost && (
+                                <span className="ml-1.5 rounded bg-indigo-500/10 px-1 py-px text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Tax cost</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-neutral-400 truncate">
                               {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                              {shownNote(t) && <> · {shownNote(t)}</>}
                             </div>
                           </div>
-                          <div className={`text-xs font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          <div className={`text-xs font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"}`}>
                             <PrivacyMask>{t.category === "INFLOW" ? "+" : "-"}{inr(t.amount)}</PrivacyMask>
                           </div>
                           {!selecting && (
                             <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  startForm(t.category === "INFLOW" ? "RENT" : "EXPENSE");
+                                  setKind(t.transaction_type);
+                                  setRepeat("ONCE");
+                                  setAmount(String(t.amount));
+                                  setOnDate(t.transaction_date.slice(0, 10));
+                                  setSub(t.sub_category ?? "");
+                                  setNote(shownNote(t));
+                                  setTaxCost(!!t.adds_to_tax_cost);
+                                }}
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600"
+                                aria-label="Duplicate entry"
+                                title="Duplicate"
+                              >
+                                <Copy size={13} />
+                              </button>
                               <button type="button" onClick={() => startEdit(t)} className="p-1.5 rounded-lg text-neutral-400 hover:text-indigo-600" aria-label="Edit entry">
                                 <Pencil size={13} />
                               </button>
@@ -508,7 +763,7 @@ export default function PropertyMoneySheet({
               </div>
               {selecting && selected.size > 0 && (
                 <div className="sticky bottom-0 -mx-1 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-surface p-2.5 shadow-lg space-y-2">
-                  <div className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">{selected.size} entries selected</div>
+                  <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">{selected.size} entries selected</div>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -538,7 +793,7 @@ export default function PropertyMoneySheet({
                 </div>
               )}
               {txs.some((t) => t.transaction_type === "HOME_LOAN_EMI") && property.has_loan && (
-                <p className="text-[10px] text-neutral-400">
+                <p className="text-[11px] text-neutral-400">
                   EMIs logged here by hand are not counted (the loan schedule has every EMI). To fix a missed or different EMI,
                   open <button type="button" onClick={onOpenLoan} className="font-semibold text-indigo-600 dark:text-indigo-400 underline">EMI / Loan → EMI schedule</button>.
                 </p>
@@ -550,13 +805,13 @@ export default function PropertyMoneySheet({
         <div className="space-y-4">
           {/* 1. What */}
           <Field label={isRent ? "What kind of income?" : "What did you pay for?"}>
-            <div className={`grid gap-2 ${isRent ? "grid-cols-2" : "grid-cols-3"}`}>
+            <div className="grid gap-2 grid-cols-3">
               {kinds.map((k) => (
                 <button
                   key={k.id}
                   type="button"
-                  onClick={() => (isRent ? setKind(k.id) : pickExpense(k.id))}
-                  className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-[11px] font-semibold text-center leading-tight ${
+                  onClick={() => (isRent ? pickIncome(k.id) : pickExpense(k.id))}
+                  className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-semibold text-center leading-tight ${
                     kind === k.id
                       ? isRent
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
@@ -571,12 +826,21 @@ export default function PropertyMoneySheet({
             </div>
           </Field>
 
-          {/* 2. How much */}
-          <Field label={repeat === "ONCE" ? "Amount (₹)" : repeat === "YEARLY" ? "Amount each year (₹)" : "Amount each month (₹)"}>
-            <input type="number" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 25000" className={inputCls} autoFocus />
+          {KIND_HINTS[kind] && (
+            <p className="-mt-2 rounded-xl bg-amber-500/5 border border-amber-500/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">{KIND_HINTS[kind]}</p>
+          )}
+
+          <Field label={kind === "OTHER_EXPENSE" || kind === "OTHER_INCOME" ? "Which head?" : "Head (optional)"}>
+            <SubPicker value={sub} onChange={setSub} options={subOptions(kind)} listId="subs-new" />
           </Field>
 
-          {/* 3. How often */}
+          {/* 2. How much */}
+          <Field label={repeat === "ONCE" ? "Amount (₹)" : repeat === "YEARLY" ? "Amount each year (₹)" : "Amount each month (₹)"}>
+            <input type="number" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 25000" className={inputCls} autoFocus ref={amountRef} />
+          </Field>
+
+          {/* 3. How often (an edit is always one entry) */}
+          {editingId == null && (
           <Field label="How often?">
             <Segmented<Repeat>
               value={repeat}
@@ -588,6 +852,7 @@ export default function PropertyMoneySheet({
               }
             />
           </Field>
+          )}
 
           {/* 4. When */}
           {repeat === "ONCE" ? (
@@ -606,7 +871,7 @@ export default function PropertyMoneySheet({
           )}
 
           {repeat !== "ONCE" && lastOfKind && from <= lastOfKind && (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               You already added {LABELS[kind]?.toLowerCase() ?? "entries"} till {monthLabel(lastOfKind)}. Starting before that will add
               those months again.{" "}
               <button type="button" className="font-bold underline" onClick={() => setFrom(addMonthsIso(lastOfKind, everyMonths))}>
@@ -615,10 +880,10 @@ export default function PropertyMoneySheet({
             </p>
           )}
           {repeat !== "ONCE" && lastOfKind && from > lastOfKind && count > 0 && (
-            <p className="text-[11px] text-neutral-500">Already added till {monthLabel(lastOfKind)}, so this starts after it.</p>
+            <p className="text-xs text-neutral-500">Already added till {monthLabel(lastOfKind)}, so this starts after it.</p>
           )}
           {repeat !== "ONCE" && lastOfKind && count === 0 && from > lastOfKind && (
-            <p className="text-[11px] text-neutral-500">Already up to date till {monthLabel(lastOfKind)}. Nothing new to add for these dates.</p>
+            <p className="text-xs text-neutral-500">Already up to date till {monthLabel(lastOfKind)}. Nothing new to add for these dates.</p>
           )}
 
           {repeat !== "ONCE" && amt > 0 && count > 0 && (
@@ -628,8 +893,14 @@ export default function PropertyMoneySheet({
             </p>
           )}
 
+          <Field label="Note (optional)" hint="Shown against this entry in the cash flow.">
+            <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder={NOTE_PLACEHOLDER[kind] ?? "e.g. Paid by cheque"} className={inputCls} />
+          </Field>
+
+          {TAX_COST_KINDS.has(kind) && <TaxCostToggle checked={taxCost} onChange={setTaxCost} kind={kind} />}
+
           {!isRent && (
-            <button type="button" onClick={onOpenLoan} className="w-full flex items-start gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-left text-[11px] text-neutral-600 dark:text-neutral-300">
+            <button type="button" onClick={onOpenLoan} className="w-full flex items-start gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-left text-xs text-neutral-600 dark:text-neutral-300">
               <CreditCard size={14} className="text-indigo-500 shrink-0 mt-0.5" />
               <span>
                 Paying a home loan EMI? Don&apos;t add it here. <b className="text-indigo-600 dark:text-indigo-400">{property.has_loan ? "Your loan" : "Add your loan"}</b> and
@@ -646,12 +917,51 @@ export default function PropertyMoneySheet({
             disabled={saving}
             className={`w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-60 ${isRent ? "bg-emerald-600 hover:bg-emerald-700" : "bg-rose-600 hover:bg-rose-700"}`}
           >
-            {saving ? "Saving…" : repeat === "ONCE" || count <= 1 || !(amt > 0) ? (isRent ? "Add income" : "Add expense") : `Add ${count} entries`}
+            {saving
+              ? "Saving…"
+              : editingId != null
+                ? "Save changes"
+                : repeat === "ONCE" || count <= 1 || !(amt > 0)
+                  ? isRent ? "Add income" : "Add expense"
+                  : `Add ${count} entries`}
           </button>
 
-          <button type="button" onClick={() => { setMode("HISTORY"); loadHistory(); }} className="w-full text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white">
-            See all entries
-          </button>
+          {flash && (
+            <p role="status" className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              ✓ {flash}. Add the next one, or close when done.
+            </p>
+          )}
+
+          {txs && txs.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase font-bold text-neutral-400">Latest entries</span>
+                <button type="button" onClick={() => { setMode("HISTORY"); loadHistory(); }} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                  See all {txs.length} ›
+                </button>
+              </div>
+              <div className="rounded-xl border border-neutral-200 dark:border-white/10 divide-y divide-neutral-100 dark:divide-white/5">
+                {[...txs]
+                  .sort((a, b) => (b.transaction_date.localeCompare(a.transaction_date) || b.id - a.id))
+                  .slice(0, 8)
+                  .map((t) => (
+                    <div key={t.id} className={`flex items-center gap-2 px-3 py-1.5 ${justAdded.has(t.id) ? "bg-emerald-500/10" : ""}`}>
+                      <span className="w-[68px] shrink-0 text-[11px] text-neutral-400">
+                        {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-xs text-neutral-700 dark:text-neutral-300">
+                        {LABELS[t.transaction_type] ?? t.type_label}
+                        {t.sub_category && <span className="text-neutral-400"> · {t.sub_category}</span>}
+                        {shownNote(t) && <span className="text-neutral-400"> · {shownNote(t)}</span>}
+                      </span>
+                      <span className={`text-xs font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"}`}>
+                        <PrivacyMask>{t.category === "INFLOW" ? "+" : "-"}{inr(t.amount)}</PrivacyMask>
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Modal>

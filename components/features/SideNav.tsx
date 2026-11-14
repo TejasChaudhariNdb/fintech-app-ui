@@ -22,6 +22,8 @@ import {
   Building,
   ChevronDown,
   CalendarClock,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -39,6 +41,22 @@ export default function SideNav() {
     avatar_url?: string | null;
   } | null>(null);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
+  // Collapsed = icon-only strip for more screen space; remembered on this device.
+  // The dashboard layout renders this only after its client-side auth check, so localStorage is available.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem("sidenav_collapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem("sidenav_collapsed", c ? "0" : "1");
+      } catch {}
+      return !c;
+    });
 
   // Auto-expand holdings sub-menu whenever user is on any /holdings route or /sips
   useEffect(() => {
@@ -134,19 +152,36 @@ export default function SideNav() {
   const displayName = user?.full_name || user?.email?.split("@")[0] || "User";
 
   return (
-    <aside id="tour-side-nav" className="hidden lg:flex w-60 flex-col bg-white dark:bg-[#0F1219] border-r border-neutral-200 dark:border-white/5 h-screen sticky top-0">
+    <aside
+      id="tour-side-nav"
+      className={`hidden lg:flex ${collapsed ? "w-[68px]" : "w-60"} shrink-0 flex-col bg-white dark:bg-[#0F1219] border-r border-neutral-200 dark:border-white/5 h-screen sticky top-0 z-40 transition-[width] duration-200`}
+    >
+      {/* Collapse / expand arrow on the sidebar's edge */}
+      <button
+        type="button"
+        onClick={toggleCollapsed}
+        className="absolute -right-3 top-6 z-10 h-6 w-6 rounded-full border border-neutral-200 dark:border-white/10 bg-white dark:bg-[#0F1219] text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400 shadow-sm flex items-center justify-center"
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? <ChevronsRight size={14} /> : <ChevronsLeft size={14} />}
+      </button>
+
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 mb-2">
-        <div className="h-8 w-8 rounded-lg bg-primary-600 flex items-center justify-center shadow-sm shadow-primary-500/30">
+      <div className={`flex items-center gap-3 py-5 mb-2 ${collapsed ? "justify-center px-0" : "px-5"}`}>
+        <div className="h-8 w-8 shrink-0 rounded-lg bg-primary-600 flex items-center justify-center shadow-sm shadow-primary-500/30">
           <span className="text-white font-bold text-base">A</span>
         </div>
-        <span className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
-          Arthavi
-        </span>
+        {!collapsed && (
+          <span className="text-lg font-bold text-neutral-900 dark:text-white tracking-tight">
+            Arthavi
+          </span>
+        )}
       </div>
 
       {/* Main Navigation */}
-      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto min-h-0">
+      <nav className={`flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden min-h-0 ${collapsed ? "px-2.5" : "px-3"}`}>
         {mainTabs.map((tab) => {
           if (tab.id === "/holdings") {
             const isHoldingsActive = pathname.startsWith("/holdings");
@@ -163,7 +198,8 @@ export default function SideNav() {
                   <Link
                     href="/holdings"
                     onClick={() => setIsHoldingsExpanded(true)}
-                    className="flex items-center gap-3 flex-1 px-3 py-2.5 text-sm min-w-0">
+                    title={collapsed ? tab.label : undefined}
+                    className={`flex items-center gap-3 flex-1 py-2.5 text-sm min-w-0 ${collapsed ? "justify-center px-0" : "px-3"}`}>
                     <Icon
                       size={18}
                       strokeWidth={isHoldingsActive ? 2.5 : 2}
@@ -171,9 +207,10 @@ export default function SideNav() {
                         isHoldingsActive ? "text-primary-600 dark:text-primary-400" : ""
                       }
                     />
-                    <span className="truncate">{tab.label}</span>
+                    {!collapsed && <span className="truncate">{tab.label}</span>}
                   </Link>
 
+                  {!collapsed && (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -190,11 +227,12 @@ export default function SideNav() {
                       }`}
                     />
                   </button>
+                  )}
                 </div>
 
                 {/* Holdings Quick Submenus */}
                 {isHoldingsExpanded && (
-                  <div className="ml-4 pl-3 my-1 border-l-2 border-neutral-200/70 dark:border-white/10 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className={`my-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150 ${collapsed ? "" : "ml-4 pl-3 border-l-2 border-neutral-200/70 dark:border-white/10"}`}>
                     {holdingsSubItems.map((sub) => {
                       const isSubActive =
                         pathname === sub.id || pathname.startsWith(sub.id + "/");
@@ -204,14 +242,17 @@ export default function SideNav() {
                         <Link
                           key={sub.id}
                           href={sub.id}
-                          className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-all duration-150 group ${
+                          title={collapsed ? sub.label : undefined}
+                          className={`flex items-center gap-2.5 py-1.5 rounded-lg text-xs transition-all duration-150 group ${collapsed ? "justify-center px-0" : "px-2.5"} ${
                             isSubActive
                               ? "bg-primary-500/10 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 font-bold shadow-2xs"
                               : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white font-medium"
                           }`}>
+                          {!collapsed && (
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${sub.dotColor} shrink-0 transition-transform group-hover:scale-125`}
                           />
+                          )}
                           <SubIcon
                             size={14}
                             className={`shrink-0 transition-colors ${
@@ -220,8 +261,8 @@ export default function SideNav() {
                                 : "text-neutral-400 dark:text-neutral-500 group-hover:text-neutral-600 dark:group-hover:text-neutral-300"
                             }`}
                           />
-                          <span className="truncate">{sub.label}</span>
-                          {isSubActive && (
+                          {!collapsed && <span className="truncate">{sub.label}</span>}
+                          {isSubActive && !collapsed && (
                             <span className="ml-auto w-1 h-1 rounded-full bg-primary-500" />
                           )}
                         </Link>
@@ -240,7 +281,8 @@ export default function SideNav() {
             <Link
               key={tab.id}
               href={tab.id}
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group ${
+              title={collapsed ? tab.label : undefined}
+              className={`flex items-center gap-3 w-full py-2.5 rounded-xl transition-all duration-200 text-sm font-medium group ${collapsed ? "justify-center px-0" : "px-3"} ${
                 isActive
                   ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 font-semibold"
                   : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
@@ -252,8 +294,8 @@ export default function SideNav() {
                   isActive ? "text-primary-600 dark:text-primary-400" : ""
                 }
               />
-              {tab.label}
-              {isActive && (
+              {!collapsed && tab.label}
+              {isActive && !collapsed && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
               )}
             </Link>
@@ -265,10 +307,11 @@ export default function SideNav() {
       <div className="h-px bg-neutral-100 dark:bg-white/5 mx-4 my-3" />
 
       {/* Settings & Updates — separated at bottom of nav */}
-      <div className="px-3 pb-3 space-y-1">
+      <div className={`pb-3 space-y-1 ${collapsed ? "px-2.5" : "px-3"}`}>
         <Link
           href="/profile"
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${
+          title={collapsed ? "Settings" : undefined}
+          className={`flex items-center gap-3 w-full py-2.5 rounded-xl ${collapsed ? "justify-center px-0" : "px-3"} transition-all duration-200 text-sm font-medium ${
             pathname === "/profile"
               ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300"
               : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
@@ -280,15 +323,16 @@ export default function SideNav() {
               pathname === "/profile" ? "text-primary-600 dark:text-primary-400" : ""
             }
           />
-          Settings
-          {pathname === "/profile" && (
+          {!collapsed && "Settings"}
+          {pathname === "/profile" && !collapsed && (
             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
           )}
         </Link>
 
         <Link
           href="/profile/whats-new"
-          className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-all duration-200 text-sm font-medium ${
+          title={collapsed ? "What's New" : undefined}
+          className={`relative flex items-center gap-3 w-full py-2.5 rounded-xl ${collapsed ? "justify-center px-0" : "px-3"} transition-all duration-200 text-sm font-medium ${
             pathname === "/profile/whats-new"
               ? "bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300"
               : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 hover:text-neutral-900 dark:hover:text-white"
@@ -300,21 +344,24 @@ export default function SideNav() {
               pathname === "/profile/whats-new" ? "text-primary-600 dark:text-primary-400" : ""
             }
           />
-          What&apos;s New
-          {hasUnreadUpdates && (
+          {!collapsed && <>What&apos;s New</>}
+          {hasUnreadUpdates && collapsed && (
+            <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+          )}
+          {hasUnreadUpdates && !collapsed && (
             <span className="ml-auto bg-primary-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider animate-pulse">
               NEW
             </span>
           )}
-          {pathname === "/profile/whats-new" && !hasUnreadUpdates && (
+          {pathname === "/profile/whats-new" && !hasUnreadUpdates && !collapsed && (
             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary-500" />
           )}
         </Link>
       </div>
 
       {/* User Card at bottom */}
-      <div className="px-3 pb-4 border-t border-neutral-100 dark:border-white/5 pt-3 mx-0">
-        <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group">
+      <div className={`pb-4 border-t border-neutral-100 dark:border-white/5 pt-3 mx-0 ${collapsed ? "px-2" : "px-3"}`}>
+        <div className={`flex items-center gap-2.5 py-2 rounded-xl hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors group ${collapsed ? "flex-col px-0" : "px-2"}`}>
           {/* Avatar */}
           <div className="h-8 w-8 rounded-full bg-linear-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm overflow-hidden">
             {user?.avatar_url ? (
@@ -331,6 +378,7 @@ export default function SideNav() {
               initials
             )}
           </div>
+          {!collapsed && (
           <div className="flex-1 overflow-hidden">
             <p className="text-xs font-semibold text-neutral-900 dark:text-white truncate leading-snug">
               {displayName}
@@ -339,6 +387,7 @@ export default function SideNav() {
               {user?.email || ""}
             </p>
           </div>
+          )}
           {/* Privacy toggle */}
           <button
             onClick={togglePrivacyMode}

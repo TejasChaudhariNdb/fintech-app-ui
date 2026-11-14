@@ -178,12 +178,12 @@ export default function PropertySimulatorModal({
         <div className="rounded-2xl bg-neutral-50 dark:bg-white/5 p-4">
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">
-              <div className="text-[10px] uppercase font-bold text-neutral-400">XIRR today</div>
+              <div className="text-[11px] uppercase font-bold text-neutral-400">XIRR today</div>
               <div className="text-xl font-black font-mono text-neutral-700 dark:text-neutral-200">{pct(nowX)}</div>
             </div>
             <ArrowRight size={18} className="text-neutral-400" />
             <div className="text-center">
-              <div className="text-[10px] uppercase font-bold text-neutral-400">If sold as below</div>
+              <div className="text-[11px] uppercase font-bold text-neutral-400">If sold as below</div>
               <div className={`text-2xl font-black font-mono flex items-center gap-1 ${up ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                 {loading && !result ? <Loader2 size={18} className="animate-spin" /> : pct(simX)}
                 {result && (up ? <TrendingUp size={16} /> : <TrendingDown size={16} />)}
@@ -191,7 +191,7 @@ export default function PropertySimulatorModal({
             </div>
           </div>
           {sim && sim.estimated_tax ? (
-            <p className="text-center text-[11px] text-neutral-500 mt-1">After capital gains tax: <b>{pct(sim.xirr_post_tax_pct)}</b></p>
+            <p className="text-center text-xs text-neutral-500 mt-1">After capital gains tax: <b>{pct(sim.xirr_post_tax_pct)}</b></p>
           ) : null}
         </div>
 
@@ -203,7 +203,7 @@ export default function PropertySimulatorModal({
               <span className="text-sm font-black font-mono text-neutral-900 dark:text-white">
                 <PrivacyMask>{short(saleValue)}</PrivacyMask>
                 {diff !== 0 && (
-                  <span className={`ml-1 text-[11px] font-semibold ${diff > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  <span className={`ml-1 text-xs font-semibold ${diff > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                     ({diff > 0 ? "+" : ""}{short(diff)})
                   </span>
                 )}
@@ -225,7 +225,7 @@ export default function PropertySimulatorModal({
                   key={c.label}
                   type="button"
                   onClick={() => setSaleValue(c.v)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold whitespace-nowrap border ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap border ${
                     saleValue === c.v
                       ? "bg-indigo-600 text-white border-indigo-600"
                       : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300"
@@ -312,23 +312,23 @@ export default function PropertySimulatorModal({
         <div className="rounded-2xl bg-indigo-500/5 border border-indigo-500/20 p-3">
           <div className="text-xs font-bold text-neutral-900 dark:text-white">Property vs Nifty 50 (so far)</div>
           {bench === null ? (
-            <p className="text-[11px] text-neutral-500 mt-1 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Comparing…</p>
+            <p className="text-xs text-neutral-500 mt-1 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Comparing…</p>
           ) : bench.nifty_xirr_pct == null ? (
-            <p className="text-[11px] text-neutral-500 mt-1">Comparison not available right now.</p>
+            <p className="text-xs text-neutral-500 mt-1">Comparison not available right now.</p>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2 mt-2 text-center">
                 <div>
-                  <div className="text-[10px] uppercase text-neutral-400 font-bold">Your property</div>
+                  <div className="text-[11px] uppercase text-neutral-400 font-bold">Your property</div>
                   <div className="text-lg font-black font-mono text-neutral-900 dark:text-white">{pct(bench.property_xirr_pct)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase text-neutral-400 font-bold">Same money in Nifty 50</div>
+                  <div className="text-[11px] uppercase text-neutral-400 font-bold">Same money in Nifty 50</div>
                   <div className="text-lg font-black font-mono text-neutral-900 dark:text-white">{pct(bench.nifty_xirr_pct)}</div>
                 </div>
               </div>
-              {verdict && <p className="text-[11px] text-neutral-700 dark:text-neutral-300 mt-2">{verdict}</p>}
-              <p className="text-[10px] text-neutral-400 mt-1">
+              {verdict && <p className="text-xs text-neutral-700 dark:text-neutral-300 mt-2">{verdict}</p>}
+              <p className="text-[11px] text-neutral-400 mt-1">
                 As if your down payment, EMIs and expenses had gone into Nifty 50 on the same dates, with rent taken out. Price index, no dividends.
               </p>
             </>
@@ -336,7 +336,7 @@ export default function PropertySimulatorModal({
         </div>
 
         {result && (
-          <ul className="list-disc pl-4 text-[10px] text-neutral-400 space-y-0.5">
+          <ul className="list-disc pl-4 text-[11px] text-neutral-400 space-y-0.5">
             {result.notes.map((n) => <li key={n}>{n}</li>)}
           </ul>
         )}

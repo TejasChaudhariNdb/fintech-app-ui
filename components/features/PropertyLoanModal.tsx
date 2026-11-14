@@ -108,9 +108,9 @@ function short(v: number): string {
 function Stat({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
   return (
     <div className="rounded-xl bg-neutral-50 dark:bg-white/5 p-2.5">
-      <div className="text-[10px] uppercase font-bold text-neutral-400">{label}</div>
+      <div className="text-[11px] uppercase font-bold text-neutral-400">{label}</div>
       <div className="text-sm font-bold font-mono text-neutral-900 dark:text-white mt-0.5"><PrivacyMask>{value}</PrivacyMask></div>
-      {hint && <div className="text-[10px] text-neutral-500 leading-snug">{hint}</div>}
+      {hint && <div className="text-[11px] text-neutral-500 leading-snug">{hint}</div>}
     </div>
   );
 }
@@ -150,13 +150,13 @@ function MonthEditor({
   };
 
   const opt = (active: boolean) =>
-    `flex-1 rounded-lg border px-2 py-2 text-[11px] font-semibold ${
+    `flex-1 rounded-lg border px-2 py-2 text-xs font-semibold ${
       active ? "border-indigo-500 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300" : "border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300"
     }`;
 
   return (
     <div className="my-1.5 rounded-xl border border-indigo-500/30 bg-white dark:bg-surface p-2.5 space-y-2">
-      <div className="text-[11px] text-neutral-600 dark:text-neutral-300">
+      <div className="text-xs text-neutral-600 dark:text-neutral-300">
         <b className="text-neutral-900 dark:text-white">{monthName(row.due)} EMI</b> · scheduled {inr(row.scheduled_emi)}
       </div>
       <div className="flex gap-1.5">
@@ -191,12 +191,12 @@ function MonthEditor({
           </button>
         </div>
       )}
-      <p className="text-[10px] text-neutral-400">
+      <p className="text-[11px] text-neutral-400">
         {showCustom ? "Paid more? The extra reduces your loan. Paid less? The rest stays on the loan." : "Missed EMIs add that month's interest to the loan."}
       </p>
       <div className="flex items-center justify-between">
-        {err ? <span className="text-[11px] text-rose-600">{err}</span> : <span />}
-        <button type="button" onClick={onCancel} className="text-[11px] text-neutral-500 hover:underline">Close</button>
+        {err ? <span className="text-xs text-rose-600">{err}</span> : <span />}
+        <button type="button" onClick={onCancel} className="text-xs text-neutral-500 hover:underline">Close</button>
       </div>
     </div>
   );
@@ -245,7 +245,7 @@ function BulkMonths({
 
   const sel = "w-full rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-surface px-2 py-1.5 text-xs";
   const opt = (active: boolean) =>
-    `flex-1 rounded-lg border px-2 py-1.5 text-[11px] font-semibold ${
+    `flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold ${
       active ? "border-indigo-600 bg-indigo-600 text-white" : "border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300"
     }`;
 
@@ -253,13 +253,13 @@ function BulkMonths({
     <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3 space-y-2.5">
       <div className="text-xs font-bold text-neutral-900 dark:text-white">Change many months</div>
       <div className="grid grid-cols-2 gap-2">
-        <label className="text-[11px] text-neutral-600 dark:text-neutral-400">
+        <label className="text-xs text-neutral-600 dark:text-neutral-400">
           From
           <select value={from} onChange={(e) => setFrom(e.target.value)} className={sel}>
             {rows.map((r) => <option key={r.due} value={r.due}>{monthName(r.due)}</option>)}
           </select>
         </label>
-        <label className="text-[11px] text-neutral-600 dark:text-neutral-400">
+        <label className="text-xs text-neutral-600 dark:text-neutral-400">
           To
           <select value={to} onChange={(e) => setTo(e.target.value)} className={sel}>
             {rows.map((r) => <option key={r.due} value={r.due}>{monthName(r.due)}</option>)}
@@ -281,9 +281,9 @@ function BulkMonths({
           className="w-full rounded-lg border border-neutral-200 dark:border-white/10 bg-transparent px-2.5 py-1.5 text-xs"
         />
       )}
-      {err && <p className="text-[11px] text-rose-600">{err}</p>}
+      {err && <p className="text-xs text-rose-600">{err}</p>}
       <div className="flex items-center justify-between">
-        <button type="button" onClick={onCancel} className="text-[11px] text-neutral-500 hover:underline">Cancel</button>
+        <button type="button" onClick={onCancel} className="text-xs text-neutral-500 hover:underline">Cancel</button>
         <button
           type="button"
           disabled={busy || count === 0}
@@ -356,7 +356,7 @@ function RatesView({ holdingId, loan, onChanged }: { holdingId: number; loan: Pr
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-[11px] text-neutral-700 dark:text-neutral-300 space-y-1">
+      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-xs text-neutral-700 dark:text-neutral-300 space-y-1">
         <p>
           <b>Floating-rate loan?</b> Add each rate change your bank made (HDFC, SBI and others list them as &quot;Interest rate
           changes&quot;). Interest, the loan left and your return then follow the real rate.
@@ -381,15 +381,15 @@ function RatesView({ holdingId, loan, onChanged }: { holdingId: number; loan: Pr
             <span className="absolute -left-[15px] top-3 h-2.5 w-2.5 rounded-full bg-indigo-500" />
             <div className="rounded-xl border border-neutral-200 dark:border-white/10 p-2.5 space-y-2">
               <div className="grid grid-cols-[1.3fr_0.8fr_1fr_auto] gap-1.5 items-end">
-                <label className="text-[10px] text-neutral-500">
+                <label className="text-[11px] text-neutral-500">
                   From
                   <DatePicker value={r.effective_date} onChange={(v) => update(r.key, "effective_date", v)} className={field} />
                 </label>
-                <label className="text-[10px] text-neutral-500">
+                <label className="text-[11px] text-neutral-500">
                   Rate %
                   <input type="number" inputMode="decimal" step="0.01" placeholder="7.75" value={r.annual_rate} onChange={(e) => update(r.key, "annual_rate", e.target.value)} className={field} />
                 </label>
-                <label className="text-[10px] text-neutral-500">
+                <label className="text-[11px] text-neutral-500">
                   New EMI
                   <input type="number" inputMode="numeric" placeholder="same" value={r.new_emi} onChange={(e) => update(r.key, "new_emi", e.target.value)} className={field} />
                 </label>
@@ -402,7 +402,7 @@ function RatesView({ holdingId, loan, onChanged }: { holdingId: number; loan: Pr
         ))}
         <div className="relative">
           <span className="absolute -left-[15px] top-1.5 h-2.5 w-2.5 rounded-full bg-neutral-400" />
-          <div className="text-[11px] text-neutral-600 dark:text-neutral-400 py-1">
+          <div className="text-xs text-neutral-600 dark:text-neutral-400 py-1">
             <b className="text-neutral-900 dark:text-white">{loan.annual_rate}%</b> from the first EMI ({monthName(loan.emi_start_date)}). Change it in Edit.
           </div>
         </div>
@@ -462,7 +462,7 @@ function ScheduleView({ holdingId, onChanged }: { holdingId: number; onChanged: 
         <Stat label="Total interest" value={short(data.total_interest)} />
         <Stat label="Total paid" value={short(data.total_paid)} />
       </div>
-      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-[11px] text-neutral-700 dark:text-neutral-300">
+      <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-xs text-neutral-700 dark:text-neutral-300">
         <b>Missed an EMI or paid a different amount?</b> Open the year and tap the month to fix it, or change many months at
         once. Your loan balance and return update automatically.
         {!bulkOpen && (
@@ -487,7 +487,7 @@ function ScheduleView({ holdingId, onChanged }: { holdingId: number; onChanged: 
       )}
       {flash && <p className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{flash}</p>}
       <div className="rounded-xl border border-neutral-200 dark:border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[1fr_1fr_1fr_1fr_16px] gap-1 px-2.5 py-2 bg-neutral-50 dark:bg-white/5 text-[10px] uppercase font-bold text-neutral-500">
+        <div className="grid grid-cols-[1fr_1fr_1fr_1fr_16px] gap-1 px-2.5 py-2 bg-neutral-50 dark:bg-white/5 text-[11px] uppercase font-bold text-neutral-500">
           <span>FY</span><span className="text-right">Interest</span><span className="text-right">Principal</span><span className="text-right">Balance</span><span />
         </div>
         {data.years.map((y) => {
@@ -502,16 +502,16 @@ function ScheduleView({ holdingId, onChanged }: { holdingId: number; onChanged: 
               <button
                 type="button"
                 onClick={() => setOpenFy(open ? null : y.fy)}
-                className={`w-full grid grid-cols-[1fr_1fr_1fr_1fr_16px] gap-1 px-2.5 py-2 text-[11px] font-mono text-left items-center ${fullyPaid ? "bg-emerald-500/5" : ""}`}
+                className={`w-full grid grid-cols-[1fr_1fr_1fr_1fr_16px] gap-1 px-2.5 py-2 text-xs font-mono text-left items-center ${fullyPaid ? "bg-emerald-500/5" : ""}`}
               >
                 <span className="font-sans font-semibold text-neutral-800 dark:text-neutral-200">
                   {y.fy}
-                  {partly && <span className="block text-[9px] font-normal text-indigo-500">now</span>}
-                  {fixes > 0 && <span className="block text-[9px] font-normal text-amber-600">{fixes} fixed</span>}
+                  {partly && <span className="block text-[11px] font-normal text-indigo-500">now</span>}
+                  {fixes > 0 && <span className="block text-[11px] font-normal text-amber-600">{fixes} fixed</span>}
                 </span>
                 <span className="text-right text-rose-600 dark:text-rose-400">
                   <PrivacyMask>{short(y.interest)}</PrivacyMask>
-                  <span className="block text-[9px] text-neutral-400">{interestShare}% of EMI</span>
+                  <span className="block text-[11px] text-neutral-400">{interestShare}% of EMI</span>
                 </span>
                 <span className="text-right text-emerald-600 dark:text-emerald-400"><PrivacyMask>{short(y.principal)}</PrivacyMask></span>
                 <span className="text-right text-neutral-700 dark:text-neutral-300"><PrivacyMask>{short(y.closing)}</PrivacyMask></span>
@@ -519,7 +519,7 @@ function ScheduleView({ holdingId, onChanged }: { holdingId: number; onChanged: 
               </button>
               {open && (
                 <div className="bg-neutral-50/60 dark:bg-white/[0.02] px-2.5 pb-2">
-                  <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-1 py-1 text-[9px] uppercase font-bold text-neutral-400">
+                  <div className="grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-1 py-1 text-[11px] uppercase font-bold text-neutral-400">
                     <span>Month</span><span className="text-right">Paid</span><span className="text-right">Interest</span><span className="text-right">Balance</span>
                   </div>
                   {yearRows.map((r) => {
@@ -530,24 +530,24 @@ function ScheduleView({ holdingId, onChanged }: { holdingId: number; onChanged: 
                           type="button"
                           disabled={!editable}
                           onClick={() => setEditing(editing === r.due ? null : r.due)}
-                          className={`w-full grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-1 py-1.5 text-[10px] font-mono text-left rounded-md ${
+                          className={`w-full grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-1 py-1.5 text-[11px] font-mono text-left rounded-md ${
                             editable ? "hover:bg-indigo-500/5" : "opacity-70 cursor-default"
                           } ${editing === r.due ? "bg-indigo-500/10" : ""}`}
                         >
                           <span className="font-sans text-neutral-700 dark:text-neutral-300">
                             {new Date(r.due).toLocaleDateString("en-IN", { month: "short", year: "2-digit" })}
                             {r.status === "MISSED" ? (
-                              <span className="ml-1 rounded bg-rose-500/15 px-1 text-[9px] font-semibold text-rose-600">missed</span>
+                              <span className="ml-1 rounded bg-rose-500/15 px-1 text-[11px] font-semibold text-rose-600">missed</span>
                             ) : r.status === "CHANGED" ? (
-                              <span className="ml-1 rounded bg-amber-500/15 px-1 text-[9px] font-semibold text-amber-700 dark:text-amber-400">changed</span>
+                              <span className="ml-1 rounded bg-amber-500/15 px-1 text-[11px] font-semibold text-amber-700 dark:text-amber-400">changed</span>
                             ) : r.paid ? (
                               <span className="ml-1 text-emerald-600">✓</span>
                             ) : null}
                             {r.rate_changed && (
-                              <span className="ml-1 rounded bg-sky-500/15 px-1 text-[9px] font-semibold text-sky-700 dark:text-sky-400">{r.rate}%</span>
+                              <span className="ml-1 rounded bg-sky-500/15 px-1 text-[11px] font-semibold text-sky-700 dark:text-sky-400">{r.rate}%</span>
                             )}
                             {r.emi_raised && (
-                              <span className="ml-1 rounded bg-rose-500/15 px-1 text-[9px] font-semibold text-rose-600">EMI up</span>
+                              <span className="ml-1 rounded bg-rose-500/15 px-1 text-[11px] font-semibold text-rose-600">EMI up</span>
                             )}
                           </span>
                           <span className={`text-right ${r.status === "MISSED" ? "text-rose-600" : r.status === "CHANGED" ? "text-amber-700 dark:text-amber-400" : "text-neutral-700 dark:text-neutral-300"}`}>
@@ -577,7 +577,7 @@ function ScheduleView({ holdingId, onChanged }: { holdingId: number; onChanged: 
           );
         })}
       </div>
-      <p className="text-[10px] text-neutral-400">
+      <p className="text-[11px] text-neutral-400">
         {data.note}
         {data.outstanding_entered != null && " You entered today's loan left from your bank; that figure is used for returns."}
       </p>
@@ -748,7 +748,7 @@ export default function PropertyLoanModal({
             </div>
 
             <div>
-              <div className="flex justify-between text-[11px] text-neutral-500 mb-1">
+              <div className="flex justify-between text-xs text-neutral-500 mb-1">
                 <span>{Math.round(repaidPct)}% of the loan repaid</span>
                 {loan.months_left !== undefined && <span>{loan.months_left} EMIs left</span>}
               </div>
@@ -799,7 +799,7 @@ export default function PropertyLoanModal({
                 <span className="text-neutral-600 dark:text-neutral-300">With the loan (your actual return)</span>
                 <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{pct(loan.xirr_leveraged_pct)}</span>
               </div>
-              <p className="text-[10px] text-neutral-500 leading-snug">
+              <p className="text-[11px] text-neutral-500 leading-snug">
                 &quot;With the loan&quot; counts your down payment and every EMI as money in, and the value minus the loan left
                 {loan.foreclosure_fee_pct ? ` and a ${loan.foreclosure_fee_pct}% foreclosure fee` : ""} as money back.
               </p>
@@ -827,13 +827,13 @@ export default function PropertyLoanModal({
                 <>
                   <div className="flex justify-between py-0.5"><span>Interest deduction (Sec 24b)</span><span className="font-mono"><PrivacyMask>{inr(tax.interest_deduction)}</PrivacyMask></span></div>
                   <div className="flex justify-between py-0.5"><span>Principal deduction (Sec 80C)</span><span className="font-mono"><PrivacyMask>{inr(tax.principal_80c_amount)}</PrivacyMask></span></div>
-                  <ul className="list-disc pl-4 mt-1 text-[11px] text-neutral-500 space-y-0.5">
+                  <ul className="list-disc pl-4 mt-1 text-xs text-neutral-500 space-y-0.5">
                     {tax.notes.map((n) => (<li key={n}>{n}</li>))}
                   </ul>
                 </>
               )}
             </div>
-            <p className="text-[10px] text-neutral-400">{loan.disclaimer}</p>
+            <p className="text-[11px] text-neutral-400">{loan.disclaimer}</p>
           </div>
         )}
 
@@ -857,7 +857,7 @@ export default function PropertyLoanModal({
                   key={String(o.id)}
                   type="button"
                   onClick={() => setKnowEmi(o.id)}
-                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold ${knowEmi === o.id ? "bg-indigo-600 text-white shadow-sm" : "text-neutral-500"}`}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${knowEmi === o.id ? "bg-indigo-600 text-white shadow-sm" : "text-neutral-500"}`}
                 >
                   {o.label}
                 </button>
@@ -928,7 +928,7 @@ export default function PropertyLoanModal({
                       placeholder="From your loan statement"
                       className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm"
                     />
-                    <p className="text-[10px] text-neutral-500 mt-1">Every month uses this EMI. The loan may end a little earlier or later.</p>
+                    <p className="text-[11px] text-neutral-500 mt-1">Every month uses this EMI. The loan may end a little earlier or later.</p>
                   </div>
                 )}
               </div>
@@ -942,12 +942,12 @@ export default function PropertyLoanModal({
             <div>
               <label className="block text-xs font-semibold mb-1">Loan left today (optional)</label>
               <input type="number" inputMode="numeric" value={outstanding} onChange={(e) => setOutstanding(e.target.value)} placeholder="From your bank statement" className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm" />
-              <p className="text-[10px] text-neutral-400 mt-1">Leave empty to use the schedule. Enter it if you made prepayments or the rate changed.</p>
+              <p className="text-[11px] text-neutral-400 mt-1">Leave empty to use the schedule. Enter it if you made prepayments or the rate changed.</p>
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Foreclosure fee (% of loan left, optional)</label>
               <input type="number" inputMode="decimal" step="0.1" value={feePct} onChange={(e) => setFeePct(e.target.value)} placeholder="0" className="w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm" />
-              <p className="text-[10px] text-neutral-400 mt-1">Usually 0% for floating-rate home loans. Fixed-rate or commercial loans may charge 2–4%.</p>
+              <p className="text-[11px] text-neutral-400 mt-1">Usually 0% for floating-rate home loans. Fixed-rate or commercial loans may charge 2–4%.</p>
             </div>
 
             {error && <p className="text-xs text-rose-600">{error}</p>}
