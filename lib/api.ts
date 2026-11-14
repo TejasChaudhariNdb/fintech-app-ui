@@ -1076,7 +1076,14 @@ export const api = {
   },
 
   // CAS Upload
-  uploadCAS: async (file: File, password: string, profileId?: string, pan?: string, forceReimport?: boolean) => {
+  uploadCAS: async (
+    file: File,
+    password: string,
+    profileId?: string,
+    pan?: string,
+    forceReimport?: boolean,
+    restoreDeleted?: string[],
+  ) => {
     checkDemoRestriction();
     const formData = new FormData();
     formData.append("file", file);
@@ -1087,6 +1094,10 @@ export const api = {
     // BUG-031: re-import a statement already seen, to restore funds deleted in the app
     if (forceReimport) {
       formData.append("force_reimport", "true");
+    }
+    // Funds the user deleted earlier and ticked to add back on this upload
+    if (restoreDeleted && restoreDeleted.length > 0) {
+      formData.append("restore_deleted", JSON.stringify(restoreDeleted));
     }
     const token = localStorage.getItem("access_token");
     const url = profileId 

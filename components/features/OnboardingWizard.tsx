@@ -30,6 +30,7 @@ import Button from "../ui/Button";
 import Card from "../ui/Card";
 import Input from "../ui/Input";
 import AddTransactionModal from "./AddTransactionModal";
+import DeletedFundsNotice, { DeletedFundInfo } from "./DeletedFundsNotice";
 import { api } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 import { useRouter } from "next/navigation";
@@ -69,7 +70,10 @@ export default function OnboardingWizard({
     schemes_count?: number;
     folios_count?: number;
     pan_established?: boolean;
+    skipped_deleted?: DeletedFundInfo[];
+    restored_with_new_activity?: DeletedFundInfo[];
   } | null>(null);
+  const [restoredBackCount, setRestoredBackCount] = useState(0);
   const [signupSource, setSignupSource] = useState("other");
   const [userEmail, setUserEmail] = useState("");
   const [copied, setCopied] = useState(false);
@@ -86,6 +90,7 @@ export default function OnboardingWizard({
     setShowManualPanInput(false);
     setPanError("");
     setImportResult(null);
+    setRestoredBackCount(0);
     setError("");
     setErrorStatus(null);
   };
@@ -723,6 +728,17 @@ export default function OnboardingWizard({
     }
   };
 
+  // Add back funds the user deleted earlier: re-send the same statement with their keys.
+  const handleRestoreDeleted = async (keys: string[]) => {
+    if (!file || !selectedProfileId) {
+      throw new Error("Please select the statement file and profile again.");
+    }
+    const panToPass = manualPan ? manualPan.trim().toUpperCase() : undefined;
+    const res = await api.uploadCAS(file, password, selectedProfileId, panToPass, true, keys);
+    setImportResult(res);
+    setRestoredBackCount((n) => n + keys.length);
+  };
+
   // SUCCESS STATE: Already Imported (Duplicate File)
   if (success && importResult?.status === "already_imported") {
     return (
@@ -831,6 +847,15 @@ export default function OnboardingWizard({
               </div>
             </div>
 
+            {restoredBackCount > 0 && (
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
+                <Check size={14} className="shrink-0" />
+                <span>
+                  {restoredBackCount === 1 ? "1 fund added back" : `${restoredBackCount} funds added back`} to your portfolio
+                </span>
+              </div>
+            )}
+
             {importResult.pan_established && (
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
                 <Check size={14} className="shrink-0" />
@@ -842,6 +867,14 @@ export default function OnboardingWizard({
               💡 <strong>Multiple statements?</strong> You can upload another CAS from a different email address or from KFintech — statements sharing your PAN will merge into this single portfolio.
             </div>
           </div>
+        )}
+
+        {uploadFormat === "CAS" && importResult && (
+          <DeletedFundsNotice
+            skipped={importResult.skipped_deleted || []}
+            restoredWithNewActivity={importResult.restored_with_new_activity || []}
+            onRestore={handleRestoreDeleted}
+          />
         )}
 
         <div className="flex flex-col sm:flex-row gap-3 w-full">
