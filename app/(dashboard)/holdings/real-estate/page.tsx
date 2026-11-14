@@ -36,6 +36,7 @@ import {
   ArrowLeftRight,
   Calculator,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 
 interface RealEstateItem {
@@ -398,6 +399,20 @@ export default function RealEstateHoldingsPage() {
     });
   };
 
+  const [showInfoHint, setShowInfoHint] = useState<boolean>(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem("re_info_hint_seen") !== "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissInfoHint = () => {
+    setShowInfoHint(false);
+    try {
+      localStorage.setItem("re_info_hint_seen", "1");
+    } catch {}
+  };
+
   const costParts = holdings.reduce(
     (acc, h) => ({
       price: acc.price + (h.purchase_price || 0),
@@ -550,6 +565,19 @@ export default function RealEstateHoldingsPage() {
 
       {/* ── SUMMARY CARDS: Cost basis · Market value · Yield / return (tap to cycle) · Capital gain · Cash flow.
           2026-11-14: each card shows one number and one short line; the ⓘ popover holds the breakdown, so text never spills out. ── */}
+      {/* One-time hint so people find the ⓘ (phones cannot hover). Dismissed for good on this device. */}
+      {summary && summary.total_properties_count > 0 && showInfoHint && (
+        <div className="flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-xs text-neutral-700 dark:text-neutral-300">
+          <Info size={15} className="shrink-0 text-indigo-500" />
+          <span className="flex-1">
+            Tap the <Info size={12} className="inline -mt-0.5 text-indigo-500" /> on any card to see how the number is worked out.
+          </span>
+          <button type="button" onClick={dismissInfoHint} className="shrink-0 rounded-lg px-2 py-1 font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10">
+            Got it
+          </button>
+        </div>
+      )}
+
       {summary && summary.total_properties_count > 0 && (
         <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
           {/* 1. Cost Basis */}

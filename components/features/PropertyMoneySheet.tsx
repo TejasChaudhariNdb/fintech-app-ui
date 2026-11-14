@@ -617,7 +617,7 @@ export default function PropertyMoneySheet({
           </Link>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => startForm("RENT")} className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-white py-2.5 text-xs font-bold">
-              <Plus size={14} /> Add rent
+              <Plus size={14} /> Add income
             </button>
             <button type="button" onClick={() => startForm("EXPENSE")} className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 text-white py-2.5 text-xs font-bold">
               <Plus size={14} /> Add expense
@@ -635,9 +635,9 @@ export default function PropertyMoneySheet({
                   <div className="text-[10px] uppercase font-bold text-neutral-400">Money in</div>
                   <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400"><PrivacyMask>+{inr(totalIn)}</PrivacyMask></div>
                 </div>
-                <div className="rounded-xl bg-rose-500/5 p-2">
+                <div className="rounded-xl bg-neutral-500/5 p-2">
                   <div className="text-[10px] uppercase font-bold text-neutral-400">Money out</div>
-                  <div className="text-sm font-bold font-mono text-rose-600 dark:text-rose-400"><PrivacyMask>-{inr(totalOut)}</PrivacyMask></div>
+                  <div className="text-sm font-semibold font-mono text-neutral-700 dark:text-neutral-200"><PrivacyMask>−{inr(totalOut)}</PrivacyMask></div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -724,7 +724,7 @@ export default function PropertyMoneySheet({
                               {shownNote(t) && <> · {shownNote(t)}</>}
                             </div>
                           </div>
-                          <div className={`text-xs font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                          <div className={`text-xs font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"}`}>
                             <PrivacyMask>{t.category === "INFLOW" ? "+" : "-"}{inr(t.amount)}</PrivacyMask>
                           </div>
                           {!selecting && (
@@ -954,7 +954,7 @@ export default function PropertyMoneySheet({
                         {t.sub_category && <span className="text-neutral-400"> · {t.sub_category}</span>}
                         {shownNote(t) && <span className="text-neutral-400"> · {shownNote(t)}</span>}
                       </span>
-                      <span className={`text-[11px] font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      <span className={`text-[11px] font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"}`}>
                         <PrivacyMask>{t.category === "INFLOW" ? "+" : "-"}{inr(t.amount)}</PrivacyMask>
                       </span>
                     </div>

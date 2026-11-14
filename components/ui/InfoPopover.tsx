@@ -87,7 +87,7 @@ export default function InfoPopover({ label, children }: { label: string; childr
           place();
           setPinned((p) => !p);
         }}
-        className={`p-0.5 rounded-full transition-colors ${open ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400"}`}
+        className={`p-1.5 -m-1 rounded-full transition-colors ${open ? "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10" : "text-indigo-500/70 dark:text-indigo-400/70 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-500/10"}`}
       >
         <Info size={14} />
       </button>

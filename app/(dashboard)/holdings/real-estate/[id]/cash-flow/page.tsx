@@ -108,6 +108,14 @@ type Direction = "ALL" | "OUT" | "IN";
 const inr = (v: number) => `₹${Math.round(v).toLocaleString("en-IN")}`;
 const nameOf = (l: { head: string; label: string }) => SHORT[l.head] ?? l.label;
 
+/** ₹1.40Cr / ₹39.3L / ₹97.1K for tight spaces. */
+function inrShort(v: number): string {
+  if (v >= 1e7) return `₹${(v / 1e7).toFixed(2)}Cr`;
+  if (v >= 1e5) return `₹${(v / 1e5).toFixed(1).replace(/\.0$/, "")}L`;
+  if (v >= 1e3) return `₹${(v / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
+  return inr(v);
+}
+
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -176,6 +184,7 @@ export default function PropertyCashFlowPage() {
   const [picked, setPicked] = useState<Set<string>>(new Set()); // empty = every head
   const [direction, setDirection] = useState<Direction>("ALL");
   const [query, setQuery] = useState("");
+  const [headsOpen, setHeadsOpen] = useState(false); // phones: head chips folded away
 
   const [view, setView] = useState<View>("HEADS");
   const [newestFirst, setNewestFirst] = useState(true);
@@ -516,14 +525,24 @@ export default function PropertyCashFlowPage() {
         </div>
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-semibold text-neutral-500">Heads {picked.size ? `(${picked.size} picked)` : "(all)"}</span>
+            {/* Phones: a toggle, so the long list of heads does not push the figures off screen. */}
+            <button
+              type="button"
+              onClick={() => setHeadsOpen((v) => !v)}
+              className="sm:hidden inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-600 dark:text-neutral-300"
+              aria-expanded={headsOpen}
+            >
+              Heads {picked.size ? `(${picked.size} picked)` : "(all)"}
+              <ChevronDown size={13} className={`transition-transform ${headsOpen ? "rotate-180" : ""}`} />
+            </button>
+            <span className="hidden sm:inline text-[11px] font-semibold text-neutral-500">Heads {picked.size ? `(${picked.size} picked)` : "(all)"}</span>
             {filtersOn && (
               <button type="button" onClick={resetFilters} className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
                 Clear all filters
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className={`${headsOpen ? "flex" : "hidden"} sm:flex flex-wrap gap-1.5`}>
             {data.heads.map((h) => (
               <Chip key={h.head} small on={picked.has(h.head)} onClick={() => toggleHead(h.head)}>
                 {nameOf(h)}
@@ -876,7 +895,9 @@ function Total({ label, sub, value, signed }: { label: string; sub: string; valu
       <div className="text-sm font-semibold font-mono text-neutral-800 dark:text-neutral-100">
         <PrivacyMask>
           {signed ? (value >= 0 ? "+" : "−") : ""}
-          {inr(Math.abs(value))}
+          {/* Phones: short form so a crore figure fits a third of the screen. */}
+          <span className="sm:hidden">{inrShort(Math.abs(value))}</span>
+          <span className="hidden sm:inline">{inr(Math.abs(value))}</span>
         </PrivacyMask>
       </div>
       <div className="text-[9px] text-neutral-400 leading-tight">{sub}</div>
