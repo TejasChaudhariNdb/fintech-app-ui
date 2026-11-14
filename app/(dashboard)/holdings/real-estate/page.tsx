@@ -1,6 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Modal from "@/components/ui/Modal";
+import InfoPopover, { PopRow } from "@/components/ui/InfoPopover";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
 import Card from "@/components/ui/Card";
@@ -18,8 +22,6 @@ import {
   Layers,
   Home,
   MapPin,
-  TrendingUp,
-  TrendingDown,
   Plus,
   Trash2,
   Edit2,
@@ -27,10 +29,8 @@ import {
   Loader2,
   Calendar,
   CheckCircle2,
-  IndianRupee,
   Key,
   Receipt,
-  Wallet,
   CreditCard,
   ChevronRight,
   ArrowLeftRight,
@@ -122,11 +122,21 @@ interface RealEstateSummary {
     expenses: number;
     loan_payments: number;
     interest_paid: number;
+    principal_repaid?: number;
+    logged_loan_payments?: number;
     net: number;
   };
 }
 
-type ReturnMode = "XIRR" | "CAGR";
+// Tap to cycle (feedback 2026-11-14): property (price) yield → rental yield → net return (XIRR).
+type ReturnMode = "PRICE" | "RENT" | "NET";
+const RETURN_MODES: ReturnMode[] = ["PRICE", "RENT", "NET"];
+const RETURN_INFO: Record<ReturnMode, { title: string; short: string; help: string; card: string }> = {
+  PRICE: { title: "Property yield", short: "Price", help: "Yearly growth of the property's price only (CAGR)", card: "Price growth a year" },
+  RENT: { title: "Rental yield", short: "Rent", help: "Today's yearly rent as % of today's market value", card: "Yearly rent ÷ value" },
+  NET: { title: "Net return", short: "Net", help: "True XIRR on your own money, after EMIs, interest, rent and every cost", card: "XIRR after EMIs & costs" },
+};
+const nextMode = (m: ReturnMode): ReturnMode => RETURN_MODES[(RETURN_MODES.indexOf(m) + 1) % RETURN_MODES.length];
 
 function fmtPa(v: number | null | undefined): string {
   if (v === null || v === undefined) return "—";
@@ -193,6 +203,95 @@ function ActionButton({
       <Icon size={15} className="shrink-0" />
       <span className="whitespace-nowrap">{label}</span>
     </button>
+  );
+}
+
+/** "+₹7.3L" / "−₹97.1K" (minus sign before the rupee symbol). */
+function signedINR(v: number): string {
+  return `${v < 0 ? "−" : "+"}${formatINRShort(Math.abs(v))}`;
+}
+
+function PopTitle({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-400 mb-1">{children}</div>;
+}
+
+function PopNote({ children }: { children: React.ReactNode }) {
+  return <p className="mt-2 text-[11px] leading-snug text-neutral-500">{children}</p>;
+}
+
+/** Summary card: title + ⓘ, one big number, one short line (never wraps out of the card). */
+function SummaryCard({
+  title,
+  extra,
+  info,
+  value,
+  sub,
+  after,
+  onClick,
+  ariaLabel,
+  highlight,
+  className = "",
+}: {
+  title: React.ReactNode;
+  extra?: React.ReactNode;
+  info: React.ReactNode;
+  value: React.ReactNode;
+  sub: React.ReactNode;
+  after?: React.ReactNode;
+  onClick?: () => void;
+  ariaLabel?: string;
+  highlight?: boolean;
+  className?: string;
+}) {
+  const clickable = !!onClick;
+  return (
+    <Card
+      className={`p-3.5 sm:p-4 flex flex-col justify-between min-w-0 ${highlight ? "border-indigo-500/30 bg-indigo-500/[0.03]" : ""} ${
+        clickable ? "cursor-pointer hover:border-indigo-500/50 transition-colors" : ""
+      } ${className}`}
+    >
+      <div
+        role={clickable ? "button" : undefined}
+        tabIndex={clickable ? 0 : undefined}
+        aria-label={ariaLabel}
+        onClick={onClick}
+        onKeyDown={
+          clickable
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onClick?.();
+                }
+              }
+            : undefined
+        }
+        className="flex flex-col justify-between h-full outline-none"
+      >
+        <div className="flex items-center justify-between gap-2 text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 min-w-0">
+            <span className="truncate">{title}</span>
+            <InfoPopover label={typeof title === "string" ? title : "this figure"}>{info}</InfoPopover>
+          </span>
+          {extra}
+        </div>
+        <div className="mt-2.5 min-w-0">
+          <div className="text-lg sm:text-2xl font-black font-mono tracking-tight whitespace-nowrap truncate">{value}</div>
+          <div className="text-[11px] text-neutral-500 mt-0.5 truncate">{sub}</div>
+        </div>
+      </div>
+      {after && <div onClick={(e) => e.stopPropagation()}>{after}</div>}
+    </Card>
+  );
+}
+
+/** Three dots showing which of the three return figures is on screen. */
+function ModeDots({ mode }: { mode: ReturnMode }) {
+  return (
+    <div className="mt-1.5 flex gap-1" aria-hidden>
+      {RETURN_MODES.map((m) => (
+        <span key={m} className={`h-1 rounded-full transition-all ${m === mode ? "w-4 bg-indigo-500" : "w-1.5 bg-indigo-500/25"}`} />
+      ))}
+    </div>
   );
 }
 
@@ -270,26 +369,51 @@ export default function RealEstateHoldingsPage() {
   const [editingItem, setEditingItem] = useState<RealEstateItem | null>(null);
   const [loanModalFor, setLoanModalFor] = useState<RealEstateItem | null>(null);
   const [taxOpen, setTaxOpen] = useState(false);
+  const [cashPickerOpen, setCashPickerOpen] = useState(false);
+  const router = useRouter();
+  // Cash flow screen is per property: open it straight away for one, else ask which.
+  const openCashFlow = () => {
+    if (holdings.length === 1) router.push(`/holdings/real-estate/${holdings[0].id}/cash-flow`);
+    else setCashPickerOpen(true);
+  };
   const [simFor, setSimFor] = useState<RealEstateItem | null>(null);
-  const [returnMode, setReturnMode] = useState<ReturnMode>("XIRR");
+  const [returnMode, setReturnMode] = useState<ReturnMode>("NET");
   const [moneyMode, setMoneyMode] = useState<MoneySheetMode>("RENT");
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("re_return_mode");
-      if (saved === "XIRR" || saved === "CAGR") setReturnMode(saved);
+      if (saved === "PRICE" || saved === "RENT" || saved === "NET") setReturnMode(saved);
+      else if (saved === "CAGR") setReturnMode("PRICE"); // saved by the older XIRR/CAGR toggle
     } catch {}
   }, []);
 
   const toggleReturnMode = () => {
     setReturnMode((m) => {
-      const next = m === "XIRR" ? "CAGR" : "XIRR";
+      const next = nextMode(m);
       try {
         localStorage.setItem("re_return_mode", next);
       } catch {}
       return next;
     });
   };
+
+  const costParts = holdings.reduce(
+    (acc, h) => ({
+      price: acc.price + (h.purchase_price || 0),
+      stamp: acc.stamp + (h.stamp_duty_and_charges || 0),
+      renovation: acc.renovation + (h.renovation_costs || 0),
+    }),
+    { price: 0, stamp: 0, renovation: 0 }
+  );
+  const cashNet = summary?.holding_cash_flow?.net ?? summary?.total_net_cash_flow ?? 0;
+
+  const summaryReturn =
+    returnMode === "NET"
+      ? summary?.portfolio_xirr_pct
+      : returnMode === "RENT"
+        ? summary?.portfolio_rental_yield_pct
+        : summary?.portfolio_cagr_pct;
 
   // Modal State for Cash Flow & Transactions
   const [cashFlowModalOpen, setCashFlowModalOpen] = useState(false);
@@ -424,145 +548,186 @@ export default function RealEstateHoldingsPage() {
         </div>
       </div>
 
-      {/* ── SUMMARY CARDS (feedback 2026-11-13): Cost basis · Market value · XIRR/CAGR · Capital gain · Net cash flow ── */}
+      {/* ── SUMMARY CARDS: Cost basis · Market value · Yield / return (tap to cycle) · Capital gain · Cash flow.
+          2026-11-14: each card shows one number and one short line; the ⓘ popover holds the breakdown, so text never spills out. ── */}
       {summary && summary.total_properties_count > 0 && (
         <div className="grid grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
-          {/* 1. Cost Basis (cost only) */}
-          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Cost Basis</span>
-              <IndianRupee size={15} className="text-blue-500" />
-            </div>
-            <div className="mt-2.5">
-              <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
-                <PrivacyMask>{formatINRShort(summary.total_invested)}</PrivacyMask>
-              </div>
-              <div className="text-[11px] text-neutral-400 mt-0.5">Price + stamp duty + renovation</div>
-            </div>
-          </Card>
+          {/* 1. Cost Basis */}
+          <SummaryCard
+            title="Cost Basis"
+            info={
+              <>
+                <PopTitle>What you paid to buy</PopTitle>
+                <PopRow label="Purchase price" value={<PrivacyMask>{formatINRShort(costParts.price)}</PrivacyMask>} />
+                <PopRow label="Stamp duty & registration" value={<PrivacyMask>{formatINRShort(costParts.stamp)}</PrivacyMask>} />
+                <PopRow label="Renovation at purchase" value={<PrivacyMask>{formatINRShort(costParts.renovation)}</PrivacyMask>} />
+                <PopRow label="Cost basis" value={<PrivacyMask>{formatINRShort(summary.total_invested)}</PrivacyMask>} strong />
+                <PopNote>
+                  Costs added later (repairs, maintenance) are in Cash flow. Renovations you tick “count in capital gains cost” also lower the tax.
+                </PopNote>
+              </>
+            }
+            value={<PrivacyMask>{formatINRShort(summary.total_invested)}</PrivacyMask>}
+            sub="What you paid to buy"
+          />
 
           {/* 2. Market Value */}
-          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Market Value</span>
-              <Building2 size={15} className="text-indigo-500" />
-            </div>
-            <div className="mt-2.5">
-              <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white font-mono tracking-tight">
-                <PrivacyMask>{formatINRShort(summary.total_current_valuation)}</PrivacyMask>
-              </div>
-              <div className="text-[11px] text-neutral-400 mt-0.5">
-                {summary.total_properties_count} {summary.total_properties_count === 1 ? "property" : "properties"}
+          <SummaryCard
+            title="Market Value"
+            info={
+              <>
+                <PopTitle>
+                  {summary.total_properties_count} {summary.total_properties_count === 1 ? "property" : "properties"} today
+                </PopTitle>
+                <PopRow label="Market value" value={<PrivacyMask>{formatINRShort(summary.total_current_valuation)}</PrivacyMask>} />
                 {(summary.total_loan_outstanding ?? 0) > 0 && (
-                  <> · loan left <PrivacyMask>{formatINRShort(summary.total_loan_outstanding ?? 0)}</PrivacyMask></>
+                  <>
+                    <PopRow label="Loan still to repay" value={<PrivacyMask>−{formatINRShort(summary.total_loan_outstanding ?? 0)}</PrivacyMask>} />
+                    <PopRow
+                      label="Your equity"
+                      value={<PrivacyMask>{formatINRShort(summary.total_current_valuation - (summary.total_loan_outstanding ?? 0))}</PrivacyMask>}
+                      strong
+                    />
+                  </>
                 )}
-              </div>
-            </div>
-          </Card>
+                <PopNote>Update a property&apos;s value from its edit (pencil) button.</PopNote>
+              </>
+            }
+            value={<PrivacyMask>{formatINRShort(summary.total_current_valuation)}</PrivacyMask>}
+            sub={
+              (summary.total_loan_outstanding ?? 0) > 0 ? (
+                <>Loan left <PrivacyMask>{formatINRShort(summary.total_loan_outstanding ?? 0)}</PrivacyMask></>
+              ) : (
+                `${summary.total_properties_count} ${summary.total_properties_count === 1 ? "property" : "properties"}`
+              )
+            }
+          />
 
-          {/* 3. XIRR / CAGR (tap to switch) */}
-          <button
-            type="button"
+          {/* 3. Property yield → Rental yield → Net return (tap to cycle) */}
+          <SummaryCard
+            className="col-span-2 xl:col-span-1"
+            highlight
             onClick={toggleReturnMode}
-            className="col-span-2 xl:col-span-1 text-left rounded-2xl"
-            aria-label={`Showing ${returnMode}. Tap to show ${returnMode === "XIRR" ? "CAGR" : "XIRR"}`}
-          >
-            <Card className="h-full p-3.5 sm:p-4 flex flex-col justify-between border-indigo-500/30 bg-indigo-500/[0.03] hover:border-indigo-500/60 transition-colors">
-              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
-                <span className="text-indigo-600 dark:text-indigo-400">{returnMode}</span>
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] text-indigo-600 dark:text-indigo-400">
-                  <ArrowLeftRight size={11} /> {returnMode === "XIRR" ? "CAGR" : "XIRR"}
-                </span>
-              </div>
-              <div className="mt-2.5">
-                <div className={`text-lg sm:text-2xl font-black font-mono tracking-tight whitespace-nowrap ${toneOf(returnMode === "XIRR" ? summary.portfolio_xirr_pct : summary.portfolio_cagr_pct)}`}>
-                  <BigPa v={returnMode === "XIRR" ? summary.portfolio_xirr_pct : summary.portfolio_cagr_pct} />
-                </div>
-                <div className="text-[11px] text-neutral-500 mt-0.5 leading-snug">
-                  {returnMode === "XIRR"
-                    ? "Your real yearly return on your own money: down payment, EMIs, rent and costs"
-                    : "Yearly growth of the property price only (no loan, rent or costs)"}
-                </div>
-              </div>
-            </Card>
-          </button>
+            ariaLabel={`Showing ${RETURN_INFO[returnMode].title}. Tap to show ${RETURN_INFO[nextMode(returnMode)].title}`}
+            title={<span className="text-indigo-600 dark:text-indigo-400">{RETURN_INFO[returnMode].title}</span>}
+            extra={
+              <span
+                className="shrink-0 inline-flex items-center rounded-full bg-indigo-500/10 p-1 text-indigo-600 dark:text-indigo-400"
+                title={`Tap for ${RETURN_INFO[nextMode(returnMode)].title.toLowerCase()}`}
+              >
+                <ArrowLeftRight size={11} />
+              </span>
+            }
+            info={
+              <>
+                <PopTitle>Three ways to look at the return</PopTitle>
+                {RETURN_MODES.map((m) => {
+                  const v = m === "NET" ? summary.portfolio_xirr_pct : m === "RENT" ? summary.portfolio_rental_yield_pct : summary.portfolio_cagr_pct;
+                  return (
+                    <div key={m} className={`rounded-lg px-2 py-1.5 ${m === returnMode ? "bg-indigo-500/10" : ""}`}>
+                      <PopRow label={<b className="text-neutral-900 dark:text-white">{RETURN_INFO[m].title}</b>} value={fmtPa(v)} tone={toneOf(v)} />
+                      <div className="text-[11px] text-neutral-500 leading-snug">{RETURN_INFO[m].help}</div>
+                    </div>
+                  );
+                })}
+                <PopNote>Tap the card to switch between them.</PopNote>
+              </>
+            }
+            value={
+              <span className={toneOf(summaryReturn)}>
+                <BigPa v={summaryReturn} />
+              </span>
+            }
+            sub={RETURN_INFO[returnMode].card}
+            after={<ModeDots mode={returnMode} />}
+          />
 
           {/* 4. Capital Gain */}
-          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Capital Gain</span>
-              {summary.total_gain_loss >= 0 ? (
-                <TrendingUp size={15} className="text-emerald-500" />
-              ) : (
-                <TrendingDown size={15} className="text-rose-500" />
-              )}
-            </div>
-            <div className="mt-2.5">
-              <div className={`text-lg sm:text-2xl font-black font-mono tracking-tight whitespace-nowrap ${toneOf(summary.total_gain_loss)}`}>
-                <PrivacyMask>
-                  {summary.total_gain_loss >= 0 ? "+" : ""}
-                  {formatINRShort(summary.total_gain_loss)}
-                </PrivacyMask>
-              </div>
-              <div className="text-[11px] text-neutral-500 mt-0.5">
-                {fmtPa(summary.portfolio_cagr_pct)} · {summary.total_gain_pct >= 0 ? "+" : ""}
-                {summary.total_gain_pct.toFixed(1)}% total
-              </div>
-              {summary.tax_estimate && summary.tax_estimate.long_term_properties_count > 0 && (
+          <SummaryCard
+            title="Capital Gain"
+            info={
+              <>
+                <PopTitle>If you sold today</PopTitle>
+                <PopRow label="Market value" value={<PrivacyMask>{formatINRShort(summary.total_current_valuation)}</PrivacyMask>} />
+                <PopRow label="Cost basis" value={<PrivacyMask>−{formatINRShort(summary.total_invested)}</PrivacyMask>} />
+                <PopRow label="Capital gain" value={<PrivacyMask>{signedINR(summary.total_gain_loss)}</PrivacyMask>} tone={toneOf(summary.total_gain_loss)} strong />
+                <PopRow label="Total growth" value={`${summary.total_gain_pct >= 0 ? "+" : ""}${summary.total_gain_pct.toFixed(1)}%`} />
+                <PopRow label="Growth a year (CAGR)" value={fmtPa(summary.portfolio_cagr_pct)} />
+                {summary.tax_estimate && summary.tax_estimate.long_term_properties_count > 0 && (
+                  <>
+                    <PopRow label="Tax if sold today (est.)" value={<PrivacyMask>{formatINRShort(summary.tax_estimate.recommended_tax_total)}</PrivacyMask>} />
+                    <button type="button" onClick={() => setTaxOpen(true)} className="mt-2 w-full rounded-lg bg-indigo-500/10 py-1.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                      See how the tax is worked out ›
+                    </button>
+                  </>
+                )}
+              </>
+            }
+            value={
+              <span className={toneOf(summary.total_gain_loss)}>
+                <PrivacyMask>{signedINR(summary.total_gain_loss)}</PrivacyMask>
+              </span>
+            }
+            sub={`${summary.total_gain_pct >= 0 ? "+" : ""}${summary.total_gain_pct.toFixed(1)}% · ${fmtPa(summary.portfolio_cagr_pct)}`}
+            after={
+              summary.tax_estimate && summary.tax_estimate.long_term_properties_count > 0 ? (
                 <button
                   type="button"
                   onClick={() => setTaxOpen(true)}
                   className="mt-2 w-full flex items-center justify-between gap-1 rounded-lg bg-indigo-500/5 px-2 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
                 >
-                  <span className="whitespace-nowrap">
+                  <span className="truncate">
                     Tax ≈ <PrivacyMask>{formatINRShort(summary.tax_estimate.recommended_tax_total)}</PrivacyMask>
                   </span>
-                  <span className="inline-flex items-center whitespace-nowrap">Details <ChevronRight size={12} /></span>
+                  <ChevronRight size={12} className="shrink-0" />
                 </button>
-              )}
-            </div>
-          </Card>
+              ) : null
+            }
+          />
 
-          {/* 5. Net Cash Flow while holding */}
-          <Card className="p-3.5 sm:p-4 flex flex-col justify-between">
-            <div className="flex items-center justify-between text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
-              <span>Net Cash Flow</span>
-              <Wallet size={15} className="text-amber-500" />
-            </div>
-            <div className="mt-2.5">
-              <div className={`text-lg sm:text-2xl font-black font-mono tracking-tight whitespace-nowrap ${toneOf(summary.holding_cash_flow?.net ?? summary.total_net_cash_flow ?? 0)}`}>
-                <PrivacyMask>
-                  {(summary.holding_cash_flow?.net ?? summary.total_net_cash_flow ?? 0) >= 0 ? "+" : ""}
-                  {formatINRShort(summary.holding_cash_flow?.net ?? summary.total_net_cash_flow ?? 0)}
-                </PrivacyMask>
-              </div>
-              {summary.holding_cash_flow ? (
-                <div className="text-[11px] text-neutral-500 mt-0.5 leading-snug">
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold whitespace-nowrap">
-                    Rent +<PrivacyMask>{formatINRShort(summary.holding_cash_flow.income)}</PrivacyMask>
-                  </span>
-                  {summary.holding_cash_flow.loan_payments > 0 && (
-                    <>
-                      {" · "}
-                      <span className="text-rose-500 font-semibold whitespace-nowrap">
-                        EMIs -<PrivacyMask>{formatINRShort(summary.holding_cash_flow.loan_payments)}</PrivacyMask>
-                      </span>
-                    </>
+          {/* 5. Cash flow while holding: rent less interest and costs. Neutral colour (a red figure alarms owners whose
+              property is growing); principal is equity, so it is not taken off. Tap opens the full cash flow screen. */}
+          <SummaryCard
+            title="Cash Flow"
+            onClick={openCashFlow}
+            ariaLabel="Open the full cash flow"
+            extra={
+              <span className="inline-flex items-center text-[10px] normal-case tracking-normal font-semibold text-indigo-600 dark:text-indigo-400">
+                View <ChevronRight size={12} />
+              </span>
+            }
+            info={
+              summary.holding_cash_flow ? (
+                <>
+                  <PopTitle>While you have held the properties</PopTitle>
+                  <PopRow label="Rent & other income" value={<PrivacyMask>+{formatINRShort(summary.holding_cash_flow.income)}</PrivacyMask>} tone="text-emerald-600 dark:text-emerald-400" />
+                  <PopRow label="Loan interest" value={<PrivacyMask>−{formatINRShort(summary.holding_cash_flow.interest_paid)}</PrivacyMask>} />
+                  {(summary.holding_cash_flow.logged_loan_payments ?? 0) > 0 && (
+                    <PopRow label="EMIs logged without a loan" value={<PrivacyMask>−{formatINRShort(summary.holding_cash_flow.logged_loan_payments ?? 0)}</PrivacyMask>} />
                   )}
-                  {summary.holding_cash_flow.expenses > 0 && (
-                    <>
-                      {" · "}
-                      <span className="text-rose-500 font-semibold whitespace-nowrap">
-                        Costs -<PrivacyMask>{formatINRShort(summary.holding_cash_flow.expenses)}</PrivacyMask>
-                      </span>
-                    </>
+                  <PopRow label="Costs (maintenance, tax, repairs…)" value={<PrivacyMask>−{formatINRShort(summary.holding_cash_flow.expenses)}</PrivacyMask>} />
+                  <PopRow label="Cash flow" value={<PrivacyMask>{signedINR(cashNet)}</PrivacyMask>} strong />
+                  {(summary.holding_cash_flow.principal_repaid ?? 0) > 0 && (
+                    <PopNote>
+                      Loan principal repaid (<PrivacyMask>{formatINRShort(summary.holding_cash_flow.principal_repaid ?? 0)}</PrivacyMask>) is not taken off: it
+                      becomes your equity in the property.
+                    </PopNote>
                   )}
-                </div>
+                  <button type="button" onClick={openCashFlow} className="mt-2 w-full rounded-lg bg-indigo-500/10 py-1.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                    Open full cash flow ›
+                  </button>
+                </>
               ) : (
-                <div className="text-[11px] text-neutral-500 mt-0.5">Rent less costs, while holding</div>
-              )}
-            </div>
-          </Card>
+                <PopNote>Rent less loan interest and costs while you hold the property. Add rent or expenses to see it.</PopNote>
+              )
+            }
+            value={
+              <span className="text-neutral-700 dark:text-neutral-200">
+                <PrivacyMask>{signedINR(cashNet)}</PrivacyMask>
+              </span>
+            }
+            sub="Rent − interest − costs"
+          />
         </div>
       )}
 
@@ -651,8 +816,8 @@ export default function RealEstateHoldingsPage() {
             const TypeIcon = typeInfo.icon;
             const txCount = prop.transactions_count ?? 0;
             const netFlow = prop.holding_cash_flow ?? prop.net_cash_flow ?? 0;
-            const xirrValue = prop.true_xirr_pct ?? null;
-            const shownReturn = returnMode === "XIRR" ? xirrValue : prop.cagr_pct;
+            const shownReturn =
+              returnMode === "NET" ? prop.true_xirr_pct ?? null : returnMode === "RENT" ? (prop.is_rented ? prop.rental_yield_pct : null) : prop.cagr_pct;
             const b = prop.returns_breakdown;
             const hasRent = (b?.income ?? 0) > 0;
             const hasCashFlow = txCount > 0 || !!prop.loan;
@@ -727,24 +892,18 @@ export default function RealEstateHoldingsPage() {
                     type="button"
                     onClick={toggleReturnMode}
                     className="col-span-2 sm:col-span-1 rounded-xl bg-indigo-500/[0.08] hover:bg-indigo-500/15 px-1 py-1.5 text-center transition-colors"
-                    title={
-                      returnMode === "CAGR"
-                        ? "CAGR: price growth only. Tap for XIRR."
-                        : prop.xirr_basis === "WITH_LOAN"
-                          ? "XIRR: your return incl. loan EMIs, rent and costs. Tap for CAGR."
-                          : prop.xirr_basis === "CASH_FLOW"
-                            ? "XIRR: your return incl. rent and costs. Tap for CAGR."
-                            : "XIRR: price only so far (no rent or loan added). Tap for CAGR."
-                    }
-                    aria-label={`${returnMode} ${shownReturn ?? ""} percent a year. Tap to switch.`}
+                    title={`${RETURN_INFO[returnMode].help}.${
+                      returnMode === "NET" && prop.xirr_basis === "PRICE_ONLY" ? " No rent or loan added yet, so price only." : ""
+                    } Tap for ${RETURN_INFO[nextMode(returnMode)].title.toLowerCase()}.`}
+                    aria-label={`${RETURN_INFO[returnMode].title} ${shownReturn ?? ""} percent a year. Tap to switch.`}
                   >
-                    <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-0.5">
-                      {returnMode} <ArrowLeftRight size={10} />
+                    <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-0.5 whitespace-nowrap">
+                      {RETURN_INFO[returnMode].short} <ArrowLeftRight size={10} />
                     </div>
                     <div className={`text-sm font-black font-mono mt-0.5 whitespace-nowrap ${toneOf(shownReturn)}`}>
                       {shownReturn == null ? "—" : `${shownReturn.toFixed(1)}%`}
                     </div>
-                    <div className="text-[9px] text-neutral-400">p.a.</div>
+                    <div className="text-[9px] text-neutral-400">{returnMode === "RENT" && !prop.is_rented ? "not rented" : "p.a."}</div>
                   </button>
                   <Metric
                     label="Gain"
@@ -757,21 +916,22 @@ export default function RealEstateHoldingsPage() {
                       {formatINRShort(prop.gain_loss)}
                     </PrivacyMask>
                   </Metric>
-                  <Metric
-                    label="Net cash"
-                    tone={toneOf(netFlow)}
-                    className="col-span-3 sm:col-span-1"
-                    sub={hasCashFlow ? "rent − EMI − costs" : "add rent or costs"}
-                  >
-                    {hasCashFlow ? (
-                      <PrivacyMask>
-                        {netFlow >= 0 ? "+" : ""}
-                        {formatINRShort(netFlow)}
-                      </PrivacyMask>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </Metric>
+                  <Link href={`/holdings/real-estate/${prop.id}/cash-flow`} className="col-span-3 sm:col-span-1 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5">
+                    <Metric
+                      label="Cash flow"
+                      tone="text-neutral-700 dark:text-neutral-200"
+                      sub={hasCashFlow ? "tap to view" : "add rent or costs"}
+                    >
+                      {hasCashFlow ? (
+                        <PrivacyMask>
+                          {netFlow >= 0 ? "+" : ""}
+                          {formatINRShort(netFlow)}
+                        </PrivacyMask>
+                      ) : (
+                        <span className="text-neutral-400">—</span>
+                      )}
+                    </Metric>
+                  </Link>
                 </div>
 
                 {/* Gentle check for a likely typo in the value (e.g. ₹5Cr instead of ₹50L) */}
@@ -824,15 +984,23 @@ export default function RealEstateHoldingsPage() {
                     <ActionButton icon={Receipt} label="+ Expense" onClick={() => handleOpenCashFlow(prop, "EXPENSE")} />
                     <ActionButton icon={Calculator} label="What if?" onClick={() => setSimFor(prop)} primary />
                   </div>
-                  {txCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenCashFlow(prop, "HISTORY")}
-                      className="mt-2 w-full text-center text-[11px] font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                  <div className="mt-2 flex items-center justify-center gap-4 text-[11px] font-semibold">
+                    <Link
+                      href={`/holdings/real-estate/${prop.id}/cash-flow`}
+                      className="text-indigo-600 dark:text-indigo-400 hover:underline"
                     >
-                      View all {txCount} entries ›
-                    </button>
-                  )}
+                      Full cash flow ›
+                    </Link>
+                    {txCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCashFlow(prop, "HISTORY")}
+                        className="text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                      >
+                        Edit {txCount} entries ›
+                      </button>
+                    )}
+                  </div>
                 </div>
               </Card>
             );
@@ -881,6 +1049,29 @@ export default function RealEstateHoldingsPage() {
           if (p) setLoanModalFor(p);
         }}
       />
+
+      {/* ── WHICH PROPERTY'S CASH FLOW ── */}
+      <Modal isOpen={cashPickerOpen} onClose={() => setCashPickerOpen(false)} title="Cash flow · pick a property">
+        <div className="rounded-xl border border-neutral-200 dark:border-white/10 divide-y divide-neutral-100 dark:divide-white/5">
+          {holdings.map((h) => (
+            <Link
+              key={h.id}
+              href={`/holdings/real-estate/${h.id}/cash-flow`}
+              onClick={() => setCashPickerOpen(false)}
+              className="flex items-center gap-2 px-3 py-3 hover:bg-neutral-50 dark:hover:bg-white/5"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-neutral-900 dark:text-white">{h.property_name}</span>
+              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-300">
+                <PrivacyMask>
+                  {(h.holding_cash_flow ?? 0) >= 0 ? "+" : ""}
+                  {formatINRShort(h.holding_cash_flow ?? 0)}
+                </PrivacyMask>
+              </span>
+              <ChevronRight size={14} className="text-neutral-400" />
+            </Link>
+          ))}
+        </div>
+      </Modal>
 
       {/* ── TAX DETAILS SHEET ── */}
       <RealEstateTaxSheet isOpen={taxOpen} onClose={() => setTaxOpen(false)} properties={holdings} />

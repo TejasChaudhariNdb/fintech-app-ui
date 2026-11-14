@@ -20,6 +20,14 @@ export interface PropertyTaxView {
   recommended_option: string | null;
   recommended_tax: number | null;
   tax_note: string | null;
+  // 2026-11-14: cost of improvement (entries ticked "count in capital gains cost"), each indexed from its own FY.
+  cost_of_acquisition?: number;
+  cost_of_improvement?: number;
+  indexed_cost_of_acquisition?: number | null;
+  indexed_cost_of_improvement?: number | null;
+  improvements?: { date: string; amount: number; cii: number | null; indexed_amount: number | null }[];
+  improvements_before_2001_skipped?: number;
+  tax_note_improvements?: string | null;
 }
 
 export interface TaxSheetProperty {
@@ -144,7 +152,14 @@ export default function RealEstateTaxSheet({
 
               <div>
                 <Row label="Sale value (today's value)" value={inr(p.current_valuation)} />
-                <Row label="Your cost" hint="Price + stamp duty + renovation" value={inr(p.total_invested)} />
+                <Row label="Your cost" hint="Price + stamp duty + renovation at purchase" value={inr(p.total_invested)} />
+                {(t.cost_of_improvement ?? 0) > 0 && (
+                  <Row
+                    label="Cost of improvement"
+                    hint={`${t.improvements?.length ?? 0} ${t.improvements?.length === 1 ? "entry" : "entries"} ticked “count in capital gains cost”`}
+                    value={inr(t.cost_of_improvement)}
+                  />
+                )}
                 <Row label="Gain" value={inr(t.raw_gain)} strong />
               </div>
 
@@ -169,6 +184,15 @@ export default function RealEstateTaxSheet({
                       title="Option B · 20% with indexation"
                       lines={[
                         { label: `Inflation index (CII) ${t.cii_purchase} → ${t.cii_sale}`, value: `×${((t.cii_sale ?? 0) / (t.cii_purchase || 1)).toFixed(2)}` },
+                        ...((t.cost_of_improvement ?? 0) > 0
+                          ? [
+                              { label: "Indexed cost of purchase", value: inr(t.indexed_cost_of_acquisition) },
+                              ...(t.improvements ?? []).map((im) => ({
+                                label: `Improvement ${new Date(im.date).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}: ${inr(im.amount)} × ${t.cii_sale}/${im.cii}`,
+                                value: inr(im.indexed_amount),
+                              })),
+                            ]
+                          : []),
                         { label: "Indexed cost", value: inr(t.indexed_cost) },
                         { label: "Taxable gain", value: inr(Math.max(t.indexed_gain ?? 0, 0)) },
                       ]}
@@ -181,13 +205,15 @@ export default function RealEstateTaxSheet({
                 </div>
               )}
               {t.tax_note && <p className="text-[10px] text-neutral-400 leading-snug">{t.tax_note}</p>}
+              {t.tax_note_improvements && <p className="text-[10px] text-neutral-400 leading-snug">{t.tax_note_improvements}</p>}
             </div>
           );
         })}
 
         <p className="text-[10px] text-neutral-400 leading-snug">
-          Estimate only. Excludes surcharge, cess, brokerage and exemptions such as Sec 54 (reinvesting in another
-          house). Not tax advice.
+          Estimate only. Only costs you tick as “count in capital gains cost” (renovation, extension, brokerage on purchase)
+          are added; routine repairs, painting, society maintenance and property tax never count. Excludes surcharge, cess,
+          brokerage on sale and exemptions such as Sec 54 (reinvesting in another house). Not tax advice.
         </p>
       </div>
     </Modal>

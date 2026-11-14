@@ -34,6 +34,8 @@ export interface RealEstateFormData {
   notes?: string | null;
   profile_id?: number | null;
   occupancy_type?: "SELF_OCCUPIED" | "LET_OUT";
+  // Read-only, from the backend when editing: the true XIRR (EMIs, interest, rent, costs).
+  true_xirr_pct?: number | null;
 }
 
 interface RealEstateFormProps {
@@ -190,7 +192,9 @@ export default function RealEstateForm({
   const rentalYieldPct =
     currentValuationNum > 0 ? (annualRent / currentValuationNum) * 100 : 0;
 
-  const totalReturnXirrPct = cagrPct + rentalYieldPct;
+  // Price CAGR + rental yield is not a return (feedback 2026-11-14): it ignores EMIs, interest and
+  // costs, and a one-off jump in value would inflate it. The net return shown is the backend XIRR.
+  const savedXirr = initialData?.true_xirr_pct ?? null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -469,7 +473,12 @@ export default function RealEstateForm({
           </div>
           <button
             type="button"
-            onClick={() => setIsRented(!isRented)}
+            onClick={() => {
+              const next = !isRented;
+              setIsRented(next);
+              // Rented out means let-out for tax; keep the two in step (owner can still change Usage).
+              setOccupancy(next ? "LET_OUT" : "SELF_OCCUPIED");
+            }}
             className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 ${
               isRented ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-700"
             }`}
@@ -512,7 +521,7 @@ export default function RealEstateForm({
               />
             </div>
             <div className="shrink-0 text-left sm:text-right">
-              <span className="text-[11px] text-neutral-500 block">Gross Yield</span>
+              <span className="text-[11px] text-neutral-500 block">Rental yield</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                 {rentalYieldPct.toFixed(2)}% p.a.
               </span>
@@ -528,7 +537,7 @@ export default function RealEstateForm({
       {totalCostBasis > 0 && currentValuationNum > 0 && (
         <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-around text-center gap-2">
           <div>
-            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Return</div>
+            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Price gain</div>
             <div
               className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${
                 unrealizedGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
@@ -542,7 +551,7 @@ export default function RealEstateForm({
           <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
 
           <div>
-            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Appreciation CAGR</div>
+            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Property yield</div>
             <div className="text-xs sm:text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">
               {cagrPct.toFixed(1)}% p.a.
             </div>
@@ -557,13 +566,17 @@ export default function RealEstateForm({
             </div>
           </div>
 
-          {isRented && rentalYieldPct > 0 && (
+          {initialData?.id != null && savedXirr != null && (
             <>
               <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
-              <div>
-                <div className="text-[10px] font-semibold text-neutral-500 uppercase">Total Return</div>
-                <div className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  {totalReturnXirrPct.toFixed(1)}% XIRR
+              <div title="True XIRR on your own money, after EMIs, interest, rent and every cost. Updates after you save.">
+                <div className="text-[10px] font-semibold text-neutral-500 uppercase">Net return</div>
+                <div
+                  className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${
+                    savedXirr >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {savedXirr.toFixed(1)}% XIRR
                 </div>
               </div>
             </>
