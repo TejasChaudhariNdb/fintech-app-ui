@@ -201,6 +201,18 @@ export default function MutualFundsPage() {
     }
   }, [sortBy, sortOrder, filtersLoaded]);
 
+  // The search text survives opening a fund and going back, like the filters and sort.
+  // Session storage, not local: a forgotten search must not hide funds on the next app open.
+  useEffect(() => {
+    if (!filtersLoaded) return;
+    try {
+      if (searchQuery) sessionStorage.setItem("mf_search_query", searchQuery);
+      else sessionStorage.removeItem("mf_search_query");
+    } catch {
+      // storage unavailable: search still works for this visit
+    }
+  }, [searchQuery, filtersLoaded]);
+
   useEffect(() => {
     const savedTab = localStorage.getItem("mf_holding_view_tab");
     if (savedTab === "holdings" || savedTab === "analytics") {
@@ -231,6 +243,12 @@ export default function MutualFundsPage() {
     const savedOrder = localStorage.getItem("mf_sort_order");
     if (savedOrder === "asc" || savedOrder === "desc") {
       setSortOrder(savedOrder);
+    }
+    try {
+      const savedSearch = sessionStorage.getItem("mf_search_query");
+      if (savedSearch) setSearchQuery(savedSearch);
+    } catch {
+      // storage unavailable: start with an empty search
     }
     setFiltersLoaded(true);
   }, []);
@@ -352,7 +370,12 @@ export default function MutualFundsPage() {
   }, [searchParams, router]);
 
   const handleDeleteScheme = async (schemeId: number) => {
-    if (!confirm("Are you sure you want to delete this mutual fund?")) return;
+    if (
+      !confirm(
+        "Delete this mutual fund?\n\nIt will also be skipped on future CAS uploads. You can add it back from the upload result screen.",
+      )
+    )
+      return;
     try {
       showToast("Deleting scheme...", "loading");
       await api.deleteScheme(schemeId);
