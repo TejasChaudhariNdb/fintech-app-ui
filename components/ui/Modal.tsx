@@ -145,7 +145,7 @@ export default function Modal({
         ref={sheetRef}
         className={`
           bg-white dark:bg-[#151A23] border-t sm:border border-neutral-200/90 dark:border-white/10
-          rounded-t-3xl sm:rounded-3xl w-full max-w-md sm:max-w-[30.8rem]
+          rounded-t-3xl sm:rounded-3xl w-full max-w-md sm:max-w-[510px]
           transition-colors duration-200
           max-h-[88vh] sm:max-h-[85vh] flex flex-col shadow-2xl overflow-hidden
           touch-pan-y overscroll-contain pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-0
