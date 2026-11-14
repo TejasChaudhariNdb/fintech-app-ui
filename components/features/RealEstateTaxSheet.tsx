@@ -48,7 +48,7 @@ function Row({ label, value, strong, hint }: { label: string; value: React.React
     <div className="flex items-baseline justify-between gap-3 py-1">
       <div className="min-w-0">
         <div className={`text-xs ${strong ? "font-semibold text-neutral-900 dark:text-white" : "text-neutral-600 dark:text-neutral-300"}`}>{label}</div>
-        {hint && <div className="text-[10px] text-neutral-400 leading-snug">{hint}</div>}
+        {hint && <div className="text-[11px] text-neutral-400 leading-snug">{hint}</div>}
       </div>
       <div className={`text-xs font-mono shrink-0 ${strong ? "font-bold text-neutral-900 dark:text-white" : "text-neutral-700 dark:text-neutral-200"}`}>
         <PrivacyMask>{value}</PrivacyMask>
@@ -79,7 +79,7 @@ function OptionBox({
       <div className="flex items-center justify-between gap-2 mb-1">
         <span className="text-xs font-bold text-neutral-900 dark:text-white">{title}</span>
         {recommended && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 size={12} /> Lower tax
           </span>
         )}
@@ -117,7 +117,7 @@ export default function RealEstateTaxSheet({
               Nothing is paid until you actually sell.
             </p>
           </div>
-          <ul className="list-disc pl-6 space-y-0.5 text-[11px] text-neutral-600 dark:text-neutral-400">
+          <ul className="list-disc pl-6 space-y-0.5 text-xs text-neutral-600 dark:text-neutral-400">
             <li><b>Held 24 months or less:</b> the gain is added to your income and taxed at your slab rate.</li>
             <li><b>Held over 24 months:</b> 12.5% on the gain.</li>
             <li>
@@ -145,7 +145,7 @@ export default function RealEstateTaxSheet({
             <div key={p.id} className="rounded-2xl border border-neutral-200 dark:border-white/10 p-3 space-y-2">
               <div>
                 <div className="text-sm font-bold text-neutral-900 dark:text-white">{p.property_name}</div>
-                <div className="text-[11px] text-neutral-500">
+                <div className="text-xs text-neutral-500">
                   Held {p.tenure_years} years · {t.is_long_term ? "long-term" : "short-term"}
                 </div>
               </div>
@@ -164,11 +164,11 @@ export default function RealEstateTaxSheet({
               </div>
 
               {!t.is_long_term ? (
-                <p className="text-[11px] text-neutral-500 rounded-lg bg-neutral-50 dark:bg-white/5 p-2">
+                <p className="text-xs text-neutral-500 rounded-lg bg-neutral-50 dark:bg-white/5 p-2">
                   Held 24 months or less, so the gain is taxed at your income slab rate. We don&apos;t estimate it here.
                 </p>
               ) : t.raw_gain <= 0 && !(t.indexed_gain && t.indexed_gain > 0) ? (
-                <p className="text-[11px] text-neutral-500 rounded-lg bg-neutral-50 dark:bg-white/5 p-2">
+                <p className="text-xs text-neutral-500 rounded-lg bg-neutral-50 dark:bg-white/5 p-2">
                   No gain at today&apos;s value, so no tax.
                 </p>
               ) : (
@@ -200,17 +200,17 @@ export default function RealEstateTaxSheet({
                       recommended={indexedRecommended}
                     />
                   ) : (
-                    <p className="text-[11px] text-neutral-500">Bought on or after 23 Jul 2024, so indexation is not available.</p>
+                    <p className="text-xs text-neutral-500">Bought on or after 23 Jul 2024, so indexation is not available.</p>
                   )}
                 </div>
               )}
-              {t.tax_note && <p className="text-[10px] text-neutral-400 leading-snug">{t.tax_note}</p>}
-              {t.tax_note_improvements && <p className="text-[10px] text-neutral-400 leading-snug">{t.tax_note_improvements}</p>}
+              {t.tax_note && <p className="text-[11px] text-neutral-400 leading-snug">{t.tax_note}</p>}
+              {t.tax_note_improvements && <p className="text-[11px] text-neutral-400 leading-snug">{t.tax_note_improvements}</p>}
             </div>
           );
         })}
 
-        <p className="text-[10px] text-neutral-400 leading-snug">
+        <p className="text-[11px] text-neutral-400 leading-snug">
           Estimate only. Only costs you tick as “count in capital gains cost” (renovation, extension, brokerage on purchase)
           are added; routine repairs, painting, society maintenance and property tax never count. Excludes surcharge, cess,
           brokerage on sale and exemptions such as Sec 54 (reinvesting in another house). Not tax advice.

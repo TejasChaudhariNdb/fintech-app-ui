@@ -205,7 +205,7 @@ function Field({ label, children, hint }: { label: string; children: React.React
     <div>
       <label className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200 mb-1.5">{label}</label>
       {children}
-      {hint && <p className="text-[10px] text-neutral-400 mt-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-neutral-400 mt-1">{hint}</p>}
     </div>
   );
 }
@@ -225,7 +225,7 @@ function SubPicker({ value, onChange, options, listId }: { value: string; onChan
                 key={o}
                 type="button"
                 onClick={() => onChange(on ? "" : o)}
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                   on ? "border-indigo-600 bg-indigo-600 text-white" : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300"
                 }`}
               >
@@ -255,7 +255,7 @@ function TaxCostToggle({ checked, onChange, kind }: { checked: boolean; onChange
   return (
     <label className="flex items-start gap-2 rounded-xl border border-neutral-200 dark:border-white/10 px-3 py-2 cursor-pointer">
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 accent-indigo-600" />
-      <span className="text-[11px] text-neutral-600 dark:text-neutral-300 leading-snug">
+      <span className="text-xs text-neutral-600 dark:text-neutral-300 leading-snug">
         <b className="text-neutral-900 dark:text-white">Count in capital gains cost</b>
         <br />
         {kind === "BROKERAGE_COMMISSION"
@@ -632,11 +632,11 @@ export default function PropertyMoneySheet({
             <>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-xl bg-emerald-500/5 p-2">
-                  <div className="text-[10px] uppercase font-bold text-neutral-400">Money in</div>
+                  <div className="text-[11px] uppercase font-bold text-neutral-400">Money in</div>
                   <div className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400"><PrivacyMask>+{inr(totalIn)}</PrivacyMask></div>
                 </div>
                 <div className="rounded-xl bg-neutral-500/5 p-2">
-                  <div className="text-[10px] uppercase font-bold text-neutral-400">Money out</div>
+                  <div className="text-[11px] uppercase font-bold text-neutral-400">Money out</div>
                   <div className="text-sm font-semibold font-mono text-neutral-700 dark:text-neutral-200"><PrivacyMask>−{inr(totalOut)}</PrivacyMask></div>
                 </div>
               </div>
@@ -659,7 +659,7 @@ export default function PropertyMoneySheet({
                 </button>
               </div>
               {selecting && (
-                <div className="flex items-center justify-between text-[11px] text-neutral-600 dark:text-neutral-400">
+                <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
                   <span>{selected.size} selected · tap entries to pick</span>
                   <button
                     type="button"
@@ -676,7 +676,7 @@ export default function PropertyMoneySheet({
               <div className="space-y-3">
                 {grouped.map((g) => (
                   <div key={g.key}>
-                    <div className="text-[10px] uppercase font-bold text-neutral-400 mb-1">{g.label}</div>
+                    <div className="text-[11px] uppercase font-bold text-neutral-400 mb-1">{g.label}</div>
                     <div className="rounded-xl border border-neutral-200 dark:border-white/10 divide-y divide-neutral-100 dark:divide-white/5">
                       {g.items.map((t) => editId === t.id ? (
                         <div key={t.id} className="px-3 py-2 space-y-2 bg-indigo-500/5">
@@ -716,10 +716,10 @@ export default function PropertyMoneySheet({
                               {LABELS[t.transaction_type] ?? t.type_label}
                               {t.sub_category && <span className="font-normal text-neutral-500"> · {t.sub_category}</span>}
                               {t.adds_to_tax_cost && (
-                                <span className="ml-1.5 rounded bg-indigo-500/10 px-1 py-px text-[9px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Tax cost</span>
+                                <span className="ml-1.5 rounded bg-indigo-500/10 px-1 py-px text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Tax cost</span>
                               )}
                             </div>
-                            <div className="text-[10px] text-neutral-400 truncate">
+                            <div className="text-[11px] text-neutral-400 truncate">
                               {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                               {shownNote(t) && <> · {shownNote(t)}</>}
                             </div>
@@ -763,7 +763,7 @@ export default function PropertyMoneySheet({
               </div>
               {selecting && selected.size > 0 && (
                 <div className="sticky bottom-0 -mx-1 rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-surface p-2.5 shadow-lg space-y-2">
-                  <div className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200">{selected.size} entries selected</div>
+                  <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">{selected.size} entries selected</div>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -793,7 +793,7 @@ export default function PropertyMoneySheet({
                 </div>
               )}
               {txs.some((t) => t.transaction_type === "HOME_LOAN_EMI") && property.has_loan && (
-                <p className="text-[10px] text-neutral-400">
+                <p className="text-[11px] text-neutral-400">
                   EMIs logged here by hand are not counted (the loan schedule has every EMI). To fix a missed or different EMI,
                   open <button type="button" onClick={onOpenLoan} className="font-semibold text-indigo-600 dark:text-indigo-400 underline">EMI / Loan → EMI schedule</button>.
                 </p>
@@ -811,7 +811,7 @@ export default function PropertyMoneySheet({
                   key={k.id}
                   type="button"
                   onClick={() => (isRent ? pickIncome(k.id) : pickExpense(k.id))}
-                  className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-[11px] font-semibold text-center leading-tight ${
+                  className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-semibold text-center leading-tight ${
                     kind === k.id
                       ? isRent
                         ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
@@ -827,7 +827,7 @@ export default function PropertyMoneySheet({
           </Field>
 
           {KIND_HINTS[kind] && (
-            <p className="-mt-2 rounded-xl bg-amber-500/5 border border-amber-500/20 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">{KIND_HINTS[kind]}</p>
+            <p className="-mt-2 rounded-xl bg-amber-500/5 border border-amber-500/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">{KIND_HINTS[kind]}</p>
           )}
 
           <Field label={kind === "OTHER_EXPENSE" || kind === "OTHER_INCOME" ? "Which head?" : "Head (optional)"}>
@@ -871,7 +871,7 @@ export default function PropertyMoneySheet({
           )}
 
           {repeat !== "ONCE" && lastOfKind && from <= lastOfKind && (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               You already added {LABELS[kind]?.toLowerCase() ?? "entries"} till {monthLabel(lastOfKind)}. Starting before that will add
               those months again.{" "}
               <button type="button" className="font-bold underline" onClick={() => setFrom(addMonthsIso(lastOfKind, everyMonths))}>
@@ -880,10 +880,10 @@ export default function PropertyMoneySheet({
             </p>
           )}
           {repeat !== "ONCE" && lastOfKind && from > lastOfKind && count > 0 && (
-            <p className="text-[11px] text-neutral-500">Already added till {monthLabel(lastOfKind)}, so this starts after it.</p>
+            <p className="text-xs text-neutral-500">Already added till {monthLabel(lastOfKind)}, so this starts after it.</p>
           )}
           {repeat !== "ONCE" && lastOfKind && count === 0 && from > lastOfKind && (
-            <p className="text-[11px] text-neutral-500">Already up to date till {monthLabel(lastOfKind)}. Nothing new to add for these dates.</p>
+            <p className="text-xs text-neutral-500">Already up to date till {monthLabel(lastOfKind)}. Nothing new to add for these dates.</p>
           )}
 
           {repeat !== "ONCE" && amt > 0 && count > 0 && (
@@ -900,7 +900,7 @@ export default function PropertyMoneySheet({
           {TAX_COST_KINDS.has(kind) && <TaxCostToggle checked={taxCost} onChange={setTaxCost} kind={kind} />}
 
           {!isRent && (
-            <button type="button" onClick={onOpenLoan} className="w-full flex items-start gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-left text-[11px] text-neutral-600 dark:text-neutral-300">
+            <button type="button" onClick={onOpenLoan} className="w-full flex items-start gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-left text-xs text-neutral-600 dark:text-neutral-300">
               <CreditCard size={14} className="text-indigo-500 shrink-0 mt-0.5" />
               <span>
                 Paying a home loan EMI? Don&apos;t add it here. <b className="text-indigo-600 dark:text-indigo-400">{property.has_loan ? "Your loan" : "Add your loan"}</b> and
@@ -935,8 +935,8 @@ export default function PropertyMoneySheet({
           {txs && txs.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] uppercase font-bold text-neutral-400">Latest entries</span>
-                <button type="button" onClick={() => { setMode("HISTORY"); loadHistory(); }} className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                <span className="text-[11px] uppercase font-bold text-neutral-400">Latest entries</span>
+                <button type="button" onClick={() => { setMode("HISTORY"); loadHistory(); }} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                   See all {txs.length} ›
                 </button>
               </div>
@@ -946,15 +946,15 @@ export default function PropertyMoneySheet({
                   .slice(0, 8)
                   .map((t) => (
                     <div key={t.id} className={`flex items-center gap-2 px-3 py-1.5 ${justAdded.has(t.id) ? "bg-emerald-500/10" : ""}`}>
-                      <span className="w-[68px] shrink-0 text-[10px] text-neutral-400">
+                      <span className="w-[68px] shrink-0 text-[11px] text-neutral-400">
                         {new Date(t.transaction_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[11px] text-neutral-700 dark:text-neutral-300">
+                      <span className="min-w-0 flex-1 truncate text-xs text-neutral-700 dark:text-neutral-300">
                         {LABELS[t.transaction_type] ?? t.type_label}
                         {t.sub_category && <span className="text-neutral-400"> · {t.sub_category}</span>}
                         {shownNote(t) && <span className="text-neutral-400"> · {shownNote(t)}</span>}
                       </span>
-                      <span className={`text-[11px] font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"}`}>
+                      <span className={`text-xs font-bold font-mono ${t.category === "INFLOW" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"}`}>
                         <PrivacyMask>{t.category === "INFLOW" ? "+" : "-"}{inr(t.amount)}</PrivacyMask>
                       </span>
                     </div>

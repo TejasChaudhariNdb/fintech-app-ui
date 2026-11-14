@@ -173,9 +173,9 @@ function Metric({
 }) {
   return (
     <div className={`text-center px-1 py-1.5 ${className}`}>
-      <div className="text-[10px] uppercase font-semibold text-neutral-400">{label}</div>
+      <div className="text-[11px] uppercase font-semibold text-neutral-400">{label}</div>
       <div className={`text-sm font-bold font-mono mt-0.5 whitespace-nowrap ${tone ?? "text-neutral-900 dark:text-white"}`}>{children}</div>
-      {sub && <div className="text-[9px] text-neutral-400 whitespace-nowrap">{sub}</div>}
+      {sub && <div className="text-[11px] text-neutral-400 whitespace-nowrap">{sub}</div>}
     </div>
   );
 }
@@ -195,7 +195,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[11px] font-semibold leading-none transition-all active:scale-95 ${
+      className={`flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-xs font-semibold leading-none transition-all active:scale-95 ${
         primary
           ? "bg-indigo-600 text-white hover:bg-indigo-700"
           : "border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-white/5"
@@ -213,11 +213,11 @@ function signedINR(v: number): string {
 }
 
 function PopTitle({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-400 mb-1">{children}</div>;
+  return <div className="text-xs font-bold uppercase tracking-wide text-neutral-400 mb-1">{children}</div>;
 }
 
 function PopNote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-2 text-[11px] leading-snug text-neutral-500">{children}</p>;
+  return <p className="mt-2 text-xs leading-snug text-neutral-500">{children}</p>;
 }
 
 /** Summary card: title + ⓘ, one big number, one short line (never wraps out of the card). */
@@ -268,7 +268,7 @@ function SummaryCard({
         }
         className="flex flex-col justify-between h-full outline-none"
       >
-        <div className="flex items-center justify-between gap-2 text-neutral-500 text-[11px] font-bold uppercase tracking-wider">
+        <div className="flex items-center justify-between gap-2 text-neutral-500 text-xs font-bold uppercase tracking-wider">
           <span className="inline-flex items-center gap-1 min-w-0">
             <span className="truncate">{title}</span>
             <InfoPopover label={typeof title === "string" ? title : "this figure"}>{info}</InfoPopover>
@@ -277,7 +277,7 @@ function SummaryCard({
         </div>
         <div className="mt-2.5 min-w-0">
           <div className="text-lg sm:text-2xl font-black font-mono tracking-tight whitespace-nowrap truncate">{value}</div>
-          <div className="text-[11px] text-neutral-500 mt-0.5 truncate">{sub}</div>
+          <div className="text-xs text-neutral-500 mt-0.5 truncate">{sub}</div>
         </div>
       </div>
       {after && <div onClick={(e) => e.stopPropagation()}>{after}</div>}
@@ -654,7 +654,7 @@ export default function RealEstateHoldingsPage() {
                   return (
                     <div key={m} className={`rounded-lg px-2 py-1.5 ${m === returnMode ? "bg-indigo-500/10" : ""}`}>
                       <PopRow label={<b className="text-neutral-900 dark:text-white">{RETURN_INFO[m].title}</b>} value={fmtPa(v)} tone={toneOf(v)} />
-                      <div className="text-[11px] text-neutral-500 leading-snug">{RETURN_INFO[m].help}</div>
+                      <div className="text-xs text-neutral-500 leading-snug">{RETURN_INFO[m].help}</div>
                     </div>
                   );
                 })}
@@ -684,7 +684,7 @@ export default function RealEstateHoldingsPage() {
                 {summary.tax_estimate && summary.tax_estimate.long_term_properties_count > 0 && (
                   <>
                     <PopRow label="Tax if sold today (est.)" value={<PrivacyMask>{formatINRShort(summary.tax_estimate.recommended_tax_total)}</PrivacyMask>} />
-                    <button type="button" onClick={() => setTaxOpen(true)} className="mt-2 w-full rounded-lg bg-indigo-500/10 py-1.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                    <button type="button" onClick={() => setTaxOpen(true)} className="mt-2 w-full rounded-lg bg-indigo-500/10 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                       See how the tax is worked out ›
                     </button>
                   </>
@@ -702,7 +702,7 @@ export default function RealEstateHoldingsPage() {
                 <button
                   type="button"
                   onClick={() => setTaxOpen(true)}
-                  className="mt-2 w-full flex items-center justify-between gap-1 rounded-lg bg-indigo-500/5 px-2 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
+                  className="mt-2 w-full flex items-center justify-between gap-1 rounded-lg bg-indigo-500/5 px-2 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/10"
                 >
                   <span className="truncate">
                     Tax ≈ <PrivacyMask>{formatINRShort(summary.tax_estimate.recommended_tax_total)}</PrivacyMask>
@@ -720,9 +720,7 @@ export default function RealEstateHoldingsPage() {
             onClick={openCashFlow}
             ariaLabel="Open the full cash flow"
             extra={
-              <span className="inline-flex items-center text-[10px] normal-case tracking-normal font-semibold text-indigo-600 dark:text-indigo-400">
-                View <ChevronRight size={12} />
-              </span>
+              <ChevronRight size={15} className="shrink-0 text-indigo-600 dark:text-indigo-400" aria-hidden />
             }
             info={
               summary.holding_cash_flow ? (
@@ -741,7 +739,7 @@ export default function RealEstateHoldingsPage() {
                       becomes your equity in the property.
                     </PopNote>
                   )}
-                  <button type="button" onClick={openCashFlow} className="mt-2 w-full rounded-lg bg-indigo-500/10 py-1.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                  <button type="button" onClick={openCashFlow} className="mt-2 w-full rounded-lg bg-indigo-500/10 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                     Open full cash flow ›
                   </button>
                 </>
@@ -859,17 +857,17 @@ export default function RealEstateHoldingsPage() {
                   {/* Top Row: Type Badge + Profile Tag + Edit/Delete */}
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${typeInfo.color}`}>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold border ${typeInfo.color}`}>
                         <TypeIcon size={12} />
                         {typeInfo.label}
                       </span>
                       {prop.profile_name && (
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400">
                           {prop.profile_name}
                         </span>
                       )}
                       {prop.area_sqft && (
-                        <span className="text-[11px] font-semibold text-neutral-500">{prop.area_sqft.toLocaleString()} sq.ft</span>
+                        <span className="text-xs font-semibold text-neutral-500">{prop.area_sqft.toLocaleString()} sq.ft</span>
                       )}
                     </div>
                     <div className="flex items-center gap-0.5">
@@ -925,13 +923,13 @@ export default function RealEstateHoldingsPage() {
                     } Tap for ${RETURN_INFO[nextMode(returnMode)].title.toLowerCase()}.`}
                     aria-label={`${RETURN_INFO[returnMode].title} ${shownReturn ?? ""} percent a year. Tap to switch.`}
                   >
-                    <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-0.5 whitespace-nowrap">
+                    <div className="text-[11px] uppercase font-bold text-indigo-600 dark:text-indigo-400 inline-flex items-center gap-0.5 whitespace-nowrap">
                       {RETURN_INFO[returnMode].short} <ArrowLeftRight size={10} />
                     </div>
                     <div className={`text-sm font-black font-mono mt-0.5 whitespace-nowrap ${toneOf(shownReturn)}`}>
                       {shownReturn == null ? "—" : `${shownReturn.toFixed(1)}%`}
                     </div>
-                    <div className="text-[9px] text-neutral-400">{returnMode === "RENT" && !prop.is_rented ? "not rented" : "p.a."}</div>
+                    <div className="text-[11px] text-neutral-400">{returnMode === "RENT" && !prop.is_rented ? "not rented" : "p.a."}</div>
                   </button>
                   <Metric
                     label="Gain"
@@ -967,7 +965,7 @@ export default function RealEstateHoldingsPage() {
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(prop)}
-                    className="w-full flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-left text-[11px] text-amber-800 dark:text-amber-300"
+                    className="w-full flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-left text-xs text-amber-800 dark:text-amber-300"
                   >
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                     <span>
@@ -985,7 +983,7 @@ export default function RealEstateHoldingsPage() {
                     onClick={() => setLoanModalFor(prop)}
                     className="w-full flex items-center justify-between gap-2 rounded-xl border border-neutral-200 dark:border-white/10 px-3 py-2 text-left hover:border-indigo-500/40 transition-colors"
                   >
-                    <div className="min-w-0 text-[11px] text-neutral-600 dark:text-neutral-300 leading-snug">
+                    <div className="min-w-0 text-xs text-neutral-600 dark:text-neutral-300 leading-snug">
                       <span className="font-semibold text-neutral-900 dark:text-white">Loan left <PrivacyMask>{formatINRShort(prop.loan.current_outstanding)}</PrivacyMask></span>
                       {" · "}EMI <PrivacyMask>{formatINRShort(prop.loan.emi)}</PrivacyMask>
                       {" · "}
@@ -997,7 +995,7 @@ export default function RealEstateHoldingsPage() {
                   <button
                     type="button"
                     onClick={() => setLoanModalFor(prop)}
-                    className="w-full flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-left text-[11px] text-amber-800 dark:text-amber-300"
+                    className="w-full flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-left text-xs text-amber-800 dark:text-amber-300"
                   >
                     <AlertTriangle size={14} className="shrink-0 mt-0.5" />
                     <span>You logged EMIs but haven&apos;t added the loan. Add it so your return counts only your down payment, not the full price.</span>
@@ -1012,7 +1010,7 @@ export default function RealEstateHoldingsPage() {
                     <ActionButton icon={Receipt} label="+ Expense" onClick={() => handleOpenCashFlow(prop, "EXPENSE")} />
                     <ActionButton icon={Calculator} label="What if?" onClick={() => setSimFor(prop)} primary />
                   </div>
-                  <div className="mt-2 flex items-center justify-center gap-4 text-[11px] font-semibold">
+                  <div className="mt-2 flex items-center justify-center gap-4 text-xs font-semibold">
                     <Link
                       href={`/holdings/real-estate/${prop.id}/cash-flow`}
                       className="text-indigo-600 dark:text-indigo-400 hover:underline"

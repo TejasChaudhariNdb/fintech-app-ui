@@ -449,11 +449,11 @@ export default function PropertyCashFlowPage() {
           <p className="text-xs text-neutral-500">Cash flow since {prettyDate(data.purchase_date)}</p>
         </div>
         <div className="shrink-0 rounded-2xl bg-indigo-500/[0.08] px-3 py-2 text-right">
-          <div className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Net return</div>
+          <div className="text-[11px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Net return</div>
           <div className="text-lg font-black font-mono text-neutral-900 dark:text-white">
             {data.xirr_pct == null ? "—" : `${data.xirr_pct.toFixed(2)}%`}
           </div>
-          <div className="text-[9px] text-neutral-400">XIRR p.a., whole period</div>
+          <div className="text-[11px] text-neutral-400">XIRR p.a., whole period</div>
         </div>
       </div>
 
@@ -481,11 +481,11 @@ export default function PropertyCashFlowPage() {
         </div>
         {preset === "CUSTOM" && (
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-[11px] font-semibold text-neutral-500">
+            <label className="text-xs font-semibold text-neutral-500">
               From
               <DatePicker value={from} onChange={setFrom} className="mt-1 w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm" />
             </label>
-            <label className="text-[11px] font-semibold text-neutral-500">
+            <label className="text-xs font-semibold text-neutral-500">
               Till
               <DatePicker value={till} onChange={setTill} className="mt-1 w-full rounded-xl border border-neutral-200 dark:border-white/10 bg-transparent px-3 py-2 text-sm" />
             </label>
@@ -529,15 +529,15 @@ export default function PropertyCashFlowPage() {
             <button
               type="button"
               onClick={() => setHeadsOpen((v) => !v)}
-              className="sm:hidden inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-600 dark:text-neutral-300"
+              className="sm:hidden inline-flex items-center gap-1 text-xs font-semibold text-neutral-600 dark:text-neutral-300"
               aria-expanded={headsOpen}
             >
               Heads {picked.size ? `(${picked.size} picked)` : "(all)"}
               <ChevronDown size={13} className={`transition-transform ${headsOpen ? "rotate-180" : ""}`} />
             </button>
-            <span className="hidden sm:inline text-[11px] font-semibold text-neutral-500">Heads {picked.size ? `(${picked.size} picked)` : "(all)"}</span>
+            <span className="hidden sm:inline text-xs font-semibold text-neutral-500">Heads {picked.size ? `(${picked.size} picked)` : "(all)"}</span>
             {filtersOn && (
-              <button type="button" onClick={resetFilters} className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+              <button type="button" onClick={resetFilters} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                 Clear all filters
               </button>
             )}
@@ -588,7 +588,7 @@ export default function PropertyCashFlowPage() {
           <Download size={14} /> CSV
         </button>
       </div>
-      <p className="-mt-2 text-[10px] text-neutral-400">{rows.length} of {data.lines.length} rows match the filters.</p>
+      <p className="-mt-2 text-[11px] text-neutral-400">{rows.length} of {data.lines.length} rows match the filters.</p>
 
       {rows.length === 0 ? (
         <Card className="p-8 text-center text-xs text-neutral-500">Nothing matches these filters.</Card>
@@ -618,7 +618,7 @@ export default function PropertyCashFlowPage() {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs font-semibold text-neutral-900 dark:text-white truncate">{g.name}</span>
-                    <span className="block text-[10px] text-neutral-400">
+                    <span className="block text-[11px] text-neutral-400">
                       {g.count} {g.count === 1 ? "entry" : "entries"}
                       {g.excluded > 0 && <> · <PrivacyMask>{inr(g.excluded)}</PrivacyMask> not counted</>}
                     </span>
@@ -628,7 +628,7 @@ export default function PropertyCashFlowPage() {
                 {isOpen &&
                   subs.map(([name, s]) => (
                     <div key={name} className="flex items-center gap-2 pl-9 pr-3 sm:pr-4 py-1.5 bg-neutral-50/70 dark:bg-white/[0.02]">
-                      <span className="flex-1 text-[11px] text-neutral-600 dark:text-neutral-300">
+                      <span className="flex-1 text-xs text-neutral-600 dark:text-neutral-300">
                         {name} <span className="text-neutral-400">· {s.count}</span>
                       </span>
                       <Amount direction={g.direction} value={s.total} small />
@@ -636,7 +636,7 @@ export default function PropertyCashFlowPage() {
                   ))}
                 {isOpen && g.subs.has("") && subs.length > 0 && (
                   <div className="flex items-center gap-2 pl-9 pr-3 sm:pr-4 py-1.5 bg-neutral-50/70 dark:bg-white/[0.02]">
-                    <span className="flex-1 text-[11px] text-neutral-400">No head given · {g.subs.get("")!.count}</span>
+                    <span className="flex-1 text-xs text-neutral-400">No head given · {g.subs.get("")!.count}</span>
                     <Amount direction={g.direction} value={g.subs.get("")!.total} small />
                   </div>
                 )}
@@ -646,7 +646,7 @@ export default function PropertyCashFlowPage() {
         </Card>
       ) : view === "YEARS" ? (
         <Card className="divide-y divide-neutral-100 dark:divide-white/5 overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 sm:px-4 py-2 text-[10px] uppercase font-bold text-neutral-400">
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-x-3 px-3 sm:px-4 py-2 text-[11px] uppercase font-bold text-neutral-400">
             <span>FY</span>
             <span className="text-right w-20 sm:w-24">Out</span>
             <span className="text-right w-20 sm:w-24">In</span>
@@ -664,7 +664,7 @@ export default function PropertyCashFlowPage() {
               </summary>
               <div className="px-3 sm:px-4 pb-2 space-y-0.5">
                 {Array.from(y.heads.entries()).map(([name, v]) => (
-                  <div key={name} className="flex justify-between text-[11px] text-neutral-600 dark:text-neutral-300">
+                  <div key={name} className="flex justify-between text-xs text-neutral-600 dark:text-neutral-300">
                     <span>{name}</span>
                     <span className={`font-mono ${v >= 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>
                       <PrivacyMask>{v >= 0 ? "+" : "−"}{inr(Math.abs(v))}</PrivacyMask>
@@ -674,22 +674,22 @@ export default function PropertyCashFlowPage() {
               </div>
             </details>
           ))}
-          <p className="px-3 sm:px-4 py-2 text-[10px] text-neutral-400">Out includes the full purchase price; the loan taken shows as In in the purchase year.</p>
+          <p className="px-3 sm:px-4 py-2 text-[11px] text-neutral-400">Out includes the full purchase price; the loan taken shows as In in the purchase year.</p>
         </Card>
       ) : view === "LIST" ? (
         <Card className="divide-y divide-neutral-100 dark:divide-white/5 overflow-hidden">
           {[...rows].reverse().map((l, i) => (
             <div key={`${l.date}-${l.head}-${l.transaction_id ?? i}`} className={`flex items-start gap-2 px-3 sm:px-4 py-2 ${l.in_xirr ? "" : "opacity-60"}`}>
-              <div className="w-[72px] shrink-0 text-[10px] text-neutral-400 pt-0.5">{prettyDate(l.date)}</div>
+              <div className="w-[72px] shrink-0 text-[11px] text-neutral-400 pt-0.5">{prettyDate(l.date)}</div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-semibold text-neutral-900 dark:text-white">
                   {nameOf(l)}
                   {l.sub_category && <span className="font-normal text-neutral-500"> · {l.sub_category}</span>}
                   {l.adds_to_tax_cost && <TaxTag />}
                 </div>
-                {ownNote(l) && <div className="text-[10px] text-neutral-500 break-words">{ownNote(l)}</div>}
-                {!l.in_xirr && <div className="text-[10px] text-amber-700 dark:text-amber-400">{EXCLUDED_WHY[l.excluded_reason ?? ""] ?? "Not counted"}</div>}
-                {l.source === "VALUATION" && <div className="text-[10px] text-neutral-400">As if sold today (for XIRR)</div>}
+                {ownNote(l) && <div className="text-[11px] text-neutral-500 break-words">{ownNote(l)}</div>}
+                {!l.in_xirr && <div className="text-[11px] text-amber-700 dark:text-amber-400">{EXCLUDED_WHY[l.excluded_reason ?? ""] ?? "Not counted"}</div>}
+                {l.source === "VALUATION" && <div className="text-[11px] text-neutral-400">As if sold today (for XIRR)</div>}
               </div>
               <Amount direction={l.direction} value={l.amount} />
               {rowActions(l)}
@@ -702,7 +702,7 @@ export default function PropertyCashFlowPage() {
           <div className="overflow-x-auto w-0 min-w-full">
             <table className="w-full min-w-[720px] text-xs">
               <thead>
-                <tr className="text-[10px] uppercase font-bold text-neutral-400 border-b border-neutral-100 dark:border-white/5">
+                <tr className="text-[11px] uppercase font-bold text-neutral-400 border-b border-neutral-100 dark:border-white/5">
                   <th className="text-left px-3 py-2 font-bold">
                     <button type="button" onClick={() => setNewestFirst((v) => !v)} className="inline-flex items-center gap-1 uppercase">
                       Date <ArrowDownUp size={11} />
@@ -766,7 +766,7 @@ export default function PropertyCashFlowPage() {
       )}
 
       {/* How the XIRR is built */}
-      <Card className="p-3 sm:p-4 space-y-1.5 text-[11px] text-neutral-600 dark:text-neutral-300">
+      <Card className="p-3 sm:p-4 space-y-1.5 text-xs text-neutral-600 dark:text-neutral-300">
         <div className="flex items-center gap-1.5 font-semibold text-neutral-900 dark:text-white">
           <Info size={14} className="text-indigo-500" /> How the net return (XIRR) is worked out
         </div>
@@ -846,7 +846,7 @@ function Chip({ on, small, onClick, children }: { on: boolean; small?: boolean; 
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full border font-semibold ${small ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"} ${
+      className={`rounded-full border font-semibold ${small ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"} ${
         on ? "border-indigo-600 bg-indigo-600 text-white" : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300"
       }`}
     >
@@ -884,14 +884,14 @@ function IconBtn({ label, onClick, danger, children }: { label: string; onClick:
 }
 
 function TaxTag() {
-  return <span className="ml-1.5 rounded bg-indigo-500/10 px-1 py-px text-[9px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Tax cost</span>;
+  return <span className="ml-1.5 rounded bg-indigo-500/10 px-1 py-px text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400">Tax cost</span>;
 }
 
 /** Plain, neutral totals (feedback 2026-11-14: a big red negative alarms owners). */
 function Total({ label, sub, value, signed }: { label: string; sub: string; value: number; signed?: boolean }) {
   return (
     <Card className="p-2.5 sm:p-3">
-      <div className="text-[10px] uppercase font-bold text-neutral-400">{label}</div>
+      <div className="text-[11px] uppercase font-bold text-neutral-400">{label}</div>
       <div className="text-sm font-semibold font-mono text-neutral-800 dark:text-neutral-100">
         <PrivacyMask>
           {signed ? (value >= 0 ? "+" : "−") : ""}
@@ -900,7 +900,7 @@ function Total({ label, sub, value, signed }: { label: string; sub: string; valu
           <span className="hidden sm:inline">{inr(Math.abs(value))}</span>
         </PrivacyMask>
       </div>
-      <div className="text-[9px] text-neutral-400 leading-tight">{sub}</div>
+      <div className="text-[11px] text-neutral-400 leading-tight">{sub}</div>
     </Card>
   );
 }
@@ -909,7 +909,7 @@ function Total({ label, sub, value, signed }: { label: string; sub: string; valu
 function Amount({ direction, value, small }: { direction: "IN" | "OUT"; value: number; small?: boolean }) {
   return (
     <span
-      className={`shrink-0 font-mono font-semibold ${small ? "text-[11px]" : "text-xs"} ${
+      className={`shrink-0 font-mono font-semibold ${small ? "text-xs" : "text-xs"} ${
         direction === "IN" ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-700 dark:text-neutral-200"
       }`}
     >

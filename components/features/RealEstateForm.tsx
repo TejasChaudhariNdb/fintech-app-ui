@@ -431,7 +431,7 @@ export default function RealEstateForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           <div>
-            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+            <label className="block text-xs font-medium text-neutral-500 mb-1">
               Stamp Duty &amp; Registration (₹, optional)
             </label>
             <input
@@ -445,7 +445,7 @@ export default function RealEstateForm({
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+            <label className="block text-xs font-medium text-neutral-500 mb-1">
               Renovation &amp; Interiors (₹, optional)
             </label>
             <input
@@ -467,7 +467,7 @@ export default function RealEstateForm({
             <div className="text-xs font-bold text-neutral-900 dark:text-white">
               Currently Rented Out?
             </div>
-            <div className="text-[11px] text-neutral-500">
+            <div className="text-xs text-neutral-500">
               Calculate rental yield and cashflow
             </div>
           </div>
@@ -508,7 +508,7 @@ export default function RealEstateForm({
         {isRented && (
           <div className="pt-2 border-t border-neutral-200 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex-1">
-              <label className="block text-[11px] font-medium text-neutral-500 mb-1">
+              <label className="block text-xs font-medium text-neutral-500 mb-1">
                 Monthly Rent (₹)
               </label>
               <input
@@ -521,11 +521,11 @@ export default function RealEstateForm({
               />
             </div>
             <div className="shrink-0 text-left sm:text-right">
-              <span className="text-[11px] text-neutral-500 block">Rental yield</span>
+              <span className="text-xs text-neutral-500 block">Rental yield</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                 {rentalYieldPct.toFixed(2)}% p.a.
               </span>
-              <span className="text-[10px] text-neutral-400 ml-1">
+              <span className="text-[11px] text-neutral-400 ml-1">
                 ({formatINRShort(annualRent)}/yr)
               </span>
             </div>
@@ -537,7 +537,7 @@ export default function RealEstateForm({
       {totalCostBasis > 0 && currentValuationNum > 0 && (
         <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-around text-center gap-2">
           <div>
-            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Price gain</div>
+            <div className="text-[11px] font-semibold text-neutral-500 uppercase">Price gain</div>
             <div
               className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${
                 unrealizedGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
@@ -551,7 +551,7 @@ export default function RealEstateForm({
           <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
 
           <div>
-            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Property yield</div>
+            <div className="text-[11px] font-semibold text-neutral-500 uppercase">Property yield</div>
             <div className="text-xs sm:text-sm font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5">
               {cagrPct.toFixed(1)}% p.a.
             </div>
@@ -560,7 +560,7 @@ export default function RealEstateForm({
           <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
 
           <div>
-            <div className="text-[10px] font-semibold text-neutral-500 uppercase">Holding Tenure</div>
+            <div className="text-[11px] font-semibold text-neutral-500 uppercase">Holding Tenure</div>
             <div className="text-xs sm:text-sm font-bold font-mono text-neutral-700 dark:text-neutral-300 mt-0.5">
               {tenureYears.toFixed(1)} yrs
             </div>
@@ -570,7 +570,7 @@ export default function RealEstateForm({
             <>
               <div className="h-6 w-px bg-neutral-200 dark:bg-white/10" />
               <div title="True XIRR on your own money, after EMIs, interest, rent and every cost. Updates after you save.">
-                <div className="text-[10px] font-semibold text-neutral-500 uppercase">Net return</div>
+                <div className="text-[11px] font-semibold text-neutral-500 uppercase">Net return</div>
                 <div
                   className={`text-xs sm:text-sm font-bold font-mono mt-0.5 ${
                     savedXirr >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
