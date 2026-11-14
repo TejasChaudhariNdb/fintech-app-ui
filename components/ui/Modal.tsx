@@ -80,7 +80,13 @@ export default function Modal({
   }, [isOpen, onClose]);
 
   // ── Swipe-to-dismiss handlers ──────────────────────────────
-  const onDragStart = useCallback((clientY: number) => {
+  // A drag starts only on the handle / title bar (data-drag-handle), never on form fields or buttons.
+  // Safari bug (2026-11-14): a mousedown on a <select> started a drag, the native option list ate
+  // the mouseup, and moving down to pick an option dragged the sheet, which faded and slid it.
+  const onDragStart = useCallback((clientY: number, target: EventTarget | null) => {
+    const el = target as HTMLElement | null;
+    if (!el?.closest?.("[data-drag-handle]")) return;
+    if (el.closest("button, a, input, select, textarea, [role=button]")) return;
     dragStartY.current = clientY;
     dragCurrentY.current = clientY;
     setIsDragging(true);
@@ -104,6 +110,20 @@ export default function Modal({
     }
   }, [dragOffset, onClose]);
 
+  // End a drag wherever the pointer is released (the release may happen outside the sheet).
+  useEffect(() => {
+    if (!isDragging) return;
+    const end = () => onDragEnd();
+    window.addEventListener("mouseup", end);
+    window.addEventListener("touchend", end);
+    window.addEventListener("blur", end);
+    return () => {
+      window.removeEventListener("mouseup", end);
+      window.removeEventListener("touchend", end);
+      window.removeEventListener("blur", end);
+    };
+  }, [isDragging, onDragEnd]);
+
   if (!visible || typeof document === "undefined") return null;
 
   const isClosing = animating || (!isOpen && visible);
@@ -125,7 +145,7 @@ export default function Modal({
         ref={sheetRef}
         className={`
           bg-white dark:bg-[#151A23] border-t sm:border border-neutral-200/90 dark:border-white/10
-          rounded-t-3xl sm:rounded-3xl w-full max-w-md
+          rounded-t-3xl sm:rounded-3xl w-full max-w-md sm:max-w-[30.8rem]
           transition-colors duration-200
           max-h-[88vh] sm:max-h-[85vh] flex flex-col shadow-2xl overflow-hidden
           touch-pan-y overscroll-contain pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-0
@@ -144,22 +164,22 @@ export default function Modal({
           willChange: "transform",
         }}
         // Touch events
-        onTouchStart={(e) => onDragStart(e.touches[0].clientY)}
+        onTouchStart={(e) => onDragStart(e.touches[0].clientY, e.target)}
         onTouchMove={(e) => onDragMove(e.touches[0].clientY)}
         onTouchEnd={onDragEnd}
         // Mouse events (desktop)
-        onMouseDown={(e) => onDragStart(e.clientY)}
+        onMouseDown={(e) => onDragStart(e.clientY, e.target)}
         onMouseMove={(e) => { if (dragStartY.current !== null) onDragMove(e.clientY); }}
         onMouseUp={onDragEnd}
         onMouseLeave={onDragEnd}
       >
         {/* Drag handle pill — signals swipeable */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing">
+        <div data-drag-handle className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing">
           <div className="w-10 h-1 bg-neutral-300 dark:bg-white/20 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center px-6 pb-3.5 pt-1.5 flex-shrink-0 border-b border-neutral-100 dark:border-white/5 bg-white dark:bg-[#151A23]">
+        <div data-drag-handle className="flex justify-between items-center px-6 pb-3.5 pt-1.5 flex-shrink-0 border-b border-neutral-100 dark:border-white/5 bg-white dark:bg-[#151A23]">
           <h2 className="text-lg sm:text-xl font-extrabold text-neutral-900 dark:text-white truncate pr-2">
             {title}
           </h2>
