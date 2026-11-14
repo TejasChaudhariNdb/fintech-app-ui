@@ -222,6 +222,7 @@ export const api = {
           "/equity/import",
           "/equity/holding",
           "/reports/capital-gains",
+          "/mf-gifts",
           "/portfolio/market-cap-allocation",
           "/insurance/policies",
           "/insurance",
@@ -571,6 +572,25 @@ export const api = {
     }),
   deleteMFTransaction: (id: number) =>
     api.fetch(`/portfolio/transaction/${id}`, { method: "DELETE" }),
+  // MF gifting: link a gift-in to the donor's gift-out, or enter its original cost.
+  getMFGifts: () => api.fetch(`/mf-gifts`),
+  getGiftCandidates: (giftInTxId: number) =>
+    api.fetch(`/mf-gifts/${giftInTxId}/candidates`),
+  linkGift: (giftInTxId: number, giftOutTxId: number) =>
+    api.fetch(`/mf-gifts/link`, {
+      method: "POST",
+      body: JSON.stringify({ gift_in_tx_id: giftInTxId, gift_out_tx_id: giftOutTxId }),
+    }),
+  setGiftCost: (
+    giftInTxId: number,
+    lots: { acquired_date: string; units: number; cost: number }[],
+  ) =>
+    api.fetch(`/mf-gifts/${giftInTxId}/cost`, {
+      method: "PUT",
+      body: JSON.stringify({ lots }),
+    }),
+  removeGiftLink: (transferId: number) =>
+    api.fetch(`/mf-gifts/links/${transferId}`, { method: "DELETE" }),
   updateMFTransaction: (id: number, data: any) =>
     api.fetch(`/portfolio/transaction/${id}`, {
       method: "PUT",

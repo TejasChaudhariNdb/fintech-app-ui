@@ -12,6 +12,8 @@ interface TransactionItemProps {
   category?: "MF" | "STOCK";
   profileName?: string;
   profileRelation?: string;
+  /** Replaces the AMC line, e.g. "From Mom · Folio 15093532" for a gift. */
+  note?: string;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -27,6 +29,7 @@ export default function TransactionItem({
   category = "MF",
   profileName,
   profileRelation,
+  note,
   onEdit,
   onDelete,
 }: TransactionItemProps) {
@@ -46,6 +49,10 @@ export default function TransactionItem({
         return "Buy";
       case "SELL":
         return "Sell";
+      case "GIFT_IN":
+        return "Gift In";
+      case "GIFT_OUT":
+        return "Gift Out";
       default:
         return type.replace(/_/g, " ");
     }
@@ -65,6 +72,16 @@ export default function TransactionItem({
   const isPurchase = type.includes("PURCHASE") || type === "BUY";
   const isTax = type.includes("TAX") || type.includes("STAMP_DUTY");
   const isRedemption = type === "REDEMPTION" || type === "SELL";
+  const isGiftIn = type === "GIFT_IN";
+  const isGiftOut = type === "GIFT_OUT";
+  const isGift = isGiftIn || isGiftOut;
+
+  // Stored amounts/units are signed inconsistently (redemptions are negative),
+  // so the sign shown comes from the transaction direction, not the raw value.
+  const absAmount = Math.abs(amount || 0);
+  const absUnits = Math.abs(units || 0);
+  const isInflow = isPurchase || isGiftIn;
+  const amountSign = absAmount === 0 ? "" : isInflow ? "+" : "-";
 
   // Determine the color theme for the item
   let statusColor =
@@ -84,6 +101,13 @@ export default function TransactionItem({
       "bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400";
     amountColor = "text-red-600 dark:text-red-400";
     iconColor = "bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400";
+  } else if (isGift) {
+    // A gift moves units between people; it is neither a purchase nor a sale.
+    statusColor =
+      "bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400";
+    amountColor = "text-violet-600 dark:text-violet-400";
+    iconColor =
+      "bg-violet-100 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400";
   }
 
   return (
@@ -94,7 +118,7 @@ export default function TransactionItem({
       {/* Visual Indicator Icon */}
       <div
         className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 shrink-0 ${iconColor}`}>
-        {isPurchase ? "↓" : isRedemption ? "↑" : "−"}
+        {isPurchase || isGiftIn ? "↓" : isRedemption || isGiftOut ? "↑" : "−"}
       </div>
 
       {/* Main Content */}
@@ -121,7 +145,7 @@ export default function TransactionItem({
 
         {/* Secondary Info: AMC if purchase/sell, or Scheme Name if Tax */}
         <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-          {isTax ? schemeName : amc}
+          {isTax ? schemeName : note || amc}
         </p>
 
         <div className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-1 flex items-center">
@@ -132,10 +156,10 @@ export default function TransactionItem({
               year: "numeric",
             })}
           </span>
-          {units && units > 0 && (
+          {absUnits > 0 && (
             <span className="ml-1">
               {" "}
-              • {units} {category === "STOCK" ? "Shares" : "Units"}
+              • {absUnits} {category === "STOCK" ? "Shares" : "Units"}
             </span>
           )}
         </div>
@@ -145,8 +169,8 @@ export default function TransactionItem({
       <div className="text-right ml-4 flex items-center gap-3">
         <div className="group-hover:opacity-0 transition-opacity">
           <p className={`text-sm font-bold ${amountColor}`}>
-            {isPurchase ? "+" : "-"}₹
-            {amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            {amountSign}₹
+            {absAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
           </p>
         </div>
 

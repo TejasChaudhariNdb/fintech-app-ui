@@ -7,6 +7,7 @@ import {
   TrendingUp,
   TrendingDown,
   ChevronRight,
+  Gift,
 } from "lucide-react";
 import PrivacyMask from "../ui/PrivacyMask";
 import { useProfile } from "@/context/ProfileContext";
@@ -31,6 +32,8 @@ interface SchemeCardProps {
   categoryRank?: number;
   categoryTotal?: number;
   isSif?: boolean;
+  /** A received gift in this fund still needs its original cost (link or enter it). */
+  giftActionNeeded?: boolean;
   onClick?: () => void;
   onShare?: () => void;
   onEdit?: () => void;
@@ -64,6 +67,7 @@ export default function SchemeCard({
   categoryRank,
   categoryTotal,
   isSif = false,
+  giftActionNeeded = false,
   onClick,
   onShare,
   onEdit,
@@ -129,6 +133,14 @@ export default function SchemeCard({
                 {isSif && (
                   <span className="inline-flex items-center rounded-md bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-sm">
                     SIF
+                  </span>
+                )}
+                {giftActionNeeded && (
+                  <span
+                    title="Gifted units: original cost not set. Open the fund to link the giver's gift or enter the cost."
+                    className="inline-flex items-center gap-1 rounded-md bg-orange-50 dark:bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400 border border-orange-500/20">
+                    <Gift size={10} />
+                    Action needed
                   </span>
                 )}
                 {overallRank && (
