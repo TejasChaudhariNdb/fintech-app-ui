@@ -316,12 +316,16 @@ export default function HomePage() {
       api.clearPortfolioCache();
       await api.refreshNAVs();
 
-      // 3. Start Polling for completion
-      let attempts = 0;
-      const maxAttempts = 15; // 30 seconds max (15 * 2s)
+      // 3. Poll for completion. Each check waits for the previous one to
+      // finish, then 2s. A setInterval here fired regardless, so on a slow
+      // backend up to 15 checks piled up at once and added to the load.
+      const POLL_DELAY_MS = 2000;
+      const POLL_WINDOW_MS = 30000; // stop after ~30 seconds
+      const pollStarted = Date.now();
+      const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-      const pollInterval = setInterval(async () => {
-        attempts++;
+      while (Date.now() - pollStarted < POLL_WINDOW_MS) {
+        await wait(POLL_DELAY_MS);
         try {
           api.clearPortfolioCache();
           let newLastUpdated = 0;
@@ -339,7 +343,6 @@ export default function HomePage() {
 
           // If timestamp is NEWER than what we started with, it's done!
           if (newLastUpdated > initialLastUpdated) {
-            clearInterval(pollInterval);
             await loadData(); // Reload full dashboard
             setRefreshing(false);
             showToast("Portfolio updated successfully", "success");
@@ -348,14 +351,11 @@ export default function HomePage() {
         } catch (e) {
           console.error("Polling error", e);
         }
+      }
 
-        // Safety Timeout (Stop polling after 30 seconds)
-        if (attempts >= maxAttempts) {
-          clearInterval(pollInterval);
-          await loadData();
-          setRefreshing(false);
-        }
-      }, 2000); // Check every 2 seconds
+      // Safety timeout: reload whatever is there and stop
+      await loadData();
+      setRefreshing(false);
     } catch (err: any) {
       console.error("Failed to refresh NAVs:", err);
       showToast("Failed to trigger update", "error");
