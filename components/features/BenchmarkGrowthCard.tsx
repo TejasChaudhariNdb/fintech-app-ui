@@ -58,7 +58,19 @@ interface BenchmarkSummary extends IndexSummary {
   total_current_value: number;
   is_outperforming: boolean;
   includes_stocks: boolean;
+  /** BUG-068: what the line and its XIRR cover, and held assets the chart cannot show. */
+  included_assets?: string[];
+  not_in_chart?: { asset: string; reason: string }[];
 }
+
+const SCOPE_LABELS: Record<string, string> = {
+  mutual_funds: "Mutual funds",
+  stocks: "Stocks",
+  fixed_income: "Fixed income",
+  gold: "Gold",
+  real_estate: "Real estate",
+};
+const scopeLabel = (keys?: string[]) => (keys || []).map((k) => SCOPE_LABELS[k] || k).join(" + ");
 
 type IndexSeries = {
   [K in BenchmarkKey as K | `${K}_pct`]: number | null;
@@ -355,6 +367,12 @@ export default function BenchmarkGrowthCard({
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PORTFOLIO_COLOR }} />
               Your Portfolio
             </div>
+            {/* BUG-068: say what this covers, so it is not read as the whole-portfolio XIRR on top */}
+            {summary.included_assets && summary.included_assets.length > 0 && (
+              <div className="mt-0.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
+                {scopeLabel(summary.included_assets)} only
+              </div>
+            )}
             {view === "value" ? (
               <>
                 <div className="mt-1.5 text-xl sm:text-2xl font-black tabular-nums text-neutral-900 dark:text-white truncate">
@@ -385,7 +403,9 @@ export default function BenchmarkGrowthCard({
               </div>
               {showXirr && summary.portfolio_xirr !== null && (
                 <div className="flex justify-between gap-2">
-                  <dt className="text-neutral-500 dark:text-neutral-400">XIRR</dt>
+                  <dt className="text-neutral-500 dark:text-neutral-400">
+                    XIRR{summary.included_assets && summary.included_assets.length > 0 ? ` (${scopeLabel(summary.included_assets)})` : ""}
+                  </dt>
                   <dd className={`font-bold ${tone(summary.portfolio_xirr)}`}>{signed(summary.portfolio_xirr)}</dd>
                 </div>
               )}
@@ -564,6 +584,16 @@ export default function BenchmarkGrowthCard({
         )}
       </div>
 
+      {/* BUG-068: visible note on what the chart leaves out */}
+      {summary && summary.not_in_chart && summary.not_in_chart.length > 0 && (
+        <p className="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+          <span className="font-semibold">Not in this chart: </span>
+          {scopeLabel(summary.not_in_chart.map((e) => e.asset))}. Their value is only known for today
+          (no daily price history), so they cannot be drawn over time. The Portfolio XIRR at the top of
+          Home includes them.
+        </p>
+      )}
+
       {/* ── HOW TO READ IT ── */}
       {summary && (
         <details className="pt-3 border-t border-neutral-100 dark:border-white/5 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
@@ -574,6 +604,7 @@ export default function BenchmarkGrowthCard({
             returns and the rupee values of both are directly comparable.
             {summary.includes_stocks && " Stocks are counted at cost before their first daily price snapshot."}
           </p>
+
         </details>
       )}
     </Card>

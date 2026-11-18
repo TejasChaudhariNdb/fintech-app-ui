@@ -9,12 +9,15 @@ interface BenchmarkCardProps {
   portfolioXirr: number | null;
   benchmarkXirr: number | null;
   benchmarkName?: string;
+  /** Says which holdings "Your XIRR" covers when a page shows more than one XIRR. */
+  portfolioLabel?: string;
 }
 
 export default function BenchmarkCard({
   portfolioXirr,
   benchmarkXirr,
   benchmarkName = "Nifty 50",
+  portfolioLabel = "Your XIRR",
 }: BenchmarkCardProps) {
   // Both XIRRs must exist to compare; a missing one is never treated as 0% (decision 2, 2026-11-12).
   const hasBenchmark =
@@ -40,7 +43,7 @@ export default function BenchmarkCard({
           <div className="flex items-end justify-between">
             {/* Portfolio */}
             <div>
-              <p className="text-xs text-neutral-500 mb-1">Your XIRR</p>
+              <p className="text-xs text-neutral-500 mb-1">{portfolioLabel}</p>
               <p
                 className={`text-xl font-bold ${
                   (portfolioXirr as number) >= 0 ? "text-emerald-500" : "text-red-500"

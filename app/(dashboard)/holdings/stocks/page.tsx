@@ -55,7 +55,8 @@ import DematReconcileModal from "@/components/features/DematReconcileModal";
 export default function StocksPage() {
   const { profiles, activeProfileId } = useProfile();
   const [isLoading, setIsLoading] = useState(true);
-  const [portfolioXirr, setPortfolioXirr] = useState(0);
+  // Lifetime XIRR (all trades, sold stocks included). null = cannot be calculated, shown as "--".
+  const [portfolioXirr, setPortfolioXirr] = useState<number | null>(null);
   // BUG-042: stock XIRR vs Nifty 50 on the same cash flows
   const [stockBench, setStockBench] = useState<{ portfolio_xirr: number | null; benchmark_xirr: number | null; name: string } | null>(null);
 
@@ -347,7 +348,7 @@ export default function StocksPage() {
       const stocksRes = await api.getEquitySummary();
       // stocksRes is { total_value: ..., holdings: [...] }
       setManualStocks(stocksRes.holdings || []);
-      setPortfolioXirr(stocksRes.xirr || 0);
+      setPortfolioXirr(typeof stocksRes.xirr === "number" ? stocksRes.xirr : null);
     } catch (err) {
       console.error(err);
       showToast("Failed to load stocks", "error");
@@ -807,14 +808,17 @@ export default function StocksPage() {
               </div>
             </Card>
             <Card className="p-4 bg-white dark:bg-surface border border-neutral-200 dark:border-white/5 flex flex-col justify-center rounded-2xl">
+              {/* Two XIRRs on this page use different trades: this card counts every trade
+                  (sold stocks included); the benchmark card below counts current holdings only. */}
               <p className="text-xs uppercase tracking-[0.18em] text-neutral-500 mb-2">
-                XIRR
+                Lifetime XIRR
               </p>
               <p
-                className={`text-lg sm:text-2xl font-bold ${portfolioXirr >= 0 ? "text-green-500" : "text-red-500"
+                className={`text-lg sm:text-2xl font-bold ${portfolioXirr === null ? "text-neutral-500" : portfolioXirr >= 0 ? "text-green-500" : "text-red-500"
                   }`}>
-                {formatPercent(portfolioXirr)}
+                {portfolioXirr === null ? "--" : formatPercent(portfolioXirr)}
               </p>
+              <p className="text-[10px] sm:text-xs text-neutral-500 mt-1">Incl. sold stocks</p>
             </Card>
           </div>
 
@@ -823,6 +827,7 @@ export default function StocksPage() {
               portfolioXirr={stockBench.portfolio_xirr}
               benchmarkXirr={stockBench.benchmark_xirr}
               benchmarkName={stockBench.name || "Nifty 50"}
+              portfolioLabel="Your XIRR (current holdings)"
             />
           )}
 

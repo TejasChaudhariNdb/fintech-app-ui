@@ -217,11 +217,12 @@ export function useAssetPreferences(profileId: string | number = "all") {
   }, [profileId]);
 
   // Optimistic update. If the server save fails, storeAssetPreferences broadcasts the previous values
-  // and the handler above reverts the toggles.
+  // and the handler above reverts the toggles. Resolves to true once the server has the new values,
+  // so a caller can reload numbers the server calculates with them (BUG-061).
   const updatePreferences = useCallback(
-    (newPrefs: NetWorthAssetPreferences) => {
+    (newPrefs: NetWorthAssetPreferences): Promise<boolean> => {
       setPreferences(newPrefs);
-      void storeAssetPreferences(newPrefs, profileId);
+      return storeAssetPreferences(newPrefs, profileId);
     },
     [profileId]
   );

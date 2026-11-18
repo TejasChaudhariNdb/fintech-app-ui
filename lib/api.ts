@@ -218,7 +218,6 @@ export const api = {
           "/goals",
           "/goals/",
           "/cas/upload",
-          "/cas/upload-json",
           "/equity/import",
           "/equity/holding",
           "/reports/capital-gains",

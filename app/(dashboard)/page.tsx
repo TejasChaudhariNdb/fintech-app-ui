@@ -175,6 +175,12 @@ export default function HomePage() {
             mf_lifetime_xirr: xirrData ? xirrData.mf_lifetime_xirr : ps.mf_lifetime_xirr,
             stock_xirr: xirrData ? xirrData.stock_xirr : ps.stock_xirr,
             stock_lifetime_xirr: xirrData ? xirrData.stock_lifetime_xirr : ps.stock_lifetime_xirr,
+            // BUG-065: which asset classes the Portfolio XIRR covers (shown behind the info button)
+            included_assets: xirrData?.included_assets ?? [],
+            excluded_assets: xirrData?.excluded_assets ?? [],
+            fixed_income_xirr: xirrData?.fixed_income_xirr ?? null,
+            gold_xirr: xirrData?.gold_xirr ?? null,
+            real_estate_xirr: xirrData?.real_estate_xirr ?? null,
           });
         }
         if (topH) setTopHoldings(topH.holdings || []);
@@ -269,6 +275,11 @@ export default function HomePage() {
           mf_lifetime_xirr: xirrData?.mf_lifetime_xirr ?? null,
           stock_xirr: xirrData?.stock_xirr ?? null,
           stock_lifetime_xirr: xirrData?.stock_lifetime_xirr ?? null,
+          included_assets: xirrData?.included_assets ?? [],
+          excluded_assets: xirrData?.excluded_assets ?? [],
+          fixed_income_xirr: xirrData?.fixed_income_xirr ?? null,
+          gold_xirr: xirrData?.gold_xirr ?? null,
+          real_estate_xirr: xirrData?.real_estate_xirr ?? null,
         });
         setGoals(g || []);
         setInsights(ins || []);
@@ -507,6 +518,11 @@ export default function HomePage() {
           lastUpdated={familySummary?.last_updated || netWorth?.last_updated}
           xirr={summary?.xirr}
           lifetimeXirr={summary?.lifetime_xirr}
+          xirrIncludedAssets={summary?.included_assets}
+          xirrExcludedAssets={summary?.excluded_assets}
+          fiXirr={summary?.fixed_income_xirr}
+          goldXirr={summary?.gold_xirr}
+          reXirr={summary?.real_estate_xirr}
           mfXirr={summary?.mf_xirr}
           mfLifetimeXirr={summary?.mf_lifetime_xirr}
           // Hide the stock XIRR when stocks is switched off, the same as the stock value (BUG-056).
@@ -845,8 +861,16 @@ export default function HomePage() {
           onClose={() => setShowCustomizeModal(false)}
           preferences={assetPrefs}
           onSave={(newPrefs) => {
-            setAssetPrefs(newPrefs);
-            showToast("Preferences saved & cache refreshed", "success");
+            // BUG-061: the server leaves switched-off assets out of net worth, so the numbers on
+            // screen were calculated with the old choice. Reload once the server has the new one.
+            void setAssetPrefs(newPrefs).then((saved) => {
+              if (saved) {
+                void loadData();
+                showToast("Preferences saved", "success");
+              } else {
+                showToast("Could not save preferences. Please try again.", "error");
+              }
+            });
           }}
           values={{
             mutual_funds: familySummary?.allocation?.mutual_funds || 0,
@@ -929,8 +953,16 @@ export default function HomePage() {
         onClose={() => setShowCustomizeModal(false)}
         preferences={assetPrefs}
         onSave={(newPrefs) => {
-          setAssetPrefs(newPrefs);
-          showToast("Preferences saved & cache refreshed", "success");
+          // BUG-061: the server leaves switched-off assets out of net worth, so the numbers on
+          // screen were calculated with the old choice. Reload once the server has the new one.
+          void setAssetPrefs(newPrefs).then((saved) => {
+            if (saved) {
+              void loadData();
+              showToast("Preferences saved", "success");
+            } else {
+              showToast("Could not save preferences. Please try again.", "error");
+            }
+          });
         }}
         values={{
           mutual_funds: netWorth?.mutual_funds || 0,
@@ -1016,6 +1048,11 @@ export default function HomePage() {
                   lastUpdated={netWorth?.last_updated}
                   xirr={summary?.xirr}
                   lifetimeXirr={summary?.lifetime_xirr}
+                  xirrIncludedAssets={summary?.included_assets}
+                  xirrExcludedAssets={summary?.excluded_assets}
+                  fiXirr={summary?.fixed_income_xirr}
+                  goldXirr={summary?.gold_xirr}
+                  reXirr={summary?.real_estate_xirr}
                   mfXirr={summary?.mf_xirr}
                   mfLifetimeXirr={summary?.mf_lifetime_xirr}
                   stockXirr={summary?.stock_xirr}
