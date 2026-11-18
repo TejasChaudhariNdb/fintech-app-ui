@@ -2,7 +2,8 @@
 
 import React from "react";
 import Card from "../ui/Card";
-import { RefreshCw, Loader2, Clock, ArrowDownUp, SlidersHorizontal } from "lucide-react";
+import Modal from "../ui/Modal";
+import { RefreshCw, Loader2, Clock, ArrowDownUp, SlidersHorizontal, Info } from "lucide-react";
 import PrivacyMask from "../ui/PrivacyMask";
 
 interface NetWorthCardProps {
@@ -38,12 +39,19 @@ interface NetWorthCardProps {
   reInvested?: number;
   reProfit?: number;
   reReturnPct?: number;
+  /** BUG-065: XIRR per asset class (gold, FD/bonds, real estate with its home loan). */
+  fiXirr?: number | null;
+  goldXirr?: number | null;
+  reXirr?: number | null;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   dayChangePct?: number;
   lastUpdated?: string;
   xirr?: number | null;
   lifetimeXirr?: number | null;
+  /** BUG-065: asset classes the Portfolio XIRR covers, and the ones left out with the reason. */
+  xirrIncludedAssets?: string[];
+  xirrExcludedAssets?: { asset: string; reason: string; types?: string[] }[];
   onAddMF?: () => void;
   onAddStock?: () => void;
   onAddFD?: () => void;
@@ -57,6 +65,142 @@ interface NetWorthCardProps {
   showFixedIncome?: boolean;
   showGold?: boolean;
   showRealEstate?: boolean;
+}
+
+
+// BUG-065: names for the asset classes the Portfolio XIRR lists.
+const ASSET_LABELS: Record<string, string> = {
+  mutual_funds: "Mutual funds",
+  stocks: "Stocks",
+  fixed_income: "Fixed income (FD, bonds)",
+  gold: "Gold",
+  real_estate: "Real estate",
+};
+const assetLabel = (key: string) => ASSET_LABELS[key] || key;
+
+// One metric chip for every asset card, cycling XIRR -> Lifetime XIRR -> Returns.
+type MetricMode = "xirr" | "lifetime" | "returns";
+const NEXT_METRIC: Record<MetricMode, MetricMode> = { xirr: "lifetime", lifetime: "returns", returns: "xirr" };
+const METRIC_LABEL: Record<MetricMode, string> = { xirr: "XIRR", lifetime: "Lifetime XIRR", returns: "Returns" };
+
+const fmtPct = (v?: number | null) => (v === undefined || v === null ? "--" : `${v.toFixed(2)}%`);
+
+function MetricToggle({
+  mode,
+  onCycle,
+  xirr,
+  lifetimeXirr,
+  gain,
+  gainPct,
+  hasHolding,
+}: {
+  mode: MetricMode;
+  onCycle: () => void;
+  xirr?: number | null;
+  lifetimeXirr?: number | null;
+  gain?: number;
+  gainPct?: number;
+  hasHolding: boolean;
+}) {
+  let text = "--";
+  let sign = 0;
+  if (hasHolding && mode === "returns" && gain !== undefined) {
+    sign = gain > 0 ? 1 : gain < 0 ? -1 : 0;
+    const pct = gainPct !== undefined && isFinite(gainPct) ? ` (${gain >= 0 ? "+" : ""}${gainPct.toFixed(1)}%)` : "";
+    text = `${gain >= 0 ? "+" : "-"}₹${Math.round(Math.abs(gain)).toLocaleString("en-IN")}${pct}`;
+  } else if (hasHolding && mode !== "returns") {
+    // null = cannot be calculated: "--", never 0% (decision 2, 2026-11-12)
+    const v = mode === "xirr" ? xirr : lifetimeXirr;
+    text = fmtPct(v);
+    sign = v === undefined || v === null ? 0 : v > 0 ? 1 : v < 0 ? -1 : 0;
+  }
+  const colorClass = sign < 0 ? "text-rose-300" : sign > 0 ? "text-emerald-300" : "text-white/70";
+  return (
+    <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+      <button
+        type="button"
+        onClick={onCycle}
+        className="w-full inline-flex items-center justify-between gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
+        title="Tap to switch between XIRR, Lifetime XIRR and Returns">
+        <span className="flex items-center gap-1.5 truncate">
+          <ArrowDownUp size={11} className={`${sign < 0 ? "text-rose-300" : "text-emerald-300"} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
+          <span className="text-white/70 text-[10px] truncate">{METRIC_LABEL[mode]}</span>
+        </span>
+        <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
+          {mode === "returns" && text !== "--" ? <PrivacyMask>{text}</PrivacyMask> : text}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+// What the Portfolio XIRR covers: each included asset with its own XIRR, and what is left out.
+function XirrInfo({
+  xirr,
+  lifetimeXirr,
+  included,
+  excluded,
+  perAsset,
+}: {
+  xirr?: number | null;
+  lifetimeXirr?: number | null;
+  included: string[];
+  excluded: { asset: string; reason: string; types?: string[] }[];
+  perAsset: Record<string, number | null | undefined>;
+}) {
+  return (
+    <div className="space-y-4 text-sm text-neutral-700 dark:text-neutral-300">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-neutral-50 dark:bg-white/5 p-3">
+          <p className="text-xs text-neutral-500">XIRR</p>
+          <p className="text-lg font-bold text-neutral-900 dark:text-white tabular-nums">{fmtPct(xirr)}</p>
+          <p className="text-[11px] text-neutral-500">What you hold now</p>
+        </div>
+        <div className="rounded-xl bg-neutral-50 dark:bg-white/5 p-3">
+          <p className="text-xs text-neutral-500">Lifetime XIRR</p>
+          <p className="text-lg font-bold text-neutral-900 dark:text-white tabular-nums">{fmtPct(lifetimeXirr)}</p>
+          <p className="text-[11px] text-neutral-500">Also counts funds and stocks you sold</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Included</p>
+        {included.length === 0 ? (
+          <p className="text-xs text-neutral-500">Nothing to calculate yet.</p>
+        ) : (
+          <ul className="divide-y divide-neutral-200 dark:divide-white/10">
+            {included.map((a) => (
+              <li key={a} className="flex items-center justify-between py-1.5">
+                <span>{assetLabel(a)}</span>
+                <span className="font-semibold tabular-nums">{fmtPct(perAsset[a])}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {excluded.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Not included</p>
+          <ul className="space-y-1 text-xs">
+            {excluded.map((e) => (
+              <li key={`${e.asset}-${e.reason}`}>
+                {e.reason === "no_deposit_dates"
+                  ? `${(e.types || []).join(", ") || assetLabel(e.asset)}: deposit dates are not recorded, so XIRR cannot be calculated`
+                  : `${assetLabel(e.asset)}: switched off in Customize`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <p className="text-[11px] text-neutral-500">
+        Real estate uses your own money (down payment, EMIs and costs) and the value after repaying the
+        home loan, the same as the property page. Fixed income counts FDs, bonds and post office
+        deposits.
+      </p>
+    </div>
+  );
 }
 
 export default function NetWorthCard({
@@ -98,6 +242,11 @@ export default function NetWorthCard({
   lastUpdated,
   xirr,
   lifetimeXirr,
+  fiXirr,
+  goldXirr,
+  reXirr,
+  xirrIncludedAssets,
+  xirrExcludedAssets,
   onAddMF,
   onAddStock,
   onAddFD,
@@ -172,10 +321,28 @@ export default function NetWorthCard({
     return () => clearInterval(interval);
   }, []);
 
-  const [mfXirrMode, setMfXirrMode] = React.useState<"xirr" | "lifetime">("xirr");
-  const [stockXirrMode, setStockXirrMode] = React.useState<"xirr" | "lifetime">("xirr");
+  // One choice for every asset card: XIRR -> Lifetime XIRR -> Returns (tap any card's chip).
+  const [metricMode, setMetricMode] = React.useState<MetricMode>("xirr");
+  const cycleMetric = () => setMetricMode((m) => NEXT_METRIC[m]);
+  const [showXirrInfo, setShowXirrInfo] = React.useState(false);
 
   return (
+    <>
+    <Modal isOpen={showXirrInfo} onClose={() => setShowXirrInfo(false)} title="Portfolio XIRR">
+      <XirrInfo
+        xirr={xirr}
+        lifetimeXirr={lifetimeXirr}
+        included={xirrIncludedAssets || []}
+        excluded={xirrExcludedAssets || []}
+        perAsset={{
+          mutual_funds: mfXirr,
+          stocks: stockXirr,
+          fixed_income: fiXirr,
+          gold: goldXirr,
+          real_estate: reXirr,
+        }}
+      />
+    </Modal>
     <Card id="tour-net-worth-card" className="p-4 sm:p-6 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 text-white border-none shadow-2xl shadow-primary-900/40 relative overflow-hidden group">
       {/* Decorative background elements */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl transform translate-x-10 -translate-y-10 pointer-events-none" />
@@ -266,6 +433,16 @@ export default function NetWorthCard({
                 <span className={xirr === null ? "text-white/80 font-bold" : xirr >= 0 ? "text-emerald-300 font-bold" : "text-rose-300 font-bold"}>
                   {xirr === null ? "--" : `${xirr.toFixed(2)}%`}
                 </span>
+                {(xirrIncludedAssets?.length || xirrExcludedAssets?.length) ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowXirrInfo((v) => !v)}
+                    aria-expanded={showXirrInfo}
+                    aria-label="What this XIRR includes"
+                    className="text-white/70 hover:text-white">
+                    <Info size={12} />
+                  </button>
+                ) : null}
               </div>
             )}
           </div>
@@ -354,33 +531,15 @@ export default function NetWorthCard({
                     </div>
                   </div>
 
-                  {/* XIRR Toggle Switch */}
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setMfXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
-                      className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
-                      title="Tap to toggle between XIRR and Lifetime XIRR">
-                      <span className="flex items-center gap-1.5 truncate">
-                        <ArrowDownUp size={11} className={`${(() => {
-                          const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                          return val != null && val < 0 ? "text-rose-300" : "text-emerald-300";
-                        })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
-                        <span className="text-white/70 text-[10px]">{mfXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
-                      </span>
-                      {(() => {
-                        const val = mfXirrMode === "xirr" ? mfXirr : (mfLifetimeXirr ?? mfXirr);
-                        const isNeg = val !== undefined && val !== null && val < 0;
-                        const isPos = val !== undefined && val !== null && val > 0;
-                        const colorClass = isNeg ? "text-rose-300" : isPos ? "text-emerald-300" : "text-white/70";
-                        return (
-                          <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                            {val !== undefined && val !== null && (mfValue > 0 || val !== 0) ? `${val.toFixed(2)}%` : "--"}
-                          </span>
-                        );
-                      })()}
-                    </button>
-                  </div>
+                  <MetricToggle
+                    mode={metricMode}
+                    onCycle={cycleMetric}
+                    xirr={mfXirr}
+                    lifetimeXirr={mfLifetimeXirr}
+                    gain={mfProfit}
+                    gainPct={mfReturnPct}
+                    hasHolding={mfValue > 0}
+                  />
                 </div>
               )}
 
@@ -432,33 +591,15 @@ export default function NetWorthCard({
                     </div>
                   </div>
 
-                  {/* XIRR Toggle Switch */}
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setStockXirrMode(m => m === "xirr" ? "lifetime" : "xirr")}
-                      className="w-full inline-flex items-center justify-between px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 active:scale-98 text-[11px] font-medium text-white transition-all border border-white/15 shadow-xs cursor-pointer select-none group/btn"
-                      title="Tap to toggle between XIRR and Lifetime XIRR">
-                      <span className="flex items-center gap-1.5 truncate">
-                        <ArrowDownUp size={11} className={`${(() => {
-                          const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                          return val != null && val < 0 ? "text-rose-300" : "text-blue-300";
-                        })()} shrink-0 group-hover/btn:rotate-180 transition-transform duration-300`} />
-                        <span className="text-white/70 text-[10px]">{stockXirrMode === "xirr" ? "XIRR" : "Lifetime"}</span>
-                      </span>
-                      {(() => {
-                        const val = stockXirrMode === "xirr" ? stockXirr : (stockLifetimeXirr ?? stockXirr);
-                        const isNeg = val !== undefined && val !== null && val < 0;
-                        const isPos = val !== undefined && val !== null && val > 0;
-                        const colorClass = isNeg ? "text-rose-300" : isPos ? "text-blue-300" : "text-white/70";
-                        return (
-                          <span className={`font-bold shrink-0 tabular-nums ${colorClass}`}>
-                            {val !== undefined && val !== null && (stockValue > 0 || val !== 0) ? `${val.toFixed(2)}%` : "--"}
-                          </span>
-                        );
-                      })()}
-                    </button>
-                  </div>
+                  <MetricToggle
+                    mode={metricMode}
+                    onCycle={cycleMetric}
+                    xirr={stockXirr}
+                    lifetimeXirr={stockLifetimeXirr}
+                    gain={stockProfit}
+                    gainPct={stockReturnPct}
+                    hasHolding={stockValue > 0}
+                  />
                 </div>
               )}
 
@@ -489,17 +630,15 @@ export default function NetWorthCard({
                     </div>
                     <div className="min-h-[16px] mt-1" />
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
-                    <span className="text-[10px] text-white/70">Interest Earned</span>
-                    {fixedIncomeValue !== undefined && fixedIncomeValue > 0 && fiProfit !== undefined ? (
-                      <span className={`font-bold tabular-nums ${fiProfit >= 0 ? "text-cyan-300" : "text-rose-300"}`}>
-                        {fiProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(fiProfit)).toLocaleString("en-IN")}
-                        {fiReturnPct !== undefined && ` (${fiProfit >= 0 ? "+" : ""}${fiReturnPct.toFixed(1)}%)`}
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-white/50 tabular-nums">--</span>
-                    )}
-                  </div>
+                  <MetricToggle
+                    mode={metricMode}
+                    onCycle={cycleMetric}
+                    xirr={fiXirr}
+                    lifetimeXirr={fiXirr}
+                    gain={fiProfit}
+                    gainPct={fiReturnPct}
+                    hasHolding={(fixedIncomeValue || 0) > 0}
+                  />
                 </div>
               )}
 
@@ -530,17 +669,15 @@ export default function NetWorthCard({
                     </div>
                     <div className="min-h-[16px] mt-1" />
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90">
-                    <span className="text-[10px] text-white/70">Total Returns</span>
-                    {goldValue !== undefined && goldValue > 0 && goldProfit !== undefined ? (
-                      <span className={`font-bold tabular-nums ${goldProfit >= 0 ? "text-amber-300" : "text-rose-300"}`}>
-                        {goldProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(goldProfit)).toLocaleString("en-IN")}
-                        {goldReturnPct !== undefined && ` (${goldProfit >= 0 ? "+" : ""}${goldReturnPct.toFixed(1)}%)`}
-                      </span>
-                    ) : (
-                      <span className="font-semibold text-white/50 tabular-nums">--</span>
-                    )}
-                  </div>
+                  <MetricToggle
+                    mode={metricMode}
+                    onCycle={cycleMetric}
+                    xirr={goldXirr}
+                    lifetimeXirr={goldXirr}
+                    gain={goldProfit}
+                    gainPct={goldReturnPct}
+                    hasHolding={(goldValue || 0) > 0}
+                  />
                 </div>
               )}
 
@@ -571,23 +708,15 @@ export default function NetWorthCard({
                     </div>
                     <div className="min-h-[16px] mt-1" />
                   </div>
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between text-[11px] text-white/90 gap-1.5">
-                    <span className="text-[10px] text-white/70 shrink-0">Appreciation</span>
-                    {realEstateValue !== undefined && realEstateValue > 0 && reProfit !== undefined ? (
-                      <div className="flex flex-col items-end text-right">
-                        <span className={`font-bold tabular-nums text-[11px] ${reProfit >= 0 ? "text-rose-300" : "text-rose-400"}`}>
-                          {reProfit >= 0 ? "+" : "-"}₹{Math.round(Math.abs(reProfit)).toLocaleString("en-IN")}
-                        </span>
-                        {reReturnPct !== undefined && (
-                          <span className={`text-[10px] font-semibold tabular-nums ${reProfit >= 0 ? "text-rose-300" : "text-rose-400"}`}>
-                            ({reProfit >= 0 ? "+" : ""}{reReturnPct.toFixed(1)}%)
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="font-semibold text-white/50 tabular-nums">--</span>
-                    )}
-                  </div>
+                  <MetricToggle
+                    mode={metricMode}
+                    onCycle={cycleMetric}
+                    xirr={reXirr}
+                    lifetimeXirr={reXirr}
+                    gain={reProfit}
+                    gainPct={reReturnPct}
+                    hasHolding={(realEstateValue || 0) > 0}
+                  />
                 </div>
               )}
             </div>
@@ -595,5 +724,6 @@ export default function NetWorthCard({
         })()}
       </div>
     </Card>
+    </>
   );
 }

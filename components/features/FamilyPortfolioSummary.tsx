@@ -37,12 +37,14 @@ interface ProfileBreakdown {
   mf_day_change_pct?: number;
   stock_day_change?: number;
   stock_day_change_pct?: number;
-  xirr?: number;
-  lifetime_xirr?: number;
-  mf_xirr?: number;
-  mf_lifetime_xirr?: number;
-  stock_xirr?: number;
-  stock_lifetime_xirr?: number;
+  // BUG-065: real XIRRs from the server; null = cannot be calculated (shown as "--").
+  xirr?: number | null;
+  lifetime_xirr?: number | null;
+  mf_xirr?: number | null;
+  mf_lifetime_xirr?: number | null;
+  stock_xirr?: number | null;
+  stock_lifetime_xirr?: number | null;
+  included_assets?: string[];
   holdings_count?: {
     fixed_income?: number;
     gold?: number;
@@ -111,7 +113,8 @@ function ProfileCard({
   assetPrefs?: NetWorthAssetPreferences;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [headerXirrMode, setHeaderXirrMode] = useState<"xirr" | "lifetime">("xirr");
+  // Same three choices as the Home cards: XIRR -> Lifetime XIRR -> Returns.
+  const [headerXirrMode, setHeaderXirrMode] = useState<"xirr" | "lifetime" | "absolute">("xirr");
   const [mfMetricMode, setMfMetricMode] = useState<"xirr" | "lifetime" | "absolute">("xirr");
   const [stockMetricMode, setStockMetricMode] = useState<"xirr" | "lifetime" | "absolute">("xirr");
 
@@ -181,18 +184,19 @@ function ProfileCard({
   const dayChangePctToDisplay = p.day_change_pct !== undefined ? p.day_change_pct : returnPct;
   const isHeaderDayPositive = dayChangePctToDisplay >= 0;
 
+  // BUG-065: show the server's XIRR or "--". Never fall back to the absolute return (it is not an
+  // XIRR) or to 0.00% (it looks like a real 0% return).
+  const fmtXirr = (v?: number | null) => (v === undefined || v === null ? "--" : `${v.toFixed(2)}%`);
   const profileXirrVal =
-    headerXirrMode === "lifetime"
-      ? ((p.lifetime_xirr ?? p.xirr) !== undefined
-          ? (p.lifetime_xirr ?? p.xirr)!.toFixed(2)
-          : (returnPct > 0 ? returnPct.toFixed(2) : "0.00"))
-      : (p.xirr !== undefined ? p.xirr.toFixed(2) : (returnPct > 0 ? returnPct.toFixed(2) : "0.00"));
+    headerXirrMode === "absolute"
+      ? `${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(2)}%`
+      : fmtXirr(headerXirrMode === "lifetime" ? p.lifetime_xirr : p.xirr);
 
-  const mfXirrVal = p.mf_xirr !== undefined ? p.mf_xirr.toFixed(2) : (mfReturnPct > 0 ? mfReturnPct.toFixed(2) : "0.00");
-  const mfLifetimeXirrVal = p.mf_lifetime_xirr !== undefined ? p.mf_lifetime_xirr.toFixed(2) : mfXirrVal;
+  const mfXirrVal = fmtXirr(p.mf_xirr);
+  const mfLifetimeXirrVal = fmtXirr(p.mf_lifetime_xirr);
 
-  const stockXirrVal = p.stock_xirr !== undefined ? p.stock_xirr.toFixed(2) : (stockReturnPct > 0 ? stockReturnPct.toFixed(2) : "0.00");
-  const stockLifetimeXirrVal = p.stock_lifetime_xirr !== undefined ? p.stock_lifetime_xirr.toFixed(2) : stockXirrVal;
+  const stockXirrVal = fmtXirr(p.stock_xirr);
+  const stockLifetimeXirrVal = fmtXirr(p.stock_lifetime_xirr);
 
   const isGain = totalGain >= 0;
   const sharePercent = totalFamilyValue > 0 ? Math.round((totalValue / totalFamilyValue) * 100) : 0;
@@ -273,13 +277,13 @@ function ProfileCard({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setHeaderXirrMode(m => m === "xirr" ? "lifetime" : "xirr");
+                  setHeaderXirrMode(m => (m === "xirr" ? "lifetime" : m === "lifetime" ? "absolute" : "xirr"));
                 }}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/15 active:scale-95 text-[10px] font-medium text-neutral-700 dark:text-neutral-200 border border-neutral-200 dark:border-white/10 shadow-2xs transition-all cursor-pointer select-none group/chip"
-                title="Tap to toggle between XIRR and Lifetime XIRR">
+                title="Tap to switch between XIRR, Lifetime XIRR and Returns">
                 <ArrowDownUp size={9} className="text-primary-500 shrink-0 group-hover/chip:rotate-180 transition-transform duration-200" />
-                <span className="text-[9px] text-neutral-400">{headerXirrMode === "xirr" ? "XIRR" : "Lifetime"}:</span>
-                <span className="font-bold tabular-nums">{profileXirrVal}%</span>
+                <span className="text-[9px] text-neutral-400">{headerXirrMode === "xirr" ? "XIRR" : headerXirrMode === "lifetime" ? "Lifetime XIRR" : "Returns"}:</span>
+                <span className="font-bold tabular-nums">{profileXirrVal}</span>
               </button>
             </div>
           </div>
@@ -336,13 +340,13 @@ function ProfileCard({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setHeaderXirrMode(m => m === "xirr" ? "lifetime" : "xirr");
+                setHeaderXirrMode(m => (m === "xirr" ? "lifetime" : m === "lifetime" ? "absolute" : "xirr"));
               }}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/15 active:scale-95 text-xs font-medium text-neutral-700 dark:text-neutral-200 border border-neutral-200/80 dark:border-white/10 shadow-2xs transition-all cursor-pointer select-none group/chip"
-              title="Tap to toggle between XIRR and Lifetime XIRR">
+              title="Tap to switch between XIRR, Lifetime XIRR and Returns">
               <ArrowDownUp size={11} className="text-primary-500 group-hover/chip:rotate-180 transition-transform duration-200" />
-              <span className="text-neutral-400 text-[11px]">{headerXirrMode === "xirr" ? "XIRR" : "Lifetime"}:</span>
-              <span className="font-bold tabular-nums text-neutral-900 dark:text-white">{profileXirrVal}%</span>
+              <span className="text-neutral-400 text-[11px]">{headerXirrMode === "xirr" ? "XIRR" : headerXirrMode === "lifetime" ? "Lifetime XIRR" : "Returns"}:</span>
+              <span className="font-bold tabular-nums text-neutral-900 dark:text-white">{profileXirrVal}</span>
             </button>
           </div>
 
@@ -403,11 +407,11 @@ function ProfileCard({
                     title="Tap to toggle between XIRR, Lifetime XIRR, and Absolute Returns">
                     <span className="flex items-center gap-1 truncate text-neutral-500 dark:text-neutral-400">
                       <ArrowDownUp size={10} className="text-emerald-500 shrink-0 group-hover/subbtn:rotate-180 transition-transform duration-200" />
-                      <span>{mfMetricMode === "xirr" ? "XIRR" : mfMetricMode === "lifetime" ? "Lifetime" : "Returns"}</span>
+                      <span>{mfMetricMode === "xirr" ? "XIRR" : mfMetricMode === "lifetime" ? "Lifetime XIRR" : "Returns"}</span>
                     </span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums shrink-0">
-                      {mfMetricMode === "xirr" && `${mfXirrVal}%`}
-                      {mfMetricMode === "lifetime" && `${mfLifetimeXirrVal}%`}
+                      {mfMetricMode === "xirr" && mfXirrVal}
+                      {mfMetricMode === "lifetime" && mfLifetimeXirrVal}
                       {mfMetricMode === "absolute" && `${fmtPct(mfReturnPct)}%`}
                     </span>
                   </button>
@@ -458,11 +462,11 @@ function ProfileCard({
                     className="w-full inline-flex items-center justify-between px-2 py-1 rounded-md bg-neutral-100/80 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/15 active:scale-98 text-[10px] font-medium text-neutral-700 dark:text-neutral-200 transition-all border border-neutral-200/60 dark:border-white/10 shadow-xs cursor-pointer select-none group/subbtn">
                     <span className="flex items-center gap-1 truncate text-neutral-500 dark:text-neutral-400">
                       <ArrowDownUp size={10} className="text-blue-500 shrink-0 group-hover/subbtn:rotate-180 transition-transform duration-200" />
-                      <span>{stockMetricMode === "xirr" ? "XIRR" : stockMetricMode === "lifetime" ? "Lifetime" : "Returns"}</span>
+                      <span>{stockMetricMode === "xirr" ? "XIRR" : stockMetricMode === "lifetime" ? "Lifetime XIRR" : "Returns"}</span>
                     </span>
                     <span className="font-bold text-blue-600 dark:text-blue-400 tabular-nums shrink-0">
-                      {stockMetricMode === "xirr" && `${stockXirrVal}%`}
-                      {stockMetricMode === "lifetime" && `${stockLifetimeXirrVal}%`}
+                      {stockMetricMode === "xirr" && stockXirrVal}
+                      {stockMetricMode === "lifetime" && stockLifetimeXirrVal}
                       {stockMetricMode === "absolute" && `${fmtPct(stockReturnPct)}%`}
                     </span>
                   </button>
