@@ -31,6 +31,7 @@ import MutualFundJourneyChart from "@/components/features/MutualFundJourneyChart
 import OnboardingWizard from "@/components/features/OnboardingWizard";
 import MutualFundsZeroState from "@/components/features/MutualFundsZeroState";
 import { useProfile } from "@/context/ProfileContext";
+import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 
 const COLORS = ["#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"];
 const SCHEME_CHART_LIMIT = 5;
@@ -1309,18 +1310,28 @@ export default function MutualFundsPage() {
                                 {isDayPositive ? "+" : ""}{scheme.day_change_pct.toFixed(2)}%
                               </span>
                             </div>
-                            <div>
-                              <span className="text-neutral-400 mr-1">XIRR:</span>
-                              <span className={`font-bold ${scheme.xirr !== undefined && scheme.xirr !== null ? (scheme.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
-                                {scheme.xirr !== undefined && scheme.xirr !== null ? `${scheme.xirr.toFixed(2)}%` : "--"}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-neutral-400 mr-1">CAGR:</span>
-                              <span className={`font-bold ${scheme.cagr !== undefined && scheme.cagr !== null ? (scheme.cagr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
-                                {scheme.cagr !== undefined && scheme.cagr !== null ? `${scheme.cagr.toFixed(2)}%` : "--"}
-                              </span>
-                            </div>
+                            {/* BUG-072: plain return, labelled, when held under a year */}
+                            {(() => {
+                              const short = Boolean(scheme.held_under_one_year);
+                              const x = scheme.xirr === undefined || scheme.xirr === null ? null : rateToShow(scheme.xirr, scheme.return_pct, short);
+                              const c = scheme.cagr === undefined || scheme.cagr === null ? null : rateToShow(scheme.cagr, scheme.return_pct, short);
+                              return (
+                                <>
+                                  <div title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
+                                    <span className="text-neutral-400 mr-1">{rateLabel("XIRR", short)}:</span>
+                                    <span className={`font-bold ${x !== null ? (x >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                                      {x !== null ? `${x.toFixed(2)}%` : "--"}
+                                    </span>
+                                  </div>
+                                  <div title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
+                                    <span className="text-neutral-400 mr-1">{rateLabel("CAGR", short)}:</span>
+                                    <span className={`font-bold ${c !== null ? (c >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                                      {c !== null ? `${c.toFixed(2)}%` : "--"}
+                                    </span>
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -1343,6 +1354,7 @@ export default function MutualFundsPage() {
                   returnPct={scheme.return_pct}
                   xirr={scheme.xirr}
                   cagr={scheme.cagr}
+                  heldUnderOneYear={Boolean(scheme.held_under_one_year)}
                   dayChange={scheme.day_change}
                   dayChangePct={scheme.day_change_pct}
                   categoryLabel={scheme.category_label}

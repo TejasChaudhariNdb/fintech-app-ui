@@ -207,7 +207,7 @@ export default function MutualFundJourneyChart({
                     className={`font-semibold ${
                       hoveredGain >= 0 ? "text-emerald-500" : "text-rose-500"
                     }`}>
-                    {hoveredGain >= 0 ? "+" : ""}₹
+                    {hoveredGain >= 0 ? "+" : "-"}₹
                     {Math.round(Math.abs(hoveredGain)).toLocaleString("en-IN")} (
                     {hoveredGainPct.toFixed(2)}%)
                   </p>
@@ -227,7 +227,7 @@ export default function MutualFundJourneyChart({
                     className={`font-semibold ${
                       allTimeGain >= 0 ? "text-emerald-500" : "text-rose-500"
                     }`}>
-                    {allTimeGain >= 0 ? "+" : ""}₹
+                    {allTimeGain >= 0 ? "+" : "-"}₹
                     {Math.round(Math.abs(allTimeGain)).toLocaleString("en-IN")} (
                     {allTimeGainPct.toFixed(2)}%)
                   </p>
@@ -243,7 +243,7 @@ export default function MutualFundJourneyChart({
                     className={`font-semibold ${
                       periodGain >= 0 ? "text-emerald-500" : "text-rose-500"
                     }`}>
-                    {periodGain >= 0 ? "+" : ""}₹
+                    {periodGain >= 0 ? "+" : "-"}₹
                     {Math.round(Math.abs(periodGain)).toLocaleString("en-IN")}{" "}
                     <span className="text-xs font-semibold">
                       ({periodReturnPct >= 0 ? "+" : ""}{periodReturnPct.toFixed(2)}%)

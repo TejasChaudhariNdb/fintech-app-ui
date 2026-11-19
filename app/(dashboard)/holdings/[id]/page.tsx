@@ -16,6 +16,7 @@ import Toast, { ToastType } from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import GiftDetailsCard, { giftCounterpartyLabel, GiftInfo } from "@/components/features/GiftDetailsCard";
+import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 
 export default function SchemeDetailPage({
   params,
@@ -286,20 +287,29 @@ export default function SchemeDetailPage({
               </p>
             </div>
             <div className="px-2">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
-                XIRR
+              {/* BUG-072: plain return, labelled, when held under a year */}
+              <p
+                className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1"
+                title={scheme.held_under_one_year ? UNDER_ONE_YEAR_NOTE : undefined}>
+                {rateLabel("XIRR", Boolean(scheme.held_under_one_year))}
               </p>
-              <p className={`text-sm font-bold ${
-                scheme.xirr !== null && scheme.xirr !== undefined
-                  ? scheme.xirr >= 0
-                    ? "text-emerald-500 dark:text-emerald-400"
-                    : "text-red-500 dark:text-red-400"
-                  : "text-neutral-900 dark:text-white"
-              }`}>
-                {scheme.xirr !== null && scheme.xirr !== undefined
-                  ? `${scheme.xirr.toFixed(2)}%`
-                  : "NA"}
-              </p>
+              {(() => {
+                const x =
+                  scheme.xirr === null || scheme.xirr === undefined
+                    ? null
+                    : rateToShow(scheme.xirr, scheme.return_pct, Boolean(scheme.held_under_one_year));
+                return (
+                  <p className={`text-sm font-bold ${
+                    x !== null
+                      ? x >= 0
+                        ? "text-emerald-500 dark:text-emerald-400"
+                        : "text-red-500 dark:text-red-400"
+                      : "text-neutral-900 dark:text-white"
+                  }`}>
+                    {x !== null ? `${x.toFixed(2)}%` : "NA"}
+                  </p>
+                );
+              })()}
             </div>
             <div className="px-2">
               <p className="text-[10px] uppercase tracking-wider font-semibold text-neutral-400 dark:text-neutral-500 mb-1">
