@@ -10,6 +10,7 @@ import {
   Gift,
 } from "lucide-react";
 import PrivacyMask from "../ui/PrivacyMask";
+import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 import { useProfile } from "@/context/ProfileContext";
 
 interface SchemeCardProps {
@@ -24,6 +25,8 @@ interface SchemeCardProps {
   returnPct: number;
   xirr?: number | null;
   cagr?: number | null;
+  /** BUG-072: first purchase under a year ago -> show the plain return in XIRR and CAGR. */
+  heldUnderOneYear?: boolean;
   dayChange?: number;
   dayChangePct?: number;
   categoryLabel?: string;
@@ -59,6 +62,7 @@ export default function SchemeCard({
   returnPct,
   xirr,
   cagr,
+  heldUnderOneYear = false,
   dayChange = 0,
   dayChangePct = 0,
   categoryLabel,
@@ -78,6 +82,10 @@ export default function SchemeCard({
 }: SchemeCardProps) {
   const { profiles } = useProfile();
   const isPositive = returnPct >= 0;
+  // BUG-072: plain return under a year (both boxes), the yearly rates after that
+  // (a box with no value from the server stays hidden, as before)
+  const xirrShown = xirr === undefined || xirr === null ? null : rateToShow(xirr, returnPct, heldUnderOneYear);
+  const cagrShown = cagr === undefined || cagr === null ? null : rateToShow(cagr, returnPct, heldUnderOneYear);
   const isDayPositive = dayChange >= 0;
 
   const getRelationForProfile = (profileId: number) => {
@@ -221,7 +229,7 @@ export default function SchemeCard({
                         : "text-red-600 dark:text-red-400"
                       }
                     `}>
-                    {isPositive ? "+" : ""}₹
+                    {isPositive ? "+" : "-"}₹
                     {Math.abs(profit).toLocaleString("en-IN")}
                   </span>
                   <span
@@ -267,7 +275,7 @@ export default function SchemeCard({
                         : "text-red-600 dark:text-red-400"
                       }
                     `}>
-                    {isDayPositive ? "+" : ""}₹
+                    {isDayPositive ? "+" : "-"}₹
                     {Math.abs(dayChange).toLocaleString("en-IN")}
                   </span>
                   <span
@@ -308,7 +316,7 @@ export default function SchemeCard({
               className={`mt-0.5 text-[13px] font-bold tabular-nums leading-tight ${
                 isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
               }`}>
-              {isPositive ? "+" : ""}₹{Math.abs(profit).toLocaleString("en-IN")}
+              {isPositive ? "+" : "-"}₹{Math.abs(profit).toLocaleString("en-IN")}
             </span>
             <span
               className={`mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${
@@ -333,7 +341,7 @@ export default function SchemeCard({
               className={`mt-0.5 text-[13px] font-bold tabular-nums leading-tight ${
                 isDayPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
               }`}>
-              {isDayPositive ? "+" : ""}₹{Math.abs(dayChange).toLocaleString("en-IN")}
+              {isDayPositive ? "+" : "-"}₹{Math.abs(dayChange).toLocaleString("en-IN")}
             </span>
             <span
               className={`mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums ${
@@ -360,18 +368,20 @@ export default function SchemeCard({
           {units !== undefined && (
             <MetricItem label="Units" value={units.toFixed(3)} />
           )}
-          {xirr !== undefined && xirr !== null && (
+          {xirrShown !== null && (
             <MetricItem
-              label="XIRR"
-              value={`${xirr.toFixed(2)}%`}
-              highlight={xirr >= 0 ? "positive" : "negative"}
+              label={rateLabel("XIRR", heldUnderOneYear)}
+              value={`${xirrShown.toFixed(2)}%`}
+              highlight={xirrShown >= 0 ? "positive" : "negative"}
+              title={heldUnderOneYear ? UNDER_ONE_YEAR_NOTE : undefined}
             />
           )}
-          {cagr !== undefined && cagr !== null && (
+          {cagrShown !== null && (
             <MetricItem
-              label="CAGR"
-              value={`${cagr.toFixed(2)}%`}
-              highlight={cagr >= 0 ? "positive" : "negative"}
+              label={rateLabel("CAGR", heldUnderOneYear)}
+              value={`${cagrShown.toFixed(2)}%`}
+              highlight={cagrShown >= 0 ? "positive" : "negative"}
+              title={heldUnderOneYear ? UNDER_ONE_YEAR_NOTE : undefined}
             />
           )}
           {categoryRank && (
@@ -381,6 +391,9 @@ export default function SchemeCard({
             />
           )}
         </div>
+        {heldUnderOneYear && (xirrShown !== null || cagrShown !== null) && (
+          <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">{UNDER_ONE_YEAR_NOTE}</p>
+        )}
       </div>
 
       {/* Action Bar */}
@@ -464,13 +477,16 @@ function MetricItem({
   label,
   value,
   highlight,
+  title,
 }: {
   label: string;
   value: string;
   highlight?: "positive" | "negative";
+  title?: string;
 }) {
   return (
     <div
+      title={title}
       className={`
       rounded-xl px-3 py-2
       ${highlight === "positive"
