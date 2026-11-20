@@ -1176,6 +1176,8 @@ export const api = {
     profileId?: string,
     // BUG-057: splits/bonus issues confirmed in the preview (share multiplier per ex-date)
     corporateActions?: { symbol: string; date: string; ratio: number }[],
+    // BUG-078 follow-up: saved trades to re-date from this file (day and month were swapped)
+    dateFixes?: { transaction_id: number; date: string }[],
   ) => {
     const token = localStorage.getItem("access_token");
     const url = profileId
@@ -1191,6 +1193,7 @@ export const api = {
         trades,
         broker,
         ...(corporateActions ? { corporate_actions: corporateActions } : {}),
+        ...(dateFixes && dateFixes.length ? { date_fixes: dateFixes } : {}),
       }),
     });
 
