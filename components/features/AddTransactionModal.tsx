@@ -58,6 +58,10 @@ export default function AddTransactionModal({
     nav: "",
   });
 
+  // Feedback #8: SIP vs one-time purchase, and stamp duty saved as its own line (as in a CAS)
+  const [purchaseKind, setPurchaseKind] = useState<"ONE_TIME" | "SIP">("ONE_TIME");
+  const [stampDutyText, setStampDutyText] = useState<string | null>(null); // null = use the suggestion
+
   const [formData, setFormData] = useState({
     scheme_id: "",
     type: "PURCHASE", // PURCHASE, REDEMPTION
@@ -89,6 +93,8 @@ export default function AddTransactionModal({
       setSearchQuery("");
       setSearchResults([]);
       setSelectedNewScheme(null);
+      setPurchaseKind("ONE_TIME");
+      setStampDutyText(null);
       setFormData({
         ...defaultFormData(),
         scheme_id: initialSchemeId ? String(initialSchemeId) : "",
@@ -147,6 +153,14 @@ export default function AddTransactionModal({
     }
   };
 
+  // Stamp duty is 0.005% of the amount invested, charged on purchases from 1 Jul 2020
+  const isPurchase = formData.type === "PURCHASE";
+  const suggestedStampDuty =
+    isPurchase && formData.date >= "2020-07-01"
+      ? Math.round((parseFloat(formData.amount) || 0) * 0.00005 * 100) / 100
+      : 0;
+  const stampDutyValue = stampDutyText ?? (suggestedStampDuty > 0 ? suggestedStampDuty.toFixed(2) : "");
+
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetProfileId) {
@@ -155,9 +169,11 @@ export default function AddTransactionModal({
     }
     setLoading(true);
     try {
+      const stampDuty = isPurchase ? parseFloat(stampDutyValue) || 0 : 0;
       const payload: any = {
         date: formData.date,
-        type: formData.type,
+        type: isPurchase ? (purchaseKind === "SIP" ? "PURCHASE_SIP" : "PURCHASE") : formData.type,
+        ...(stampDuty > 0 ? { stamp_duty: stampDuty } : {}),
         units: parseFloat(formData.units),
         amount: parseFloat(formData.amount),
         nav: parseFloat(formData.nav),
@@ -575,12 +591,51 @@ export default function AddTransactionModal({
 
           <Input
             type="number"
-            label="Total Amount"
+            label={isPurchase ? "Amount Invested (units × NAV)" : "Total Amount"}
             value={formData.amount}
             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
             className="font-bold text-lg dark:bg-white/5"
             placeholder="₹0.00"
           />
+
+          {isPurchase && (
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 mb-1.5">Purchase type</p>
+                <div className="flex bg-neutral-100 dark:bg-white/5 p-1 rounded-xl">
+                  {(["ONE_TIME", "SIP"] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => setPurchaseKind(kind)}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        purchaseKind === kind
+                          ? "bg-white dark:bg-white/15 text-neutral-900 dark:text-white shadow-sm"
+                          : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                      }`}>
+                      {kind === "SIP" ? "SIP instalment" : "One-time"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Input
+                  type="number"
+                  label="Stamp duty (0.005%)"
+                  step="0.01"
+                  min="0"
+                  value={stampDutyValue}
+                  onChange={(e) => setStampDutyText(e.target.value)}
+                  placeholder="₹0.00"
+                  className="dark:bg-white/5"
+                />
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                  Saved as a separate line, the way your CAS shows it (e.g. a ₹75,000 SIP is ₹74,996.25 invested + ₹3.75
+                  stamp duty). Filled in for you; change it if your statement shows a different amount, or clear it.
+                </p>
+              </div>
+            </div>
+          )}
 
           <Button
             type="submit"
