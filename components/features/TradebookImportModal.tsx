@@ -39,7 +39,10 @@ interface TradeRecord {
   quantity: number;
   price: number;
   amount: number;
-  date: string;
+  /** null while the export had no real purchase date (BUG-047) and the user has not entered one */
+  date: string | null;
+  /** BUG-047: the export showed a placeholder date (e.g. 01-01-2010); ask the user for the real one */
+  needs_date?: boolean;
   trade_id?: string | null;
   order_id?: string | null;
   is_duplicate: boolean;
@@ -60,6 +63,7 @@ interface PreviewResponse {
   unique_symbols: string[];
   trades: TradeRecord[];
   errors: { row?: number; symbol?: string; reason: string }[];
+  needs_date_count?: number;
   // BUG-057: splits and bonus issues to confirm, and quantity warnings
   corporate_actions?: CorporateActionProposal[];
   warnings?: { symbol: string; date: string; reason: string }[];
@@ -453,7 +457,7 @@ export default function TradebookImportModal({
 
     if (previewData) {
       const updatedTrades = [...previewData.trades, newTrade].sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date);
+        if (a.date !== b.date) return (a.date || "9999-12-31").localeCompare(b.date || "9999-12-31");
         return a.transaction_type === "BUY" ? -1 : 1;
       });
 
@@ -520,6 +524,15 @@ export default function TradebookImportModal({
     });
   };
 
+  // BUG-047: the user types the real purchase date for rows the export dated with a placeholder
+  const handleSetTradeDate = (tempId: string, value: string) => {
+    if (!previewData) return;
+    setPreviewData({
+      ...previewData,
+      trades: previewData.trades.map((t) => (t.temp_id === tempId ? { ...t, date: value || null } : t)),
+    });
+  };
+
   const handleCommit = async () => {
     if (!previewData) return;
     const tradesToCommit = previewData.trades.filter((t) =>
@@ -528,6 +541,14 @@ export default function TradebookImportModal({
 
     if (tradesToCommit.length === 0) {
       setErrorMessage("Please select at least 1 trade to import.");
+      return;
+    }
+
+    const undated = tradesToCommit.filter((t) => !t.date);
+    if (undated.length > 0) {
+      setErrorMessage(
+        `Enter the purchase date for ${Array.from(new Set(undated.map((t) => t.symbol))).join(", ")}, or untick ${undated.length === 1 ? "that row" : "those rows"}.`
+      );
       return;
     }
 
@@ -588,6 +609,10 @@ export default function TradebookImportModal({
     }) || [];
 
   const selectedCount = selectedTradeIds.size;
+  // BUG-047: selected rows still waiting for a real purchase date
+  const missingDateCount =
+    previewData?.trades.filter((t) => selectedTradeIds.has(t.temp_id) && !t.date).length || 0;
+  const todayIso = new Date().toISOString().split("T")[0];
   const targetProfileName =
     profiles.find((p) => String(p.id) === targetProfileId)?.name || "Selected Profile";
 
@@ -1614,6 +1639,17 @@ export default function TradebookImportModal({
                 </div>
               )}
 
+              {/* BUG-047: rows with no real purchase date in the export */}
+              {(previewData.needs_date_count || 0) > 0 && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                  <b>{previewData.needs_date_count}</b>{" "}
+                  {previewData.needs_date_count === 1 ? "row has" : "rows have"} no real purchase date (the file shows
+                  01-01-2010). Enter the date you bought each one below, or untick the row. XIRR, holding period
+                  and capital gains depend on it.
+                  {missingDateCount > 0 && <span className="font-semibold"> {missingDateCount} still to fill.</span>}
+                </div>
+              )}
+
               {/* Trades List Table */}
               <div className="flex items-center justify-between text-[10px] text-neutral-400 px-1">
                 <span>
@@ -1680,8 +1716,21 @@ export default function TradebookImportModal({
                               {t.transaction_type}
                             </span>
                           </td>
-                          <td className="py-2 px-2 text-neutral-500 font-mono text-[11px] whitespace-nowrap">
-                            {t.date}
+                          <td className="py-2 px-2 text-neutral-500 font-mono text-[11px] whitespace-nowrap" onClick={(e) => t.needs_date && e.stopPropagation()}>
+                            {t.needs_date ? (
+                              <input
+                                type="date"
+                                value={t.date || ""}
+                                max={todayIso}
+                                onChange={(e) => handleSetTradeDate(t.temp_id, e.target.value)}
+                                aria-label={`Purchase date for ${t.symbol}`}
+                                className={`w-[118px] rounded-md border px-1 py-0.5 text-[11px] bg-white dark:bg-neutral-900 ${
+                                  t.date ? "border-neutral-300 dark:border-white/15" : "border-amber-500 ring-1 ring-amber-400"
+                                }`}
+                              />
+                            ) : (
+                              t.date
+                            )}
                           </td>
                           <td className="py-2 px-2 text-right font-mono font-semibold text-neutral-800 dark:text-neutral-200">
                             {t.quantity}
@@ -1852,7 +1901,8 @@ export default function TradebookImportModal({
 
               <button
                 type="button"
-                disabled={selectedCount === 0 || isCommitting}
+                disabled={selectedCount === 0 || isCommitting || missingDateCount > 0}
+                title={missingDateCount > 0 ? "Enter the purchase date for every selected row first" : undefined}
                 onClick={handleCommit}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm shadow-emerald-500/25 transition-all"
               >

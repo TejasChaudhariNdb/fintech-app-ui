@@ -51,6 +51,7 @@ import StockJourneyChart from "@/components/features/StockJourneyChart";
 import TradebookImportModal from "@/components/features/TradebookImportModal";
 import CorporateActionModal from "@/components/features/CorporateActionModal";
 import DematReconcileModal from "@/components/features/DematReconcileModal";
+import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 
 export default function StocksPage() {
   const { profiles, activeProfileId } = useProfile();
@@ -1264,12 +1265,19 @@ export default function StocksPage() {
                                 {isDayPositive ? "+" : ""}{stock.day_change_pct?.toFixed(2)}%
                               </span>
                             </div>
-                            <div className="w-28">
-                              <span className="text-neutral-400 mr-1">XIRR:</span>
-                              <span className={`font-bold ${stock.xirr !== undefined && stock.xirr !== null ? (stock.xirr >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
-                                {stock.xirr !== undefined && stock.xirr !== null ? `${stock.xirr.toFixed(2)}%` : "--"}
-                              </span>
-                            </div>
+                            {/* BUG-077: plain return, labelled, when held under a year */}
+                            {(() => {
+                              const short = Boolean(stock.held_under_one_year);
+                              const x = stock.xirr === undefined || stock.xirr === null ? null : rateToShow(stock.xirr, stock.pnl_pct, short);
+                              return (
+                                <div className="w-28" title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
+                                  <span className="text-neutral-400 mr-1">{rateLabel("XIRR", short)}:</span>
+                                  <span className={`font-bold ${x !== null ? (x >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
+                                    {x !== null ? `${x.toFixed(2)}%` : "--"}
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </Link>
@@ -1422,16 +1430,25 @@ export default function StocksPage() {
                     </p>
                   </div>
                   <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                    <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                      XIRR
-                    </p>
-                    <p
-                      className={`text-xs sm:text-sm font-semibold truncate ${(stock.xirr || 0) >= 0 ? "text-green-500" : "text-red-500"
-                        }`}>
-                      {stock.xirr !== null && stock.xirr !== undefined
-                        ? formatPercent(stock.xirr)
-                        : "--"}
-                    </p>
+                    {/* BUG-077: plain return, labelled, when held under a year */}
+                    {(() => {
+                      const short = Boolean(stock.held_under_one_year);
+                      const x = stock.xirr === undefined || stock.xirr === null ? null : rateToShow(stock.xirr, stock.pnl_pct, short);
+                      return (
+                        <>
+                          <p
+                            className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5"
+                            title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
+                            {rateLabel("XIRR", short)}
+                          </p>
+                          <p
+                            className={`text-xs sm:text-sm font-semibold truncate ${(x || 0) >= 0 ? "text-green-500" : "text-red-500"
+                              }`}>
+                            {x !== null ? formatPercent(x) : "--"}
+                          </p>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
                     <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
