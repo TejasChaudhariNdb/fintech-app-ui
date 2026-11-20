@@ -46,6 +46,15 @@ interface TradeRecord {
   trade_id?: string | null;
   order_id?: string | null;
   is_duplicate: boolean;
+  /** BUG-078 follow-up: this row is already saved with day and month swapped; its date gets corrected */
+  date_fix?: DateFix | null;
+}
+
+interface DateFix {
+  transaction_id: number;
+  stored_date: string;
+  date: string;
+  symbol?: string;
 }
 
 interface PreviewResponse {
@@ -64,6 +73,9 @@ interface PreviewResponse {
   trades: TradeRecord[];
   errors: { row?: number; symbol?: string; reason: string }[];
   needs_date_count?: number;
+  // BUG-078 follow-up: saved trades whose date had day and month swapped (corrected on import)
+  date_fixes?: DateFix[];
+  date_fix_count?: number;
   // BUG-057: splits and bonus issues to confirm, and quantity warnings
   corporate_actions?: CorporateActionProposal[];
   warnings?: { symbol: string; date: string; reason: string }[];
@@ -212,6 +224,7 @@ export default function TradebookImportModal({
   const [commitResult, setCommitResult] = useState<{
     added: number;
     affected_symbols: string[];
+    dates_corrected?: number;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -539,7 +552,12 @@ export default function TradebookImportModal({
       selectedTradeIds.has(t.temp_id)
     );
 
-    if (tradesToCommit.length === 0) {
+    const dateFixes = (previewData.date_fixes || []).map((f) => ({
+      transaction_id: f.transaction_id,
+      date: f.date,
+    }));
+
+    if (tradesToCommit.length === 0 && dateFixes.length === 0) {
       setErrorMessage("Please select at least 1 trade to import.");
       return;
     }
@@ -578,12 +596,14 @@ export default function TradebookImportModal({
         payloadTrades,
         previewData.broker_detected || "BROKER_IMPORT",
         targetProfileId,
-        corporateActions
+        corporateActions,
+        dateFixes
       );
 
       setCommitResult({
-        added: res.added || tradesToCommit.length,
+        added: res.added ?? tradesToCommit.length,
         affected_symbols: res.affected_symbols || previewData.unique_symbols,
+        dates_corrected: res.dates_corrected || 0,
       });
       setStep("SUCCESS");
       onSuccess();
@@ -1443,6 +1463,19 @@ export default function TradebookImportModal({
                 )}
               </div>
 
+              {/* BUG-078 follow-up: earlier trades saved with day and month swapped */}
+              {(previewData.date_fix_count || 0) > 0 && (
+                <div className="px-3.5 py-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-500/25 flex items-start gap-2.5 text-xs text-emerald-800 dark:text-emerald-300">
+                  <Info size={16} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>
+                    <b>{previewData.date_fix_count} earlier trade{previewData.date_fix_count === 1 ? " was" : "s were"}</b>{" "}
+                    saved with the day and month swapped (for example 5 Oct instead of 10 May). Importing
+                    this file corrects {previewData.date_fix_count === 1 ? "it" : "them"} to the dates in your
+                    file and recalculates your holdings and returns.
+                  </span>
+                </div>
+              )}
+
               {/* Informational Banner for Duplicate Trades */}
               {previewData.duplicate_trades_count > 0 && (
                 <div className="px-3.5 py-2.5 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-500/25 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
@@ -1791,6 +1824,11 @@ export default function TradebookImportModal({
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-md mx-auto">
                   Imported <b>{commitResult.added} trades</b> across{" "}
                   <b>{commitResult.affected_symbols.length} stocks</b> into {targetProfileName}.
+                  {(commitResult.dates_corrected || 0) > 0 && (
+                    <>
+                      {" "}Corrected the date of <b>{commitResult.dates_corrected} earlier trade{commitResult.dates_corrected === 1 ? "" : "s"}</b>.
+                    </>
+                  )}{" "}
                   Holdings and weighted averages have been recalculated.
                 </p>
               </div>
@@ -1901,7 +1939,7 @@ export default function TradebookImportModal({
 
               <button
                 type="button"
-                disabled={selectedCount === 0 || isCommitting || missingDateCount > 0}
+                disabled={(selectedCount === 0 && !(previewData?.date_fix_count || 0)) || isCommitting || missingDateCount > 0}
                 title={missingDateCount > 0 ? "Enter the purchase date for every selected row first" : undefined}
                 onClick={handleCommit}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs shadow-sm shadow-emerald-500/25 transition-all"
@@ -1914,7 +1952,11 @@ export default function TradebookImportModal({
                 ) : (
                   <>
                     <CheckCircle2 size={14} />
-                    <span>Import {selectedCount} Trades</span>
+                    <span>
+                      {selectedCount === 0 && (previewData?.date_fix_count || 0) > 0
+                        ? `Correct ${previewData?.date_fix_count} Date${previewData?.date_fix_count === 1 ? "" : "s"}`
+                        : `Import ${selectedCount} Trades`}
+                    </span>
                   </>
                 )}
               </button>
