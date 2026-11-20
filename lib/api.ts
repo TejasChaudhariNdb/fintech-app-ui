@@ -1070,6 +1070,33 @@ export const api = {
     api.clearPortfolioCache();
     return res;
   },
+  // Owner feedback #1: income/expenses from a CSV or Excel file. Preview saves nothing.
+  previewPropertyImport: async (holdingId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("access_token");
+    const r = await fetch(`${API_URL}/real-estate/holdings/${holdingId}/transactions/import-preview`, {
+      method: "POST",
+      headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+      body: formData,
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: "Could not read the file" }));
+      throw new Error(typeof err.detail === "string" ? err.detail : "Could not read the file");
+    }
+    return r.json();
+  },
+  importPropertyTransactions: async (
+    holdingId: number,
+    entries: { transaction_type: string; amount: number; transaction_date: string; description?: string | null; sub_category?: string | null }[]
+  ) => {
+    const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions/import`, {
+      method: "POST",
+      body: JSON.stringify({ entries }),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
   deletePropertyTransaction: async (holdingId: number, transactionId: number) => {
     const res = await api.fetch(`/real-estate/holdings/${holdingId}/transactions/${transactionId}`, {
       method: "DELETE",

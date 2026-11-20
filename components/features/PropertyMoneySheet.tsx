@@ -11,6 +11,7 @@ import DatePicker from "@/components/ui/DatePicker";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import { api } from "@/lib/api";
 import Link from "next/link";
+import PropertyImportSheet from "./PropertyImportSheet";
 import {
   Building,
   Car,
@@ -21,6 +22,7 @@ import {
   Landmark,
   ListTree,
   Key,
+  FileSpreadsheet,
   Loader2,
   MoreHorizontal,
   Pencil,
@@ -285,6 +287,7 @@ export default function PropertyMoneySheet({
   start?: MoneySheetStart | null;
 }) {
   const [mode, setMode] = useState<MoneySheetMode>(initialMode);
+  const [importOpen, setImportOpen] = useState(false); // feedback #1: CSV / Excel import
   const [kind, setKind] = useState("RENT_INCOME");
   const [repeat, setRepeat] = useState<Repeat>("MONTHLY");
   const [amount, setAmount] = useState("");
@@ -606,7 +609,18 @@ export default function PropertyMoneySheet({
   const kinds = isRent ? INCOME_KINDS : property.has_loan ? [...EXPENSE_KINDS, PREPAYMENT_KIND] : EXPENSE_KINDS;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+    <>
+    <PropertyImportSheet
+      isOpen={isOpen && importOpen}
+      property={property}
+      onClose={() => setImportOpen(false)}
+      onImported={(message) => {
+        setImportOpen(false);
+        loadHistory();
+        onSaved(message);
+      }}
+    />
+    <Modal isOpen={isOpen && !importOpen} onClose={onClose} title={title}>
       {mode === "HISTORY" ? (
         <div className="space-y-3">
           <Link
@@ -623,6 +637,13 @@ export default function PropertyMoneySheet({
               <Plus size={14} /> Add expense
             </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 dark:border-white/10 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300"
+          >
+            <FileSpreadsheet size={14} /> Import from CSV / Excel
+          </button>
 
           {txs === null ? (
             <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-indigo-500" size={20} /></div>
@@ -965,5 +986,6 @@ export default function PropertyMoneySheet({
         </div>
       )}
     </Modal>
+    </>
   );
 }
