@@ -1086,6 +1086,9 @@ export const api = {
     pan?: string,
     forceReimport?: boolean,
     restoreDeleted?: string[],
+    // Wrong-statement safeguards: the backend checks first and may answer status
+    // "needs_confirmation" with warnings (nothing saved); upload again without it to go ahead.
+    riskCheck?: boolean,
   ) => {
     checkDemoRestriction();
     const formData = new FormData();
@@ -1101,6 +1104,9 @@ export const api = {
     // Funds the user deleted earlier and ticked to add back on this upload
     if (restoreDeleted && restoreDeleted.length > 0) {
       formData.append("restore_deleted", JSON.stringify(restoreDeleted));
+    }
+    if (riskCheck) {
+      formData.append("risk_check", "true");
     }
     const token = localStorage.getItem("access_token");
     const url = profileId 

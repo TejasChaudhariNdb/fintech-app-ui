@@ -81,6 +81,11 @@ export default function OnboardingWizard({
   const [manualPan, setManualPan] = useState("");
   const [showManualPanInput, setShowManualPanInput] = useState(false);
   const [panError, setPanError] = useState("");
+  // Wrong-statement safeguards: warnings from the backend before anything is imported
+  const [riskWarnings, setRiskWarnings] = useState<{
+    warnings: { code: string; title: string; message: string }[];
+    retry: () => void;
+  } | null>(null);
 
   const resetUploadForm = () => {
     setSuccess(false);
@@ -93,6 +98,7 @@ export default function OnboardingWizard({
     setRestoredBackCount(0);
     setError("");
     setErrorStatus(null);
+    setRiskWarnings(null);
   };
 
   const handleFinishAndRedirect = () => {
@@ -217,7 +223,7 @@ export default function OnboardingWizard({
     profileWithPan?.pan?.trim()?.toUpperCase() ||
     null;
 
-  const handleApplyPan = async (panValue: string) => {
+  const handleApplyPan = async (panValue: string, confirmed = false) => {
     const cleanPan = panValue.trim().toUpperCase();
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(cleanPan)) {
       setPanError("Invalid PAN format. Must be 10 characters (e.g. ABCDE1234F).");
@@ -251,7 +257,12 @@ export default function OnboardingWizard({
     });
 
     try {
-      const res = await api.uploadCAS(file, password, selectedProfileId, cleanPan);
+      const res = await api.uploadCAS(file, password, selectedProfileId, cleanPan, undefined, undefined, !confirmed);
+      if (res?.status === "needs_confirmation") {
+        setRiskWarnings({ warnings: res.warnings || [], retry: () => handleApplyPan(panValue, true) });
+        setUploading(false);
+        return;
+      }
       setImportResult(res);
 
       if (res?.status === "already_imported") {
@@ -323,8 +334,8 @@ export default function OnboardingWizard({
     }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpload = async (e?: React.FormEvent, confirmed = false) => {
+    e?.preventDefault();
     if (!file) return;
     if (uploadFormat === "CAS" && !password) return;
     if (!selectedProfileId) {
@@ -347,7 +358,12 @@ export default function OnboardingWizard({
     try {
       if (uploadFormat === "CAS") {
         const panToPass = manualPan ? manualPan.trim().toUpperCase() : undefined;
-        const res = await api.uploadCAS(file, password, selectedProfileId, panToPass);
+        const res = await api.uploadCAS(file, password, selectedProfileId, panToPass, undefined, undefined, !confirmed);
+        if (res?.status === "needs_confirmation") {
+          setRiskWarnings({ warnings: res.warnings || [], retry: () => handleUpload(undefined, true) });
+          setUploading(false);
+          return;
+        }
         setImportResult(res);
 
         if (res?.status === "already_imported") {
@@ -1137,6 +1153,50 @@ export default function OnboardingWizard({
                 </div>
               )}
 
+              {riskWarnings && (
+                <div className="p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs rounded-xl space-y-3">
+                  <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span>Check this statement before importing</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {riskWarnings.warnings.map((w) => (
+                      <li key={w.code}>
+                        <p className="font-semibold text-amber-900 dark:text-amber-200">{w.title}</p>
+                        <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">{w.message}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-400">
+                    Nothing has been imported yet.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRiskWarnings(null);
+                        setFile(null);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors"
+                    >
+                      Choose another file
+                    </button>
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => {
+                        const retry = riskWarnings.retry;
+                        setRiskWarnings(null);
+                        retry();
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-amber-500/40 hover:bg-amber-100 dark:hover:bg-amber-500/10 font-semibold transition-colors disabled:opacity-50"
+                    >
+                      Import anyway
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {error && (
                 <div className="space-y-2">
                   {errorStatus === 409 || error.toLowerCase().includes("legacy") ? (
@@ -1174,7 +1234,8 @@ export default function OnboardingWizard({
                         All CAS statements imported into a single profile must belong to the same investor PAN. If this statement is for a family member, please select or create their profile.
                       </p>
                     </div>
-                  ) : error.toLowerCase().includes("another profile owned by this user already uses it") ? (
+                  ) : error.toLowerCase().includes("another profile owned by this user already uses it") ||
+                    error.toLowerCase().includes("already assigned to profile") ? (
                     <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 text-xs rounded-xl space-y-1.5">
                       <div className="flex items-center gap-2 font-bold text-red-800 dark:text-red-300">
                         <AlertCircle size={16} className="shrink-0" />
