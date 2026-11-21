@@ -32,7 +32,6 @@ import {
 import InsightsCard from "@/components/features/InsightsCard";
 import PortfolioHealthCard from "@/components/features/PortfolioHealthCard";
 import BenchmarkCard from "@/components/features/BenchmarkCard";
-import MarketPredictionCard from "@/components/features/MarketPredictionCard";
 import AssetAllocationCard from "@/components/features/AssetAllocationCard";
 import MarketCapAllocationCard from "@/components/features/MarketCapAllocationCard";
 import CustomizeAssetsModal from "@/components/features/CustomizeAssetsModal";
@@ -697,11 +696,6 @@ export default function HomePage() {
           </section>
         </section>
 
-        {/* Daily Prediction Card */}
-        <section className="animate-fade-in">
-          <MarketPredictionCard />
-        </section>
-
         {/* Family Goals list preview */}
         <section className="space-y-8">
           {/* Shared Family Goals */}
@@ -1162,11 +1156,6 @@ export default function HomePage() {
                   />
                 </section>
               )}
-
-          {/* Daily Prediction Card */}
-          <section className="animate-fade-in">
-            <MarketPredictionCard />
-          </section>
 
           {/* Portfolio Health Score */}
           {/* BUG-043: the health score follows the Home tab's asset-class choices. A class switched off counts as zero. */}

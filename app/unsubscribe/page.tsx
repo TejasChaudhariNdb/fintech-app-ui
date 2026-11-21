@@ -31,7 +31,6 @@ type NotificationPreferences = {
   email_security_alerts: boolean;
   email_cas_reports: boolean;
   push_daily_nudge: boolean;
-  push_market_predictions: boolean;
   push_product_updates: boolean;
   push_security_alerts: boolean;
   unsubscribed_all_marketing: boolean;
@@ -69,7 +68,6 @@ function UnsubscribeContent() {
     email_security_alerts: true,
     email_cas_reports: true,
     push_daily_nudge: true,
-    push_market_predictions: true,
     push_product_updates: true,
     push_security_alerts: true,
     unsubscribed_all_marketing: false,

@@ -1519,7 +1519,6 @@ export const api = {
       "portfolio-history",
       "goals",
       "user-profile",
-      "prediction-stats",
       "family-summary",
       "family-top-holdings",
       "transactions",
@@ -1719,17 +1718,6 @@ export const api = {
     api.fetch("/support/click", {
       method: "POST",
       body: JSON.stringify({ payment_app: paymentApp }),
-    }),
-
-  // Predictions
-  getPredictionStats: () => api.fetch("/predictions/today", { cacheKey: "prediction-stats" }),
-  makePrediction: (prediction: 'BULL' | 'BEAR') =>
-    api.fetch("/predictions/", {
-      method: "POST",
-      body: JSON.stringify({ prediction }),
-    }).then((res) => {
-      api.clearCache(["prediction-stats"]);
-      return res;
     }),
 
   // What's New Updates
