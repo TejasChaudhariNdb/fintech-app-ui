@@ -14,6 +14,7 @@ import {
   Loader2,
   X,
   Info,
+  GitBranch,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
@@ -42,7 +43,10 @@ export default function CorporateActionModal({
 
   // Form State
   const [symbol, setSymbol] = useState(initialSymbol);
-  const [actionType, setActionType] = useState<"BONUS" | "SPLIT" | "DEMAT_SYNC" | "MERGER">("BONUS");
+  const [actionType, setActionType] = useState<"BONUS" | "SPLIT" | "DEMAT_SYNC" | "MERGER" | "DEMERGER">("BONUS");
+  // BUG-091 demerger fields
+  const [newSymbol, setNewSymbol] = useState("");
+  const [costPercent, setCostPercent] = useState("");
   const [actionDate, setActionDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("0");
@@ -86,7 +90,11 @@ export default function CorporateActionModal({
   const currentTotalCost = currentQty * currentAvg;
 
   const addQty = parseFloat(quantity) || 0;
-  const addPrice = actionType === "BONUS" || actionType === "SPLIT" ? 0 : (parseFloat(price) || 0);
+  const isDemerger = actionType === "DEMERGER";
+  const addPrice = actionType === "BONUS" || actionType === "SPLIT" || isDemerger ? 0 : (parseFloat(price) || 0);
+  const pct = parseFloat(costPercent) || 0;
+  // Demerger preview: cost moves, nothing is added (uses today's cost; the server uses the cost on the date).
+  const movedCost = currentTotalCost * pct / 100;
 
   // Projected New Quantity & Avg Price
   const projectedQty = currentQty + addQty;
@@ -108,11 +116,38 @@ export default function CorporateActionModal({
       setErrorMessage("Please select an effective action date.");
       return;
     }
+    const cleanNew = newSymbol.trim().toUpperCase().replace(/\.(BO|NS)$/i, "");
+    if (isDemerger) {
+      if (!cleanNew || cleanNew === cleanSym) {
+        setErrorMessage("Enter the new company's symbol (different from the stock you hold).");
+        return;
+      }
+      if (!(pct > 0 && pct < 100)) {
+        setErrorMessage("Cost moved must be more than 0% and less than 100%.");
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
+      if (isDemerger) {
+        await api.recordDemerger(
+          {
+            symbol: cleanSym,
+            new_symbol: cleanNew,
+            new_quantity: addQty,
+            cost_percent: pct,
+            date: actionDate,
+            notes: notes.trim() || undefined,
+          },
+          targetProfileId
+        );
+        onSuccess();
+        onClose();
+        return;
+      }
       await api.recordCorporateAction(
         {
           symbol: cleanSym,
@@ -152,7 +187,7 @@ export default function CorporateActionModal({
                 Add Corporate Action / Bonus
               </h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                Adjust Demat shares for Bonus issues, Stock Splits &amp; Off-Market Credits
+                Bonus issues, stock splits, demergers &amp; off-market credits
               </p>
             </div>
           </div>
@@ -178,10 +213,11 @@ export default function CorporateActionModal({
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5 uppercase tracking-wider">
               Corporate Action Type
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
                 { id: "BONUS", label: "Bonus Shares", icon: Gift, desc: "₹0 cost basis" },
                 { id: "SPLIT", label: "Stock Split", icon: Scissors, desc: "Ratio split" },
+                { id: "DEMERGER", label: "Demerger", icon: GitBranch, desc: "New company" },
                 { id: "DEMAT_SYNC", label: "Demat Sync", icon: SlidersHorizontal, desc: "Balance fix" },
               ].map((t) => {
                 const isSelected = actionType === t.id;
@@ -192,7 +228,7 @@ export default function CorporateActionModal({
                     type="button"
                     onClick={() => {
                       setActionType(t.id as any);
-                      if (t.id === "BONUS" || t.id === "SPLIT") setPrice("0");
+                      if (t.id === "BONUS" || t.id === "SPLIT" || t.id === "DEMERGER") setPrice("0");
                     }}
                     className={`p-2.5 rounded-2xl border text-center transition-all ${
                       isSelected
@@ -225,6 +261,21 @@ export default function CorporateActionModal({
               />
             </div>
 
+            {isDemerger ? (
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                  New company symbol
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. JIOFIN"
+                  value={newSymbol}
+                  onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 rounded-xl text-xs font-mono font-bold bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white uppercase outline-none focus:border-cyan-500"
+                  required
+                />
+              </div>
+            ) : (
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Ratio / Notes (Optional)
@@ -237,6 +288,7 @@ export default function CorporateActionModal({
                 className="w-full px-3 py-2 rounded-xl text-xs bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-cyan-500"
               />
             </div>
+            )}
           </div>
 
           {/* Date & Additional Quantity */}
@@ -255,7 +307,7 @@ export default function CorporateActionModal({
 
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Shares Credited (+Qty)
+                {isDemerger ? "New shares received" : "Shares Credited (+Qty)"}
               </label>
               <input
                 type="number"
@@ -270,8 +322,32 @@ export default function CorporateActionModal({
             </div>
           </div>
 
-          {/* Acquisition Price (Only if not Bonus/Split) */}
-          {actionType !== "BONUS" && actionType !== "SPLIT" && (
+          {/* BUG-091: cost share the company announced */}
+          {isDemerger && (
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                Cost moved to new company (%)
+              </label>
+              <input
+                type="number"
+                step="any"
+                min="0.01"
+                max="99.99"
+                placeholder="e.g. 4.68"
+                value={costPercent}
+                onChange={(e) => setCostPercent(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl text-xs font-mono font-bold bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-cyan-500"
+                required
+              />
+              <p className="mt-1 text-[11px] text-neutral-500 leading-snug">
+                The company announces this split of cost (search &ldquo;{symbol || "company"} demerger cost of acquisition&rdquo;).
+                Your new shares keep your original purchase dates. No money is added.
+              </p>
+            </div>
+          )}
+
+          {/* Acquisition Price (Only if not Bonus/Split/Demerger) */}
+          {actionType !== "BONUS" && actionType !== "SPLIT" && !isDemerger && (
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Cost Basis per Share (₹)
@@ -301,8 +377,35 @@ export default function CorporateActionModal({
             />
           </div>
 
+          {/* BUG-091: demerger preview */}
+          {isDemerger && currentHolding && pct > 0 && pct < 100 && (
+            <div className="p-3.5 rounded-2xl bg-cyan-50/60 dark:bg-cyan-500/10 border border-cyan-500/25 space-y-2 text-xs">
+              <div className="flex items-center gap-1.5 font-bold text-cyan-900 dark:text-cyan-300">
+                <Sparkles size={14} className="text-cyan-600 dark:text-cyan-400" />
+                <span>How your cost is split</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2 rounded-xl bg-white/80 dark:bg-black/20 border border-cyan-500/10">
+                  <span className="text-[10px] text-neutral-400 block font-semibold uppercase">{symbol || "Stock"} keeps</span>
+                  <div className="font-bold text-neutral-900 dark:text-white mt-0.5">₹{(currentTotalCost - movedCost).toFixed(2)}</div>
+                  <div className="text-[10px] text-neutral-400">{currentQty} shares, same count</div>
+                </div>
+                <div className="p-2 rounded-xl bg-white/80 dark:bg-black/20 border border-cyan-500/20">
+                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400 block font-bold uppercase">{newSymbol || "New company"} gets</span>
+                  <div className="font-extrabold text-cyan-900 dark:text-cyan-300 mt-0.5">₹{movedCost.toFixed(2)}</div>
+                  <div className="text-[10px] text-neutral-400">
+                    {addQty > 0 ? `${addQty} shares @ ₹${(movedCost / addQty).toFixed(2)}` : "enter new shares"}
+                  </div>
+                </div>
+              </div>
+              <div className="text-[10px] text-cyan-700 dark:text-cyan-300/80">
+                &bull; Total invested stays ₹{currentTotalCost.toFixed(2)}. Uses your cost as of the demerger date.
+              </div>
+            </div>
+          )}
+
           {/* Live Impact Preview Card */}
-          {currentHolding && addQty > 0 && (
+          {!isDemerger && currentHolding && addQty > 0 && (
             <div className="p-3.5 rounded-2xl bg-cyan-50/60 dark:bg-cyan-500/10 border border-cyan-500/25 space-y-2 text-xs">
               <div className="flex items-center gap-1.5 font-bold text-cyan-900 dark:text-cyan-300">
                 <Sparkles size={14} className="text-cyan-600 dark:text-cyan-400" />

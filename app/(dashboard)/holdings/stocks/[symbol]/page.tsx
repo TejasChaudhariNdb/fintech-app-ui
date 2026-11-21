@@ -278,8 +278,11 @@ export default function StockDetailPage() {
     }
   };
 
-  const handleDeleteTransaction = async (transactionId: number) => {
-    if (!confirm("Delete this transaction?")) return;
+  const handleDeleteTransaction = async (transactionId: number, type = "") => {
+    const msg = type.startsWith("DEMERGER")
+      ? "Delete this demerger? Both entries go (this stock and the new company) and the cost moves back."
+      : "Delete this transaction?";
+    if (!confirm(msg)) return;
     try {
       showToast("Deleting transaction...", "loading");
       await api.deleteStockTransaction(transactionId);
@@ -425,7 +428,7 @@ export default function StockDetailPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 transition-all shadow-xs"
             >
               <Gift size={13} className="text-cyan-600 dark:text-cyan-400" />
-              <span>Bonus / Split</span>
+              <span>Bonus, Split &amp; more</span>
             </button>
           </div>
         </div>
@@ -447,7 +450,7 @@ export default function StockDetailPage() {
                             ? "bg-cyan-50 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300 border border-cyan-500/30 font-bold"
                             : tx.transaction_type === "SPLIT"
                             ? "bg-purple-50 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300 border border-purple-500/30 font-bold"
-                            : tx.transaction_type === "DEMAT_SYNC" || tx.transaction_type === "ADJUSTMENT"
+                            : tx.transaction_type === "DEMAT_SYNC" || tx.transaction_type === "ADJUSTMENT" || tx.transaction_type.startsWith("DEMERGER")
                             ? "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 border border-amber-500/30 font-bold"
                             : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
                         }`}>
@@ -462,7 +465,7 @@ export default function StockDetailPage() {
                         ) : (
                           <Sparkles size={12} />
                         )}
-                        {tx.transaction_type}
+                        {tx.transaction_type === "DEMERGER_OUT" ? "DEMERGER · cost out" : tx.transaction_type === "DEMERGER_IN" ? "DEMERGER · new shares" : tx.transaction_type}
                       </span>
                       <span className="text-xs text-neutral-500 dark:text-neutral-400">
                         {new Date(tx.date).toLocaleDateString("en-IN", {
@@ -473,6 +476,16 @@ export default function StockDetailPage() {
                       </span>
                     </div>
 
+                    {tx.transaction_type === "DEMERGER_OUT" ? (
+                      // BUG-091: the parent's row stores the share of cost moved in price (0..1), not a share price.
+                      <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">
+                        {(tx.price * 100).toFixed(2)}% of the cost moved to the new company. Shares unchanged.
+                      </p>
+                    ) : tx.transaction_type === "DEMERGER_IN" ? (
+                      <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">
+                        {tx.quantity} shares received. Cost and purchase dates come from the parent company.
+                      </p>
+                    ) : (
                     <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
                       <div>
                         <p className="text-neutral-500 dark:text-neutral-400">Quantity</p>
@@ -493,6 +506,7 @@ export default function StockDetailPage() {
                         </p>
                       </div>
                     </div>
+                    )}
 
                     {tx.notes && (
                       <p className="mt-2 text-[11px] font-medium text-cyan-700 dark:text-cyan-300/90 bg-cyan-50/50 dark:bg-cyan-500/10 px-2 py-1 rounded-lg border border-cyan-500/10 inline-block">
@@ -502,6 +516,7 @@ export default function StockDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {!tx.transaction_type.startsWith("DEMERGER") && (
                     <button
                       onClick={() =>
                         setEditingTx({
@@ -515,8 +530,9 @@ export default function StockDetailPage() {
                       className="rounded-full p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-primary-600 dark:hover:bg-white/10 dark:hover:text-primary-400">
                       <Pencil size={16} />
                     </button>
+                    )}
                     <button
-                      onClick={() => handleDeleteTransaction(tx.id)}
+                      onClick={() => handleDeleteTransaction(tx.id, tx.transaction_type)}
                       className="rounded-full p-2 text-neutral-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400">
                       <Trash2 size={16} />
                     </button>
