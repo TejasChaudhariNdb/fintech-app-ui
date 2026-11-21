@@ -630,10 +630,7 @@ export default function HomePage() {
         {/* Benchmark Growth vs Market Indices */}
         {familySummary && familySummary.net_worth > 0 && (
           <section className="animate-fade-in">
-            <BenchmarkGrowthCard
-              title="Portfolio Performance vs Benchmarks"
-              subtitle="Track alpha generation and comparative growth vs market benchmarks"
-            />
+            <BenchmarkGrowthCard />
           </section>
         )}
 
@@ -1153,10 +1150,7 @@ export default function HomePage() {
               {/* Benchmark Growth vs Market Indices */}
               {netWorth && (netWorth.mutual_funds > 0 || netWorth.stocks > 0) && (
                 <section className="animate-fade-in">
-                  <BenchmarkGrowthCard
-                    title="Portfolio Performance vs Benchmarks"
-                    subtitle="Track alpha generation and comparative growth vs market benchmarks"
-                  />
+                  <BenchmarkGrowthCard />
                 </section>
               )}
 
