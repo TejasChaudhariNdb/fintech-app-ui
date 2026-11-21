@@ -223,6 +223,39 @@ export default function BenchmarkGrowthCard({
   const benchmarkXirr = summary ? summary[`${selectedBenchmark}_xirr`] : null;
   const showXirr = XIRR_RANGES.has(selectedRange);
   const rangeLabel = selectedRange === "ALL" ? "All-time" : selectedRange;
+  const rangeText = selectedRange === "ALL" ? "all time" : `the last ${selectedRange.replace("M", " months").replace("Y", " years").replace(/^1 (\w+)s$/, "1 $1")}`;
+  // Same money in the index: its % applied to the base the portfolio % uses.
+  const benchmarkGain = summary && benchmarkReturn !== null ? (benchmarkReturn * summary.base_value) / 100 : null;
+  const gainGap = summary && benchmarkGain !== null ? summary.portfolio_gain_amount - benchmarkGain : 0;
+
+  const headline = (gain: number, pct: number) => (
+    <>
+      <div className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{selectedRange === "ALL" ? "All-time gain" : `Gain in ${rangeLabel}`}</div>
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className={`text-xl sm:text-2xl font-black tabular-nums ${tone(gain)}`}>
+          <PrivacyMask>{signedRupees(gain)}</PrivacyMask>
+        </span>
+        <span className={`text-sm font-bold tabular-nums ${tone(pct)}`}>{signed(pct)}</span>
+      </div>
+    </>
+  );
+
+  const detailRows = (valueToday: number, xirr: number | null, border: string) => (
+    <dl className={`mt-2 pt-2 border-t ${border} space-y-0.5 text-[11px] tabular-nums`}>
+      <div className="flex justify-between gap-2">
+        <dt className="text-neutral-500 dark:text-neutral-400">Value today</dt>
+        <dd className="font-bold text-neutral-900 dark:text-white">
+          <PrivacyMask>{rupees(valueToday)}</PrivacyMask>
+        </dd>
+      </div>
+      {showXirr && xirr !== null && (
+        <div className="flex justify-between gap-2">
+          <dt className="text-neutral-500 dark:text-neutral-400">XIRR (per year)</dt>
+          <dd className={`font-bold ${tone(xirr)}`}>{signed(xirr)}</dd>
+        </div>
+      )}
+    </dl>
+  );
 
   // A pinned first date reads like a hovered one, plus the prompt for the second date.
   const shownIndex = pinIndex ?? hoverIndex;
@@ -360,129 +393,78 @@ export default function BenchmarkGrowthCard({
       </div>
 
       {/* ── YOUR PORTFOLIO vs THE SAME MONEY IN THE INDEX ── */}
+      {/* Both cards lead with the rupee gain (what users asked about), then % and value today. */}
       {summary && (
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-          <div className="p-3 sm:p-4 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 min-w-0">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800 dark:text-neutral-200">
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PORTFOLIO_COLOR }} />
-              Your Portfolio
-            </div>
-            {/* BUG-068: say what this covers, so it is not read as the whole-portfolio XIRR on top */}
-            {summary.included_assets && summary.included_assets.length > 0 && (
-              <div className="mt-0.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
-                {scopeLabel(summary.included_assets)} only
+        <div className="space-y-2.5">
+          {benchmarkGain !== null && (
+            <p
+              className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold ${
+                gainGap >= 0
+                  ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "bg-rose-500/10 text-rose-700 dark:text-rose-300"
+              }`}
+            >
+              {gainGap >= 0 ? `You beat ${benchmark.name} by ` : `${benchmark.name} beat you by `}
+              <PrivacyMask>{rupees(gainGap)}</PrivacyMask>
+              {benchmarkReturn !== null && ` (${Math.abs(summary.portfolio_return_pct - benchmarkReturn).toFixed(2)}% more)`} over {rangeText}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+            <div className="p-3 sm:p-4 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/20 min-w-0">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: PORTFOLIO_COLOR }} />
+                Your Portfolio
               </div>
-            )}
-            {view === "value" ? (
-              <>
-                <div className="mt-1.5 text-xl sm:text-2xl font-black tabular-nums text-neutral-900 dark:text-white truncate">
-                  <PrivacyMask>{rupees(summary.portfolio_final_value)}</PrivacyMask>
-                </div>
-                <div className="mt-0.5 text-sm font-bold tabular-nums">
-                  <span className={tone(summary.portfolio_return_pct)}>{signed(summary.portfolio_return_pct)}</span>
-                  <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 whitespace-nowrap">{rangeLabel} return</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className={`mt-1.5 text-xl sm:text-2xl font-black tabular-nums ${tone(summary.portfolio_return_pct)}`}>
-                  {signed(summary.portfolio_return_pct)}
-                </div>
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{rangeLabel} return</div>
-                <div className="mt-0.5 text-sm font-bold tabular-nums text-neutral-900 dark:text-white">
-                  <PrivacyMask>{rupees(summary.portfolio_final_value)}</PrivacyMask>
-                </div>
-              </>
-            )}
-            <dl className="mt-2 pt-2 border-t border-emerald-500/15 space-y-0.5 text-[11px] tabular-nums">
-              <div className="flex justify-between gap-2">
-                <dt className="text-neutral-500 dark:text-neutral-400">Gain</dt>
-                <dd className={`font-bold ${tone(summary.portfolio_gain_amount)}`}>
-                  <PrivacyMask>{signedRupees(summary.portfolio_gain_amount)}</PrivacyMask>
-                </dd>
-              </div>
-              {showXirr && summary.portfolio_xirr !== null && (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-neutral-500 dark:text-neutral-400">
-                    XIRR{summary.included_assets && summary.included_assets.length > 0 ? ` (${scopeLabel(summary.included_assets)})` : ""}
-                  </dt>
-                  <dd className={`font-bold ${tone(summary.portfolio_xirr)}`}>{signed(summary.portfolio_xirr)}</dd>
+              {/* BUG-068: say what this covers, so it is not read as the whole-portfolio XIRR on top */}
+              {summary.included_assets && summary.included_assets.length > 0 && (
+                <div className="mt-0.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
+                  {scopeLabel(summary.included_assets)} only
                 </div>
               )}
-            </dl>
-          </div>
+              {headline(summary.portfolio_gain_amount, summary.portfolio_return_pct)}
+              {detailRows(summary.portfolio_final_value, summary.portfolio_xirr, "border-emerald-500/15")}
+            </div>
 
-          <div className="p-3 sm:p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 min-w-0">
-            {/* The index name is the picker */}
-            <label className="relative flex items-center justify-between gap-1 text-xs font-bold text-neutral-800 dark:text-neutral-200 cursor-pointer">
-              <span className="flex items-center gap-1.5 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: benchmark.color }} />
-                <span className="truncate">{benchmark.shortName}</span>
-              </span>
-              <ChevronsUpDown size={15} className="text-primary-500 dark:text-primary-400 shrink-0" />
-              <select
-                value={selectedBenchmark}
-                onChange={(e) => handleBenchmarkSelect(e.target.value as BenchmarkKey)}
-                className="absolute -inset-2 opacity-0 cursor-pointer"
-                title="Switch benchmark index"
-                aria-label="Benchmark index"
-              >
-                {BENCHMARKS.map((b) => (
-                  <option
-                    key={b.key}
-                    value={b.key}
-                    className="bg-white dark:bg-[#151922] text-neutral-900 dark:text-white py-1"
-                  >
-                    {b.shortName} ({b.category})
-                  </option>
-                ))}
-              </select>
-            </label>
-            {benchmarkReturn !== null && benchmarkValue !== null ? (
-              <>
-                {view === "value" ? (
-                  <>
-                    <div className="mt-1.5 text-xl sm:text-2xl font-black tabular-nums text-neutral-900 dark:text-white truncate">
-                      <PrivacyMask>{rupees(benchmarkValue)}</PrivacyMask>
-                    </div>
-                    <div className="mt-0.5 text-sm font-bold tabular-nums">
-                      <span className={tone(benchmarkReturn)}>{signed(benchmarkReturn)}</span>
-                      <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400 whitespace-nowrap">{rangeLabel} return</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={`mt-1.5 text-xl sm:text-2xl font-black tabular-nums ${tone(benchmarkReturn)}`}>
-                      {signed(benchmarkReturn)}
-                    </div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{rangeLabel} return</div>
-                    <div className="mt-0.5 text-sm font-bold tabular-nums text-neutral-900 dark:text-white">
-                      <PrivacyMask>{rupees(benchmarkValue)}</PrivacyMask>
-                    </div>
-                  </>
-                )}
-                <dl className="mt-2 pt-2 border-t border-neutral-200/80 dark:border-white/10 space-y-0.5 text-[11px] tabular-nums">
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-neutral-500 dark:text-neutral-400">Gain</dt>
-                    <dd className={`font-bold ${tone(benchmarkReturn)}`}>
-                      <PrivacyMask>
-                        {signedRupees((benchmarkReturn * summary.base_value) / 100)}
-                      </PrivacyMask>
-                    </dd>
+            <div className="p-3 sm:p-4 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] border border-neutral-200/80 dark:border-white/10 min-w-0">
+              {/* The index name is the picker */}
+              <label className="relative flex items-center justify-between gap-1 text-xs font-bold text-neutral-800 dark:text-neutral-200 cursor-pointer">
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: benchmark.color }} />
+                  <span className="truncate">{benchmark.shortName}</span>
+                </span>
+                <ChevronsUpDown size={15} className="text-primary-500 dark:text-primary-400 shrink-0" />
+                <select
+                  value={selectedBenchmark}
+                  onChange={(e) => handleBenchmarkSelect(e.target.value as BenchmarkKey)}
+                  className="absolute -inset-2 opacity-0 cursor-pointer"
+                  title="Switch benchmark index"
+                  aria-label="Benchmark index"
+                >
+                  {BENCHMARKS.map((b) => (
+                    <option
+                      key={b.key}
+                      value={b.key}
+                      className="bg-white dark:bg-[#151922] text-neutral-900 dark:text-white py-1"
+                    >
+                      {b.shortName} ({b.category})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {benchmarkGain !== null && benchmarkReturn !== null && benchmarkValue !== null ? (
+                <>
+                  <div className="mt-0.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400 truncate">
+                    Same money, same dates
                   </div>
-                  {showXirr && benchmarkXirr !== null && (
-                    <div className="flex justify-between gap-2">
-                      <dt className="text-neutral-500 dark:text-neutral-400">XIRR</dt>
-                      <dd className={`font-bold ${tone(benchmarkXirr)}`}>{signed(benchmarkXirr)}</dd>
-                    </div>
-                  )}
-                </dl>
-              </>
-            ) : (
-              <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                No {benchmark.name} price history for this period. Try a shorter range or another index.
-              </p>
-            )}
+                  {headline(benchmarkGain, benchmarkReturn)}
+                  {detailRows(benchmarkValue, benchmarkXirr, "border-neutral-200/80 dark:border-white/10")}
+                </>
+              ) : (
+                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  No {benchmark.name} price history for this period. Try a shorter range or another index.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
