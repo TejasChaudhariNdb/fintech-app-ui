@@ -26,7 +26,6 @@ type NotificationPreferences = {
   email_security_alerts: boolean;
   email_cas_reports: boolean;
   push_daily_nudge: boolean;
-  push_market_predictions: boolean;
   push_product_updates: boolean;
   push_security_alerts: boolean;
   unsubscribed_all_marketing: boolean;
@@ -56,7 +55,6 @@ export default function NotificationSettingsModal({
     email_security_alerts: true,
     email_cas_reports: true,
     push_daily_nudge: true,
-    push_market_predictions: true,
     push_product_updates: true,
     push_security_alerts: true,
     unsubscribed_all_marketing: false,
@@ -352,32 +350,6 @@ export default function NotificationSettingsModal({
                     type="checkbox"
                     checked={prefs.push_daily_nudge}
                     onChange={() => handleToggle("push_daily_nudge")}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-hidden rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-neutral-600 peer-checked:bg-indigo-600"></div>
-                </label>
-              </div>
-
-              {/* Predictions Push */}
-              <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
-                    <TrendingUp size={16} />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-neutral-900 dark:text-white">
-                      Market Predictions &amp; Streaks
-                    </p>
-                    <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
-                      Notifications when your Bull/Bear predictions win.
-                    </p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={prefs.push_market_predictions}
-                    onChange={() => handleToggle("push_market_predictions")}
                     className="sr-only peer"
                   />
                   <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-hidden rounded-full peer dark:bg-neutral-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-neutral-600 peer-checked:bg-indigo-600"></div>
