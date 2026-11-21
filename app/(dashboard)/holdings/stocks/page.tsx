@@ -747,7 +747,7 @@ export default function StocksPage() {
             <button
               onClick={() => setShowDematReconcileModal(true)}
               className="shrink-0 whitespace-nowrap px-3.5 py-2 sm:py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/25 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 active:scale-95"
-              title="Reconcile with Zerodha Demat holdings to detect Bonus shares & Splits">
+              title="Compare with your broker's Demat holdings to find bonus shares, splits and mergers">
               <Gift size={15} className="shrink-0" />
               <span>Demat Reconcile</span>
             </button>
@@ -1504,8 +1504,8 @@ export default function StocksPage() {
                   <button
                     onClick={() => setCorpActionStock(stock)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                    title="Record Bonus shares, Stock Split, or Demat balance adjustment">
-                    <Gift size={14} /> Bonus/Split
+                    title="Record a bonus, stock split, demerger or Demat balance fix">
+                    <Gift size={14} /> Bonus, Split &amp; more
                   </button>
                   <button
                     onClick={() => {
