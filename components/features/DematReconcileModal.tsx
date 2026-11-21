@@ -145,7 +145,7 @@ export default function DematReconcileModal({
       setSelectedSymbols(toSelect);
       setStep("REVIEW");
     } catch (err: any) {
-      setErrorMessage(err.message || "Failed to analyze Demat statement. Please ensure it's a valid Zerodha holdings file.");
+      setErrorMessage(err.message || "Failed to analyze Demat statement. Please check it is the holdings file (CSV or Excel) from your broker.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -218,7 +218,7 @@ export default function DematReconcileModal({
                 </span>
               </h2>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                Automatically detect bonus shares & off-market corporate actions from Zerodha Demat holdings
+                Find shares your trades don't explain (bonus, merger, off-market transfer) by comparing with your broker's Demat holdings
               </p>
             </div>
           </div>
@@ -270,7 +270,7 @@ export default function DematReconcileModal({
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx"
                   className="hidden"
                 />
                 <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform border border-amber-500/20">
@@ -281,13 +281,13 @@ export default function DematReconcileModal({
                   )}
                 </div>
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-                  {isAnalyzing ? "Comparing Tradebook vs Demat..." : "Drop your Zerodha holdings.csv here"}
+                  {isAnalyzing ? "Comparing Tradebook vs Demat..." : "Drop your holdings file here (CSV or Excel)"}
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-sm mx-auto">
-                  Export from: <span className="font-semibold text-neutral-700 dark:text-neutral-300">Zerodha Console &gt; Portfolio &gt; Holdings &gt; Download CSV</span>
+                  Zerodha: <span className="font-semibold text-neutral-700 dark:text-neutral-300">Console &gt; Portfolio &gt; Holdings &gt; Download</span> · Groww / Upstox: <span className="font-semibold text-neutral-700 dark:text-neutral-300">Holdings &gt; Download</span>
                 </p>
                 <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 dark:bg-white/10 text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
-                  <FileSpreadsheet size={13} /> Supports Zerodha, Groww, & Upstox Holdings
+                  <FileSpreadsheet size={13} /> Zerodha, Groww, Upstox or any sheet with Symbol and Quantity
                 </div>
               </div>
 
@@ -505,7 +505,7 @@ export default function DematReconcileModal({
                 Cancel
               </button>
               <div className="text-[11px] text-neutral-400">
-                Upload Zerodha holdings.csv to proceed
+                Upload your holdings file to continue
               </div>
             </>
           )}

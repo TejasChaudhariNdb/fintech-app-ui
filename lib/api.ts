@@ -1265,6 +1265,19 @@ export const api = {
     return res;
   },
 
+  // BUG-091: parent keeps its shares; new shares get cost_percent of the parent's cost and its dates.
+  recordDemerger: async (
+    data: { symbol: string; new_symbol: string; new_quantity: number; cost_percent: number; date: string; notes?: string },
+    profileId?: string
+  ) => {
+    const url = profileId
+      ? `/equity/corporate-action/demerger?profile_id=${profileId}`
+      : `/equity/corporate-action/demerger`;
+    const res = await api.fetch(url, { method: "POST", body: JSON.stringify(data) });
+    api.clearPortfolioCache();
+    return res;
+  },
+
   getCorporateActions: async (symbol?: string, profileId?: string) => {
     let url = "/equity/corporate-actions";
     const params = new URLSearchParams();
