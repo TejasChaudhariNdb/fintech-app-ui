@@ -14,6 +14,7 @@ import DatePicker from "@/components/ui/DatePicker";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import PropertyMoneySheet, { MoneySheetMode, MoneySheetStart } from "@/components/features/PropertyMoneySheet";
 import PropertyLoanModal, { PropertyLoanView } from "@/components/features/PropertyLoanModal";
+import PropertyImportSheet from "@/components/features/PropertyImportSheet";
 import {
   ArrowDownUp,
   ArrowLeft,
@@ -22,6 +23,8 @@ import {
   Copy,
   CreditCard,
   Download,
+  FileSpreadsheet,
+  SlidersHorizontal,
   Info,
   Loader2,
   Pencil,
@@ -185,6 +188,7 @@ export default function PropertyCashFlowPage() {
   const [direction, setDirection] = useState<Direction>("ALL");
   const [query, setQuery] = useState("");
   const [headsOpen, setHeadsOpen] = useState(false); // phones: head chips folded away
+  const [moreFilters, setMoreFilters] = useState(false); // in / out, search and heads folded away
 
   const [view, setView] = useState<View>("HEADS");
   const [newestFirst, setNewestFirst] = useState(true);
@@ -195,6 +199,7 @@ export default function PropertyCashFlowPage() {
   const [sheetMode, setSheetMode] = useState<MoneySheetMode>("EXPENSE");
   const [sheetStart, setSheetStart] = useState<MoneySheetStart | null>(null);
   const [loanOpen, setLoanOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [toast, setToast] = useState("");
 
   // Refresh after a change; the filters are kept.
@@ -269,7 +274,10 @@ export default function PropertyCashFlowPage() {
       return next;
     });
 
+  const entryCount = data?.lines.filter((l) => l.source === "ENTRY").length ?? 0;
   const filtersOn = preset !== "ALL" || picked.size > 0 || direction !== "ALL" || query.trim() !== "";
+  // Keep the extra filters shown while one of them is in use, so a filter is never hidden.
+  const extraFiltersOn = picked.size > 0 || direction !== "ALL" || query.trim() !== "";
   const resetFilters = () => {
     choosePreset("ALL");
     setPicked(new Set());
@@ -446,7 +454,7 @@ export default function PropertyCashFlowPage() {
         <div className="min-w-0">
           <BackLink />
           <h1 className="text-lg sm:text-xl font-bold text-neutral-900 dark:text-white truncate mt-1">{data.property_name}</h1>
-          <p className="text-xs text-neutral-500">Cash flow since {prettyDate(data.purchase_date)}</p>
+          <p className="text-xs text-neutral-500">Every rupee in and out since {prettyDate(data.purchase_date)}</p>
         </div>
         <div className="shrink-0 rounded-2xl bg-indigo-500/[0.08] px-3 py-2 text-right">
           <div className="text-[11px] uppercase font-bold text-indigo-600 dark:text-indigo-400">Net return</div>
@@ -458,6 +466,7 @@ export default function PropertyCashFlowPage() {
       </div>
 
       {/* Add / manage, without leaving this screen */}
+      <div className="space-y-2">
       <div className="grid grid-cols-3 gap-2">
         <ActionBtn tone="emerald" onClick={() => openSheet("RENT")}>
           <Plus size={14} /> Income
@@ -468,6 +477,16 @@ export default function PropertyCashFlowPage() {
         <ActionBtn tone="neutral" onClick={() => setLoanOpen(true)}>
           <CreditCard size={14} /> {data.loan ? "EMI / Loan" : "Add loan"}
         </ActionBtn>
+      </div>
+      {/* BUG-090: the entry list (with Select for bulk delete) and the file import, reachable here too. */}
+      <div className="grid grid-cols-2 gap-2">
+        <ActionBtn tone="neutral" onClick={() => openSheet("HISTORY")}>
+          <Pencil size={14} /> Edit entries{entryCount ? ` (${entryCount})` : ""}
+        </ActionBtn>
+        <ActionBtn tone="neutral" onClick={() => setImportOpen(true)}>
+          <FileSpreadsheet size={14} /> Import CSV / Excel
+        </ActionBtn>
+      </div>
       </div>
 
       {/* Filters: apply to every view below */}
@@ -491,6 +510,24 @@ export default function PropertyCashFlowPage() {
             </label>
           </div>
         )}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setMoreFilters((v) => !v)}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-600 dark:text-neutral-300"
+            aria-expanded={moreFilters || extraFiltersOn}
+          >
+            <SlidersHorizontal size={13} /> {moreFilters || extraFiltersOn ? "Fewer filters" : "More filters: in / out, search, heads"}
+            <ChevronDown size={13} className={`transition-transform ${moreFilters || extraFiltersOn ? "rotate-180" : ""}`} />
+          </button>
+          {filtersOn && (
+            <button type="button" onClick={resetFilters} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+              Clear all filters
+            </button>
+          )}
+        </div>
+        {(moreFilters || extraFiltersOn) && (
+        <>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex p-1 rounded-xl bg-neutral-100 dark:bg-white/5 sm:w-72">
             {([
@@ -536,11 +573,6 @@ export default function PropertyCashFlowPage() {
               <ChevronDown size={13} className={`transition-transform ${headsOpen ? "rotate-180" : ""}`} />
             </button>
             <span className="hidden sm:inline text-xs font-semibold text-neutral-500">Heads {picked.size ? `(${picked.size} picked)` : "(all)"}</span>
-            {filtersOn && (
-              <button type="button" onClick={resetFilters} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                Clear all filters
-              </button>
-            )}
           </div>
           <div className={`${headsOpen ? "flex" : "hidden"} sm:flex flex-wrap gap-1.5`}>
             {data.heads.map((h) => (
@@ -550,6 +582,8 @@ export default function PropertyCashFlowPage() {
             ))}
           </div>
         </div>
+        </>
+        )}
       </Card>
 
       {/* Totals for the filtered rows: plain text, no alarm colours */}
@@ -793,6 +827,16 @@ export default function PropertyCashFlowPage() {
         </div>
       )}
 
+      <PropertyImportSheet
+        isOpen={importOpen}
+        property={{ id: data.holding_id, property_name: data.property_name }}
+        onClose={() => setImportOpen(false)}
+        onImported={(msg) => {
+          setImportOpen(false);
+          showToast(msg);
+          load();
+        }}
+      />
       <PropertyMoneySheet
         isOpen={sheetOpen}
         mode={sheetMode}
