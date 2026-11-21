@@ -15,6 +15,7 @@ import PropertyMoneySheet, { MoneySheetMode } from "@/components/features/Proper
 import { RealEstateFormData } from "@/components/features/RealEstateForm";
 import RealEstateTaxSheet, { PropertyTaxView } from "@/components/features/RealEstateTaxSheet";
 import PropertySimulatorModal from "@/components/features/PropertySimulatorModal";
+import PropertyImportSheet from "@/components/features/PropertyImportSheet";
 import {
   Building2,
   Building,
@@ -37,6 +38,9 @@ import {
   Calculator,
   AlertTriangle,
   Info,
+  FileSpreadsheet,
+  ListTree,
+  Pencil,
 } from "lucide-react";
 
 interface RealEstateItem {
@@ -172,7 +176,7 @@ function Metric({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`text-center px-1 py-1.5 ${className}`}>
+    <div className={`h-full flex flex-col items-center justify-center text-center px-1 py-2 ${className}`}>
       <div className="text-[11px] uppercase font-semibold text-neutral-400">{label}</div>
       <div className={`text-sm font-bold font-mono mt-0.5 whitespace-nowrap ${tone ?? "text-neutral-900 dark:text-white"}`}>{children}</div>
       {sub && <div className="text-[11px] text-neutral-400 whitespace-nowrap">{sub}</div>}
@@ -378,6 +382,8 @@ export default function RealEstateHoldingsPage() {
     else setCashPickerOpen(true);
   };
   const [simFor, setSimFor] = useState<RealEstateItem | null>(null);
+  // BUG-090: CSV / Excel import of rent and expenses, opened from the property card.
+  const [importFor, setImportFor] = useState<RealEstateItem | null>(null);
   const [returnMode, setReturnMode] = useState<ReturnMode>("NET");
   const [moneyMode, setMoneyMode] = useState<MoneySheetMode>("RENT");
 
@@ -908,16 +914,16 @@ export default function RealEstateHoldingsPage() {
                 {/* Metrics, same order as the summary: Cost · Value · XIRR/CAGR · Gain · Net cash.
                     One row of 5 from sm; on phones 3 + 2 (6-col grid). */}
                 <div className="grid grid-cols-6 sm:grid-cols-5 gap-1.5 bg-neutral-50/70 dark:bg-white/[0.02] p-2 rounded-2xl">
-                  <Metric label="Cost" className="col-span-2 sm:col-span-1">
+                  <Metric label="Cost" sub="paid" className="col-span-2 sm:col-span-1">
                     <PrivacyMask>{formatINRShort(prop.total_invested)}</PrivacyMask>
                   </Metric>
-                  <Metric label="Value" className="col-span-2 sm:col-span-1">
+                  <Metric label="Value" sub="today" className="col-span-2 sm:col-span-1">
                     <PrivacyMask>{formatINRShort(prop.current_valuation)}</PrivacyMask>
                   </Metric>
                   <button
                     type="button"
                     onClick={toggleReturnMode}
-                    className="col-span-2 sm:col-span-1 rounded-xl bg-indigo-500/[0.08] hover:bg-indigo-500/15 px-1 py-1.5 text-center transition-colors"
+                    className="col-span-2 sm:col-span-1 flex flex-col items-center justify-center rounded-xl bg-indigo-500/[0.08] hover:bg-indigo-500/15 px-1 py-2 text-center transition-colors"
                     title={`${RETURN_INFO[returnMode].help}.${
                       returnMode === "NET" && prop.xirr_basis === "PRICE_ONLY" ? " No rent or loan added yet, so price only." : ""
                     } Tap for ${RETURN_INFO[nextMode(returnMode)].title.toLowerCase()}.`}
@@ -942,11 +948,11 @@ export default function RealEstateHoldingsPage() {
                       {formatINRShort(prop.gain_loss)}
                     </PrivacyMask>
                   </Metric>
-                  <Link href={`/holdings/real-estate/${prop.id}/cash-flow`} className="col-span-3 sm:col-span-1 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5">
+                  <Link href={`/holdings/real-estate/${prop.id}/cash-flow`} className="col-span-3 sm:col-span-1 rounded-xl hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors">
                     <Metric
                       label="Cash flow"
                       tone="text-neutral-700 dark:text-neutral-200"
-                      sub={hasCashFlow ? "tap to view" : "add rent or costs"}
+                      sub={hasCashFlow ? "net so far ›" : "none yet"}
                     >
                       {hasCashFlow ? (
                         <PrivacyMask>
@@ -1010,23 +1016,45 @@ export default function RealEstateHoldingsPage() {
                     <ActionButton icon={Receipt} label="+ Expense" onClick={() => handleOpenCashFlow(prop, "EXPENSE")} />
                     <ActionButton icon={Calculator} label="What if?" onClick={() => setSimFor(prop)} primary />
                   </div>
-                  <div className="mt-2 flex items-center justify-center gap-4 text-xs font-semibold">
-                    <Link
-                      href={`/holdings/real-estate/${prop.id}/cash-flow`}
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline"
-                    >
-                      Full cash flow ›
-                    </Link>
-                    {txCount > 0 && (
+                  {txCount === 0 ? (
+                    // BUG-090: no entries yet: short note plus the bulk import, next to the + buttons above.
+                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-dashed border-neutral-300 dark:border-white/15 p-2.5 sm:py-1.5 sm:pl-3 sm:pr-1.5">
+                      <span className="min-w-0 text-xs leading-snug">
+                        <span className="block font-semibold text-neutral-700 dark:text-neutral-200">No rent or costs yet</span>
+                        <span className="block text-neutral-500 dark:text-neutral-400">Use the + buttons above, or import a file.</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setImportFor(prop)}
+                        className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-500/10 px-2.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/15"
+                      >
+                        <FileSpreadsheet size={14} /> Import CSV / Excel
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2 grid grid-cols-3 divide-x divide-neutral-200 dark:divide-white/10 rounded-xl border border-neutral-200 dark:border-white/10 text-xs font-semibold">
+                      <Link
+                        href={`/holdings/real-estate/${prop.id}/cash-flow`}
+                        className="flex items-center justify-center gap-1.5 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/5 rounded-l-xl"
+                      >
+                        <ListTree size={14} /> Cash flow
+                      </Link>
                       <button
                         type="button"
                         onClick={() => handleOpenCashFlow(prop, "HISTORY")}
-                        className="text-neutral-500 hover:text-neutral-800 dark:hover:text-white"
+                        className="flex items-center justify-center gap-1.5 py-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/5"
                       >
-                        Edit {txCount} entries ›
+                        <Pencil size={13} /> {txCount} {txCount === 1 ? "entry" : "entries"}
                       </button>
-                    )}
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setImportFor(prop)}
+                        className="flex items-center justify-center gap-1.5 py-2 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/5 rounded-r-xl"
+                      >
+                        <FileSpreadsheet size={14} /> Import
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Card>
             );
@@ -1098,6 +1126,18 @@ export default function RealEstateHoldingsPage() {
           ))}
         </div>
       </Modal>
+
+      {/* ── IMPORT RENT / EXPENSES FROM CSV / EXCEL ── */}
+      <PropertyImportSheet
+        isOpen={!!importFor}
+        property={importFor}
+        onClose={() => setImportFor(null)}
+        onImported={(msg) => {
+          setImportFor(null);
+          showToast(msg);
+          loadData();
+        }}
+      />
 
       {/* ── TAX DETAILS SHEET ── */}
       <RealEstateTaxSheet isOpen={taxOpen} onClose={() => setTaxOpen(false)} properties={holdings} />

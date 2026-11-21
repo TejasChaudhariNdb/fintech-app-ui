@@ -10,7 +10,7 @@ import React, { useMemo, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import { api } from "@/lib/api";
-import { AlertCircle, Download, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+import { AlertCircle, Download, Loader2, Upload } from "lucide-react";
 
 type PreviewEntry = {
   row: number;
@@ -61,6 +61,25 @@ const fmtDate = (iso: string) => {
   return new Date(y, m - 1, d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 };
 
+/** 1 Upload · 2 Check and import */
+function StepBar({ step }: { step: 1 | 2 }) {
+  return (
+    <div className="flex items-center gap-2 text-[11px] font-semibold">
+      {["Upload file", "Check and import"].map((label, i) => (
+        <React.Fragment key={label}>
+          {i > 0 && <span className="h-px flex-1 bg-neutral-200 dark:bg-white/10" />}
+          <span className={`inline-flex items-center gap-1 ${step === i + 1 ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-400"}`}>
+            <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] ${step === i + 1 ? "bg-indigo-600 text-white" : "bg-neutral-200 dark:bg-white/10"}`}>
+              {i + 1}
+            </span>
+            {label}
+          </span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
 export default function PropertyImportSheet({
   isOpen,
   property,
@@ -88,6 +107,7 @@ export default function PropertyImportSheet({
     }
     setFile(f);
     setError("");
+    readFile(f);
   };
 
   const reset = () => {
@@ -111,12 +131,12 @@ export default function PropertyImportSheet({
     URL.revokeObjectURL(url);
   };
 
-  const readFile = async () => {
-    if (!file || !property) return;
+  const readFile = async (f: File) => {
+    if (!property) return;
     setBusy(true);
     setError("");
     try {
-      const res: Preview = await api.previewPropertyImport(property.id, file);
+      const res: Preview = await api.previewPropertyImport(property.id, f);
       setPreview(res);
       setRows(
         res.entries.map((e) => ({
@@ -193,79 +213,96 @@ export default function PropertyImportSheet({
     <Modal isOpen={isOpen} onClose={close} title={`Import entries · ${property.property_name}`}>
       {!preview ? (
         <div className="space-y-4">
-          <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed space-y-2">
-            <p>
-              Upload a <b>CSV</b> or <b>Excel (.xlsx)</b> file with one row per entry. Easiest layout:
-            </p>
-            <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-neutral-200 dark:border-white/10 text-[10px] font-mono">
-              {["Date", "Item", "Income", "Expense", "Note"].map((h) => (
-                <div key={h} className="bg-neutral-100 dark:bg-white/10 px-1.5 py-1 font-bold">{h}</div>
-              ))}
-              {["01-Apr-2026", "Rent", "25000", "", "April"].map((c, i) => (
-                <div key={`a${i}`} className={`px-1.5 py-1 bg-white dark:bg-white/5 ${i === 2 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{c}</div>
-              ))}
-              {["05-Apr-2026", "Maintenance", "", "3500", ""].map((c, i) => (
-                <div key={`b${i}`} className={`px-1.5 py-1 bg-white dark:bg-white/5 ${i === 3 ? "text-rose-600 dark:text-rose-400" : ""}`}>{c}</div>
-              ))}
+          <StepBar step={1} />
+          <div className="space-y-4 text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+            <div>
+              <div className="flex-1 space-y-1.5">
+                <p className="font-semibold text-neutral-900 dark:text-white">No file yet? Fill our sample in Excel</p>
+                <button
+                  type="button"
+                  onClick={downloadTemplate}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-2.5 py-1.5 font-semibold text-indigo-600 dark:text-indigo-400"
+                >
+                  <Download size={14} /> Download sample (.csv)
+                </button>
+                <div className="grid grid-cols-5 gap-px rounded-lg overflow-hidden border border-neutral-200 dark:border-white/10 text-[10px] font-mono">
+                  {["Date", "Item", "Income", "Expense", "Note"].map((h) => (
+                    <div key={h} className="bg-neutral-100 dark:bg-white/10 px-1.5 py-1 font-bold">{h}</div>
+                  ))}
+                  {["01-Apr-2026", "Rent", "25000", "", "April"].map((c, i) => (
+                    <div key={`a${i}`} className={`px-1.5 py-1 bg-white dark:bg-white/5 ${i === 2 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{c}</div>
+                  ))}
+                  {["05-Apr-2026", "Maintenance", "", "3500", ""].map((c, i) => (
+                    <div key={`b${i}`} className={`px-1.5 py-1 bg-white dark:bg-white/5 ${i === 3 ? "text-rose-600 dark:text-rose-400" : ""}`}>{c}</div>
+                  ))}
+                </div>
+                <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-neutral-500">
+                  <li>
+                    Money <b className="text-emerald-600 dark:text-emerald-400">received</b> → Income, money{" "}
+                    <b className="text-rose-600 dark:text-rose-400">paid</b> → Expense.
+                  </li>
+                  <li>Dates like <b>01-Apr-2026</b>.</li>
+                  <li>Item is optional: Rent, Maintenance, Electricity, Property tax… are recognised; anything else is saved as Miscellaneous.</li>
+                </ul>
+              </div>
             </div>
-            <p>
-              Write dates like <b>01-Apr-2026</b> (day, month name, year). Money you{" "}
-              <b className="text-emerald-600 dark:text-emerald-400">received</b> goes in <b>Income</b>, money you{" "}
-              <b className="text-rose-600 dark:text-rose-400">paid</b> goes in <b>Expense</b>. The Item is optional: words like
-              Rent, Maintenance, Electricity or Property tax are recognised, anything else is saved as Miscellaneous with your word
-              kept. You will check every row before anything is saved.
-            </p>
+            <div>
+              <div className="flex-1 space-y-1.5">
+                <p className="font-semibold text-neutral-900 dark:text-white">Choose your file. Nothing is saved until you check the rows.</p>
+                <label
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragging(false);
+                    pickFile(e.dataTransfer.files?.[0]);
+                  }}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-all ${
+                    busy ? "cursor-wait" : "cursor-pointer"
+                  } ${
+                    dragging
+                      ? "border-indigo-500 bg-indigo-500/15 scale-[1.01]"
+                      : "border-indigo-400/50 bg-indigo-500/5 hover:bg-indigo-500/10"
+                  }`}
+                >
+                  {busy ? (
+                    <Loader2 size={22} className="animate-spin text-indigo-500" />
+                  ) : (
+                    <Upload size={22} className="text-indigo-500" />
+                  )}
+                  <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                    {busy
+                      ? `Reading ${file?.name ?? "file"}…`
+                      : dragging
+                        ? "Drop the file here"
+                        : "Choose a CSV or Excel (.xlsx) file"}
+                  </span>
+                  {!busy && <span className="text-[11px] text-neutral-500">or drag it here</span>}
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx"
+                    className="hidden"
+                    disabled={busy}
+                    onChange={(e) => {
+                      pickFile(e.target.files?.[0]);
+                      e.target.value = ""; // same file can be picked again after an error
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={downloadTemplate}
-            className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400"
-          >
-            <Download size={14} /> Download a sample file
-          </button>
-          <label
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={(e) => {
-              e.preventDefault();
-              setDragging(false);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragging(false);
-              pickFile(e.dataTransfer.files?.[0]);
-            }}
-            className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 cursor-pointer text-center transition-all ${
-              dragging
-                ? "border-indigo-500 bg-indigo-500/15 scale-[1.01]"
-                : "border-indigo-400/50 bg-indigo-500/5 hover:bg-indigo-500/10"
-            }`}
-          >
-            <FileSpreadsheet size={22} className="text-indigo-500" />
-            <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-              {file ? file.name : dragging ? "Drop the file here" : "Drag a CSV or Excel (.xlsx) file here, or tap to choose"}
-            </span>
-            <input
-              type="file"
-              accept=".csv,.xlsx"
-              className="hidden"
-              onChange={(e) => pickFile(e.target.files?.[0])}
-            />
-          </label>
           {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
-          <button
-            type="button"
-            disabled={!file || busy}
-            onClick={readFile}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white py-2.5 text-sm font-bold disabled:opacity-50"
-          >
-            {busy ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />} Read file
-          </button>
         </div>
       ) : (
         <div className="space-y-3">
+          <StepBar step={2} />
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="rounded-xl bg-emerald-500/5 p-2">
               <div className="text-[11px] uppercase font-bold text-neutral-400">Income</div>

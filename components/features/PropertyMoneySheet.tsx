@@ -21,6 +21,7 @@ import {
   Handshake,
   Landmark,
   ListTree,
+  ChevronRight,
   Key,
   FileSpreadsheet,
   Loader2,
@@ -623,32 +624,45 @@ export default function PropertyMoneySheet({
     <Modal isOpen={isOpen && !importOpen} onClose={onClose} title={title}>
       {mode === "HISTORY" ? (
         <div className="space-y-3">
+          {/* BUG-090: two clear ways to add entries: one at a time, or many at once from a file. */}
+          <div className="rounded-2xl border border-neutral-200 dark:border-white/10 p-3 space-y-2.5">
+            <div className="text-[11px] uppercase font-bold text-neutral-400">Add one entry</div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => startForm("RENT")} className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-white py-2.5 text-xs font-bold">
+                <Plus size={14} /> Income
+              </button>
+              <button type="button" onClick={() => startForm("EXPENSE")} className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 text-white py-2.5 text-xs font-bold">
+                <Plus size={14} /> Expense
+              </button>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] uppercase font-bold text-neutral-400">
+              <span className="h-px flex-1 bg-neutral-200 dark:bg-white/10" /> or add many at once <span className="h-px flex-1 bg-neutral-200 dark:bg-white/10" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="w-full flex items-center gap-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 px-3 py-2.5 text-left hover:bg-indigo-500/10"
+            >
+              <FileSpreadsheet size={18} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+              <span className="flex-1 min-w-0">
+                <span className="block text-xs font-bold text-indigo-700 dark:text-indigo-300">Import from CSV / Excel</span>
+                <span className="block text-[11px] text-neutral-500">Your own sheet of rent and costs. You check every row first.</span>
+              </span>
+              <ChevronRight size={14} className="shrink-0 text-indigo-400" />
+            </button>
+          </div>
+
           <Link
             href={`/holdings/real-estate/${property.id}/cash-flow`}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/5 py-2.5 text-xs font-bold text-indigo-700 dark:text-indigo-300"
+            className="flex items-center justify-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
           >
             <ListTree size={14} /> Full cash flow (EMIs, rent, every cost) ›
           </Link>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => startForm("RENT")} className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-white py-2.5 text-xs font-bold">
-              <Plus size={14} /> Add income
-            </button>
-            <button type="button" onClick={() => startForm("EXPENSE")} className="flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 text-white py-2.5 text-xs font-bold">
-              <Plus size={14} /> Add expense
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setImportOpen(true)}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 dark:border-white/10 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300"
-          >
-            <FileSpreadsheet size={14} /> Import from CSV / Excel
-          </button>
 
           {txs === null ? (
             <div className="py-10 flex justify-center"><Loader2 className="animate-spin text-indigo-500" size={20} /></div>
           ) : txs.length === 0 ? (
-            <p className="text-center text-xs text-neutral-500 py-8">Nothing logged yet. Add rent or an expense above.</p>
+            <p className="text-center text-xs text-neutral-500 py-6">Nothing logged yet. Add one entry or import a file above.</p>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-2 text-center">
