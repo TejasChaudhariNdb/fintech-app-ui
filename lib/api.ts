@@ -1159,6 +1159,16 @@ export const api = {
   },
   searchStocks: (query: string) => api.fetch(`/equity/search?q=${query}`, {}),
 
+  // BUG-099: move a holding with no live price to the NSE/BSE stock the user picks. confirm=false previews.
+  fixHoldingSymbol: async (holdingId: number, symbol: string, confirm: boolean) => {
+    const res = await api.fetch(`/equity/holding/${holdingId}/fix-symbol`, {
+      method: "POST",
+      body: JSON.stringify({ symbol, confirm }),
+    });
+    if (confirm) api.clearPortfolioCache();
+    return res as { symbol: string; price: number; quantity: number; value: number; merges_with_existing: boolean };
+  },
+
   searchMutualFunds: (query: string) =>
     api.fetch(`/portfolio/search?q=${query}`),
 

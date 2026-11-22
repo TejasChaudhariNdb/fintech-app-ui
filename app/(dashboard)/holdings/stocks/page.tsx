@@ -50,6 +50,7 @@ import PortfolioAnalysisCard from "@/components/features/PortfolioAnalysisCard";
 import StockJourneyChart from "@/components/features/StockJourneyChart";
 import TradebookImportModal from "@/components/features/TradebookImportModal";
 import CorporateActionModal from "@/components/features/CorporateActionModal";
+import FixStockSymbolModal from "@/components/features/FixStockSymbolModal";
 import DematReconcileModal from "@/components/features/DematReconcileModal";
 import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 
@@ -203,6 +204,7 @@ export default function StocksPage() {
   const [tradebookInitialMode, setTradebookInitialMode] = useState<"HOLDINGS" | "TRADEBOOK">("HOLDINGS");
   const [showDematReconcileModal, setShowDematReconcileModal] = useState(false);
   const [corpActionStock, setCorpActionStock] = useState<any>(null);
+  const [fixStock, setFixStock] = useState<React.ComponentProps<typeof FixStockSymbolModal>["stock"]>(null); // BUG-099
 
   // Import State
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -1246,9 +1248,20 @@ export default function StocksPage() {
                         {/* Row 2 */}
                         <div className="flex justify-between items-center gap-4 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-100 dark:border-white/5 pt-2">
                           <div className="flex gap-6 items-center flex-wrap">
-                            <div>
-                              <span className="text-neutral-400 mr-1">LTP:</span>
+                            <div title={stock.live_price === false ? "We could not find a live price for this symbol. Value uses the last price we had." : undefined}>
+                              {/* BUG-098: the price job finds no price for this symbol */}
+                              <span className={stock.live_price === false ? "text-amber-600 dark:text-amber-400 mr-1" : "text-neutral-400 mr-1"}>
+                                {stock.live_price === false ? "No live price, last:" : "LTP:"}
+                              </span>
                               <span className="font-semibold text-neutral-700 dark:text-neutral-300">₹{stock.current_price?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+                              {stock.live_price === false && activeProfileId !== "all" && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setFixStock(stock); }}
+                                  className="ml-2 text-[11px] font-bold text-primary-600 dark:text-primary-400 underline">
+                                  Fix
+                                </button>
+                              )}
                             </div>
                             <div>
                               <span className="text-neutral-400 mr-1">Shares:</span>
@@ -1387,12 +1400,23 @@ export default function StocksPage() {
                     </p>
                   </div>
                   <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2">
-                    <p className="text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
-                      LTP
+                    <p
+                      className={`text-[9px] uppercase tracking-[0.12em] mb-0.5 ${stock.live_price === false ? "text-amber-600 dark:text-amber-400" : "text-neutral-500"}`}
+                      title={stock.live_price === false ? "We could not find a live price for this symbol. Value uses the last price we had." : undefined}>
+                      {stock.live_price === false ? "Not live" : "LTP"}
                     </p>
                     <p className="text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white truncate">
                       {formatPrice(stock.current_price)}
                     </p>
+                    {/* BUG-099 */}
+                    {stock.live_price === false && activeProfileId !== "all" && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setFixStock(stock); }}
+                                  className="text-[10px] font-bold text-primary-600 dark:text-primary-400 underline">
+                                  Fix
+                                </button>
+                              )}
                   </div>
                   <div className="rounded-2xl bg-neutral-50 dark:bg-white/[0.04] border border-neutral-200 dark:border-white/5 px-2.5 py-2 flex flex-col justify-between">
                     <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.12em] text-neutral-500 mb-0.5">
@@ -2094,6 +2118,16 @@ export default function StocksPage() {
         onSuccess={() => {
           loadData(false);
           showToast("Holdings reconciled with Demat successfully!", "success");
+        }}
+      />
+
+      <FixStockSymbolModal
+        stock={fixStock}
+        onClose={() => setFixStock(null)}
+        onFixed={(symbol) => {
+          setFixStock(null);
+          loadData(false);
+          showToast(`Fixed: now tracking ${symbol} with a live price`, "success");
         }}
       />
 
