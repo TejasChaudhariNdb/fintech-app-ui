@@ -751,6 +751,14 @@ export default function StocksPage() {
               <Gift size={15} className="shrink-0" />
               <span>Demat Reconcile</span>
             </button>
+            {/* BUG-097: also for stocks already sold (no card to open it from); symbol is typed in the form */}
+            <button
+              onClick={() => setCorpActionStock({ symbol: "" })}
+              className="shrink-0 whitespace-nowrap px-3.5 py-2 sm:py-2.5 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors"
+              title="Record a bonus, split or demerger for any stock, including ones you have sold">
+              <Gift size={15} className="shrink-0" />
+              <span>Bonus, Split &amp; more</span>
+            </button>
             <button
               onClick={() => {
                 setShowStockModal(true);
@@ -2094,7 +2102,7 @@ export default function StocksPage() {
         onClose={() => setCorpActionStock(null)}
         initialSymbol={corpActionStock?.symbol || ""}
         currentHolding={
-          corpActionStock
+          corpActionStock?.quantity
             ? {
               quantity: corpActionStock.quantity,
               avg_price: corpActionStock.avg_price,
