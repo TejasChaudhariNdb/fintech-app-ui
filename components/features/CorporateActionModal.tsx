@@ -15,6 +15,7 @@ import {
   X,
   Info,
   GitBranch,
+  Banknote,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
@@ -43,7 +44,7 @@ export default function CorporateActionModal({
 
   // Form State
   const [symbol, setSymbol] = useState(initialSymbol);
-  const [actionType, setActionType] = useState<"BONUS" | "SPLIT" | "DEMAT_SYNC" | "MERGER" | "DEMERGER">("BONUS");
+  const [actionType, setActionType] = useState<"BONUS" | "SPLIT" | "DEMAT_SYNC" | "MERGER" | "DEMERGER" | "DIVIDEND">("BONUS");
   // BUG-091 demerger fields
   const [newSymbol, setNewSymbol] = useState("");
   const [costPercent, setCostPercent] = useState("");
@@ -91,6 +92,8 @@ export default function CorporateActionModal({
 
   const addQty = parseFloat(quantity) || 0;
   const isDemerger = actionType === "DEMERGER";
+  // BUG-096: cash payout (dividend, REIT / InvIT distribution): the number field is the amount received.
+  const isPayout = actionType === "DIVIDEND";
   const addPrice = actionType === "BONUS" || actionType === "SPLIT" || isDemerger ? 0 : (parseFloat(price) || 0);
   const pct = parseFloat(costPercent) || 0;
   // Demerger preview: cost moves, nothing is added (uses today's cost; the server uses the cost on the date).
@@ -109,7 +112,7 @@ export default function CorporateActionModal({
       return;
     }
     if (addQty <= 0) {
-      setErrorMessage("Quantity must be greater than 0.");
+      setErrorMessage(isPayout ? "Enter the amount you received." : "Quantity must be greater than 0.");
       return;
     }
     if (!actionDate) {
@@ -149,7 +152,9 @@ export default function CorporateActionModal({
         return;
       }
       await api.recordCorporateAction(
-        {
+        isPayout
+          ? { symbol: cleanSym, action_type: "DIVIDEND", quantity: 0, price: addQty, date: actionDate, notes: notes.trim() || undefined }
+          : {
           symbol: cleanSym,
           action_type: actionType,
           quantity: addQty,
@@ -213,12 +218,13 @@ export default function CorporateActionModal({
             <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1.5 uppercase tracking-wider">
               Corporate Action Type
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {[
                 { id: "BONUS", label: "Bonus Shares", icon: Gift, desc: "₹0 cost basis" },
                 { id: "SPLIT", label: "Stock Split", icon: Scissors, desc: "Ratio split" },
                 { id: "DEMERGER", label: "Demerger", icon: GitBranch, desc: "New company" },
                 { id: "DEMAT_SYNC", label: "Demat Sync", icon: SlidersHorizontal, desc: "Balance fix" },
+                { id: "DIVIDEND", label: "Payout", icon: Banknote, desc: "Dividend, REIT, InvIT" },
               ].map((t) => {
                 const isSelected = actionType === t.id;
                 const Icon = t.icon;
@@ -275,7 +281,7 @@ export default function CorporateActionModal({
                   required
                 />
               </div>
-            ) : (
+            ) : isPayout ? null : (
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Ratio / Notes (Optional)
@@ -295,7 +301,7 @@ export default function CorporateActionModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                Record / Ex-Date
+                {isPayout ? "Date received" : "Record / Ex-Date"}
               </label>
               <DatePicker
                 value={actionDate}
@@ -307,13 +313,13 @@ export default function CorporateActionModal({
 
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
-                {isDemerger ? "New shares received" : "Shares Credited (+Qty)"}
+                {isDemerger ? "New shares received" : isPayout ? "Amount received (₹)" : "Shares Credited (+Qty)"}
               </label>
               <input
                 type="number"
                 step="any"
                 min="0.0001"
-                placeholder="e.g. 2"
+                placeholder={isPayout ? "e.g. 2100" : "e.g. 2"}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl text-xs font-mono font-bold bg-neutral-50 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-cyan-500"
@@ -347,7 +353,7 @@ export default function CorporateActionModal({
           )}
 
           {/* Acquisition Price (Only if not Bonus/Split/Demerger) */}
-          {actionType !== "BONUS" && actionType !== "SPLIT" && !isDemerger && (
+          {actionType !== "BONUS" && actionType !== "SPLIT" && !isDemerger && !isPayout && (
             <div>
               <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
                 Cost Basis per Share (₹)
@@ -405,7 +411,7 @@ export default function CorporateActionModal({
           )}
 
           {/* Live Impact Preview Card */}
-          {!isDemerger && currentHolding && addQty > 0 && (
+          {!isDemerger && !isPayout && currentHolding && addQty > 0 && (
             <div className="p-3.5 rounded-2xl bg-cyan-50/60 dark:bg-cyan-500/10 border border-cyan-500/25 space-y-2 text-xs">
               <div className="flex items-center gap-1.5 font-bold text-cyan-900 dark:text-cyan-300">
                 <Sparkles size={14} className="text-cyan-600 dark:text-cyan-400" />

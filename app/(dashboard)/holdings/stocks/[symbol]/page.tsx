@@ -450,6 +450,8 @@ export default function StockDetailPage() {
                             ? "bg-cyan-50 text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-300 border border-cyan-500/30 font-bold"
                             : tx.transaction_type === "SPLIT"
                             ? "bg-purple-50 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300 border border-purple-500/30 font-bold"
+                            : tx.transaction_type === "DIVIDEND"
+                            ? "bg-teal-50 text-teal-800 dark:bg-teal-500/15 dark:text-teal-300 border border-teal-500/30 font-bold"
                             : tx.transaction_type === "DEMAT_SYNC" || tx.transaction_type === "ADJUSTMENT" || tx.transaction_type.startsWith("DEMERGER")
                             ? "bg-amber-50 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300 border border-amber-500/30 font-bold"
                             : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
@@ -465,7 +467,7 @@ export default function StockDetailPage() {
                         ) : (
                           <Sparkles size={12} />
                         )}
-                        {tx.transaction_type === "DEMERGER_OUT" ? "DEMERGER · cost out" : tx.transaction_type === "DEMERGER_IN" ? "DEMERGER · new shares" : tx.transaction_type}
+                        {tx.transaction_type === "DEMERGER_OUT" ? "DEMERGER · cost out" : tx.transaction_type === "DEMERGER_IN" ? "DEMERGER · new shares" : tx.transaction_type === "DIVIDEND" ? "PAYOUT" : tx.transaction_type}
                       </span>
                       <span className="text-xs text-neutral-500 dark:text-neutral-400">
                         {new Date(tx.date).toLocaleDateString("en-IN", {
@@ -480,6 +482,11 @@ export default function StockDetailPage() {
                       // BUG-091: the parent's row stores the share of cost moved in price (0..1), not a share price.
                       <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">
                         {(tx.price * 100).toFixed(2)}% of the cost moved to the new company. Shares unchanged.
+                      </p>
+                    ) : tx.transaction_type === "DIVIDEND" ? (
+                      // BUG-096: price holds the amount received; no shares.
+                      <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">
+                        ₹{(tx.amount || 0).toLocaleString("en-IN")} received. Counted as money in for XIRR; shares and cost unchanged.
                       </p>
                     ) : tx.transaction_type === "DEMERGER_IN" ? (
                       <p className="mt-3 text-sm text-neutral-700 dark:text-neutral-300">
@@ -516,7 +523,7 @@ export default function StockDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {!tx.transaction_type.startsWith("DEMERGER") && (
+                    {!tx.transaction_type.startsWith("DEMERGER") && tx.transaction_type !== "DIVIDEND" && (
                     <button
                       onClick={() =>
                         setEditingTx({

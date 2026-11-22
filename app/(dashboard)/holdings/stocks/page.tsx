@@ -751,6 +751,14 @@ export default function StocksPage() {
               <Gift size={15} className="shrink-0" />
               <span>Demat Reconcile</span>
             </button>
+            {/* BUG-097: also for stocks already sold (no card to open it from); symbol is typed in the form */}
+            <button
+              onClick={() => setCorpActionStock({ symbol: "" })}
+              className="shrink-0 whitespace-nowrap px-3.5 py-2 sm:py-2.5 bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 rounded-xl text-neutral-700 dark:text-neutral-300 text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-neutral-50 dark:hover:bg-white/10 transition-colors"
+              title="Record a bonus, split, demerger or payout for any stock, including ones you have sold">
+              <Gift size={15} className="shrink-0" />
+              <span>Bonus, Split &amp; more</span>
+            </button>
             <button
               onClick={() => {
                 setShowStockModal(true);
@@ -1504,7 +1512,7 @@ export default function StocksPage() {
                   <button
                     onClick={() => setCorpActionStock(stock)}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-neutral-50 dark:bg-white/[0.04] text-[11px] font-medium text-neutral-600 dark:text-neutral-300 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-colors"
-                    title="Record a bonus, stock split, demerger or Demat balance fix">
+                    title="Record a bonus, stock split, demerger, payout or Demat balance fix">
                     <Gift size={14} /> Bonus, Split &amp; more
                   </button>
                   <button
@@ -2094,7 +2102,7 @@ export default function StocksPage() {
         onClose={() => setCorpActionStock(null)}
         initialSymbol={corpActionStock?.symbol || ""}
         currentHolding={
-          corpActionStock
+          corpActionStock?.quantity
             ? {
               quantity: corpActionStock.quantity,
               avg_price: corpActionStock.avg_price,
