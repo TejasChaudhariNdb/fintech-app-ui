@@ -846,7 +846,8 @@ export const api = {
       range,
       base_amount: String(baseAmount),
     });
-    if (profileId && profileId !== "all") {
+    // "all" must be sent too: with no profile_id the backend falls back to the default (Self) profile
+    if (profileId) {
       params.append("profile_id", profileId);
     }
     return api.fetch(`/portfolio/benchmark-growth?${params.toString()}`);
