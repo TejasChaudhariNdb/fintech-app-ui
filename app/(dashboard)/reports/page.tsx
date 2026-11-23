@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
+import InterestIncomeSection from "@/components/features/InterestIncomeSection";
 
 interface RecordItem {
   buy_tx_id?: number;
@@ -470,6 +471,8 @@ export default function ReportsPage() {
               </div>
             </div>
           </div>
+
+          <InterestIncomeSection financialYear={financialYear} />
 
           {/* Realized Capital Gain Transactions Preview Table */}
           <div className="bg-white dark:bg-[#0F1219] rounded-3xl border border-neutral-200/80 dark:border-white/5 overflow-hidden shadow-xs">

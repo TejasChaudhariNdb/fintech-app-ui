@@ -7,6 +7,7 @@ import { X, Check, Loader2, Calendar, Building2, IndianRupee } from "lucide-reac
 export interface InterestReceiptItemData {
   receipt_id?: number | null;
   holding_id: number;
+  source?: string; // FIXED_INCOME (default), SGB, INCOME
   due_date: string;
   reference: string;
   instrument_name: string;
@@ -28,6 +29,7 @@ interface InterestReceiptEditModalProps {
   onClose: () => void;
   onSave: (payload: {
     holding_id: number;
+    source?: string;
     due_date: string;
     is_received: boolean;
     actual_amount: number;
@@ -66,6 +68,7 @@ export default function InterestReceiptEditModal({
       setIsSaving(true);
       await onSave({
         holding_id: item.holding_id,
+        source: item.source,
         due_date: item.due_date,
         is_received: isReceived,
         actual_amount: parseFloat(actualAmount) || item.expected_amount,

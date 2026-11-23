@@ -35,6 +35,45 @@ export type AIQuotaStatus = {
   show_warning: boolean;
 };
 
+export type RegularIncomePayload = {
+  name: string;
+  income_type: "PENSION" | "SALARY" | "ANNUITY" | "OTHER";
+  amount: number;
+  frequency: "MONTHLY" | "QUARTERLY" | "HALF_YEARLY" | "ANNUALLY";
+  start_date: string;
+  end_date?: string | null;
+  is_taxable: boolean;
+  bank_account?: string | null;
+  notes?: string | null;
+  profile_id?: number | null;
+};
+
+export type RegularIncome = RegularIncomePayload & { id: number; owner: string };
+
+export type InterestIncomeSummary = {
+  financial_year: string;
+  schedule_fy: string; // fy value for downloadInterestScheduleCSV
+  total_taxable: number;
+  total_tax_free: number;
+  total_tds: number;
+  total_received: number;
+  total_not_yet_marked: number;
+  total_upcoming: number;
+  cumulative_fd_payouts_skipped: number;
+  instruments: {
+    source: string;
+    holding_id: number;
+    instrument_name: string;
+    institution: string;
+    owner: string;
+    tax_status: string;
+    interest: number;
+    tds: number;
+    payouts: number;
+    received_payouts: number;
+  }[];
+};
+
 export type SIPRecord = {
   id: number;
   user_id: number;
@@ -221,6 +260,7 @@ export const api = {
           "/equity/import",
           "/equity/holding",
           "/reports/capital-gains",
+          "/reports/interest-income",
           "/mf-gifts",
           "/portfolio/market-cap-allocation",
           "/insurance/policies",
@@ -625,6 +665,13 @@ export const api = {
     window.URL.revokeObjectURL(url);
   },
 
+  // BUG-095 follow-up: interest income (other sources) for the Tax page, built from the interest schedule.
+  getInterestIncome: (financialYear?: string): Promise<InterestIncomeSummary> => {
+    const params = new URLSearchParams();
+    if (financialYear) params.append("financial_year", financialYear);
+    return api.fetch(`/reports/interest-income?${params.toString()}`);
+  },
+
   getCapitalGainsSummary: (financialYear?: string, assetClass: string = "all") => {
     const params = new URLSearchParams();
     if (financialYear) params.append("financial_year", financialYear);
@@ -858,6 +905,7 @@ export const api = {
   },
   updateInterestReceipt: async (payload: {
     holding_id: number;
+    source?: string; // FIXED_INCOME (default), SGB, INCOME
     due_date: string;
     is_received: boolean;
     actual_amount?: number;
@@ -870,6 +918,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+    api.clearPortfolioCache();
+    return res;
+  },
+  // BUG-095: pension / salary / annuity shown in the interest schedule
+  getRegularIncome: () => api.fetch("/fixed-income/regular-income"),
+  saveRegularIncome: async (payload: RegularIncomePayload, id?: number) => {
+    const res = await api.fetch(id ? `/fixed-income/regular-income/${id}` : "/fixed-income/regular-income", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteRegularIncome: async (id: number) => {
+    const res = await api.fetch(`/fixed-income/regular-income/${id}`, { method: "DELETE" });
     api.clearPortfolioCache();
     return res;
   },
@@ -894,12 +957,31 @@ export const api = {
     return res.json();
   },
   getFixedIncomeTemplateUrl: () => `${API_URL}/fixed-income/template/csv`,
-  getInterestScheduleExportUrl: (fy?: string, profileId?: string) => {
+  // The export needs the Bearer token, so it is fetched and saved as a file (opening the URL in a tab got 401).
+  downloadInterestScheduleCSV: async (fy?: string, profileId?: string | null) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
     const searchParams = new URLSearchParams();
     if (profileId && profileId !== "all") searchParams.append("profile_id", profileId);
     if (fy) searchParams.append("fy", fy);
-    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
-    return `${API_URL}/fixed-income/export/interest-schedule${qs}`;
+    const res = await fetch(`${API_URL}/fixed-income/export/interest-schedule?${searchParams.toString()}`, {
+      headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+    });
+    if (!res.ok) {
+      if (res.status === 401) handleUnauthorized("/fixed-income/export/interest-schedule");
+      throw new Error("CSV export failed");
+    }
+    const disposition = res.headers.get("Content-Disposition");
+    const filename = disposition?.includes("filename=")
+      ? disposition.split("filename=")[1].replace(/"/g, "").trim()
+      : "interest_schedule.csv";
+    const url = window.URL.createObjectURL(await res.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   },
 
   // Insurance & Policy Vault

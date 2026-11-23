@@ -25,6 +25,7 @@ export interface FixedIncomeFormData {
   compounding_frequency: string;
   payout_frequency?: string;
   payout_bank_account?: string;
+  payout_date_basis?: "RELATIVE" | "FIXED"; // undefined = backend's usual rule for the type
   start_date: string;
   maturity_date?: string;
   maturity_amount?: number;
@@ -46,7 +47,7 @@ interface FixedIncomeFormProps {
 
 const PRESETS_BY_TYPE: Record<
   string,
-  { label: string; name: string; rate: number; freq?: string; tenureMonths?: number; is80C?: boolean }[]
+  { label: string; name: string; rate: number; freq?: string; payout?: string; tenureMonths?: number; is80C?: boolean }[]
 > = {
   BANK_FD: [
     { label: "SBI (6.8%)", name: "State Bank of India (SBI)", rate: 6.80, freq: "QUARTERLY", tenureMonths: 12 },
@@ -70,6 +71,8 @@ const PRESETS_BY_TYPE: Record<
     { label: "PO-SCSS: Senior (8.2%)", name: "Senior Citizen Savings (PO-SCSS)", rate: 8.20, freq: "QUARTERLY", tenureMonths: 60, is80C: true },
     { label: "NSC: 5-Yr (7.7%)", name: "National Savings Certificate (NSC)", rate: 7.70, freq: "ANNUALLY", tenureMonths: 60, is80C: true },
     { label: "KVP (7.5%)", name: "Kisan Vikas Patra (KVP)", rate: 7.50, freq: "ANNUALLY", tenureMonths: 115 },
+    // BUG-095: LIC-run pension scheme (closed to new investors 31 Mar 2023); 7.4% a year paid monthly for 10 years.
+    { label: "PMVVY: Monthly pension (7.4%)", name: "Pradhan Mantri Vaya Vandana Yojana (PMVVY)", rate: 7.40, freq: "MONTHLY", payout: "MONTHLY", tenureMonths: 120 },
   ],
   RBI_BOND: [
     { label: "RBI FRSB (8.05%)", name: "RBI Floating Rate Savings Bonds (FRSB)", rate: 8.05, freq: "HALF_YEARLY", tenureMonths: 84 },
@@ -182,6 +185,7 @@ export default function FixedIncomeForm({
   const [payoutFreq, setPayoutFreq] = useState<string>(
     initialData?.payout_frequency || "QUARTERLY"
   );
+  const [payoutBasis, setPayoutBasis] = useState<string>(initialData?.payout_date_basis || "");
   const [payoutBankAccount, setPayoutBankAccount] = useState<string>(
     initialData?.payout_bank_account || ""
   );
@@ -309,12 +313,14 @@ export default function FixedIncomeForm({
     name: string;
     rate: number;
     freq?: string;
+    payout?: string;
     tenureMonths?: number;
     is80C?: boolean;
   }) => {
     setInstitution(preset.name);
     setRateStr(String(preset.rate));
     if (preset.freq) setFrequency(preset.freq);
+    if (preset.payout) setPayoutFreq(preset.payout);
     if (preset.is80C !== undefined) setIsTaxSaving(preset.is80C);
     if (preset.tenureMonths && startDate) {
       const st = new Date(startDate);
@@ -406,6 +412,7 @@ export default function FixedIncomeForm({
         compounding_frequency: isPPF ? "ANNUALLY" : frequency,
         payout_frequency: isPPF ? "ANNUALLY" : payoutFreq,
         payout_bank_account: payoutBankAccount.trim() || undefined,
+        payout_date_basis: (payoutBasis || undefined) as FixedIncomeFormData["payout_date_basis"],
         start_date: startDate,
         maturity_date: maturityDate,
         maturity_amount: Math.round(maturityVal * 100) / 100,
@@ -796,6 +803,26 @@ export default function FixedIncomeForm({
             <option value="AT_MATURITY">At Maturity (Cumulative FD)</option>
           </select>
         </div>
+
+        {!isPPF && payoutFreq !== "AT_MATURITY" && (
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+              Interest Paid On
+            </label>
+            <select
+              value={payoutBasis}
+              onChange={(e) => setPayoutBasis(e.target.value)}
+              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-semibold text-neutral-900 dark:text-white outline-none"
+            >
+              <option value="">Usual for this type</option>
+              <option value="RELATIVE">Same day as my investment (e.g. bank FD, PO-MIS)</option>
+              <option value="FIXED">Fixed dates: 1 Apr/Jul/Oct/Jan, RBI 1 Jan/Jul, yearly 31 Mar</option>
+            </select>
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+              Usual: RBI bonds, SCSS and corporate FDs pay on fixed dates (first payment pro-rata); bank FDs and PO-MIS on your investment day.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── CREDITING BANK ACCOUNT ── */}
