@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   Info,
   AlertCircle,
+  Umbrella,
 } from "lucide-react";
 import {
   NetWorthAssetPreferences,
@@ -32,6 +33,7 @@ interface CustomizeAssetsModalProps {
     fixed_income?: number;
     gold?: number;
     real_estate?: number;
+    ulip?: number;
     insurance_cover?: number;
   };
 }
@@ -117,6 +119,19 @@ const ASSET_OPTIONS: AssetOption[] = [
     isCoreWealth: true,
   },
   {
+    key: "ulip",
+    label: "ULIPs",
+    description: "Fund value of unit-linked insurance plans (units × NAV)",
+    icon: Umbrella,
+    colorClass: {
+      bg: "bg-violet-500/10 dark:bg-violet-500/15",
+      text: "text-violet-600 dark:text-violet-400",
+      border: "border-violet-500/20",
+      badgeBg: "bg-violet-500",
+    },
+    isCoreWealth: true,
+  },
+  {
     key: "show_insurance_cover",
     label: "Family Insurance Cover",
     description: "Display term life & health sum assured in family protection cards",
@@ -161,6 +176,7 @@ export default function CustomizeAssetsModal({
     if (localPrefs.fixed_income) total += values.fixed_income || 0;
     if (localPrefs.gold) total += values.gold || 0;
     if (localPrefs.real_estate) total += values.real_estate || 0;
+    if (localPrefs.ulip) total += values.ulip || 0;
     return total;
   }, [localPrefs, values]);
 
@@ -188,6 +204,7 @@ export default function CustomizeAssetsModal({
         fixed_income: true,
         gold: true,
         real_estate: true,
+        ulip: true,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     } else if (preset === "liquid") {
@@ -197,6 +214,7 @@ export default function CustomizeAssetsModal({
         fixed_income: false,
         gold: false,
         real_estate: false,
+        ulip: false,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     } else if (preset === "financial") {
@@ -206,6 +224,7 @@ export default function CustomizeAssetsModal({
         fixed_income: true,
         gold: true,
         real_estate: false,
+        ulip: true,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     }
@@ -252,12 +271,13 @@ export default function CustomizeAssetsModal({
                 localPrefs.stocks &&
                 localPrefs.fixed_income &&
                 localPrefs.gold &&
-                localPrefs.real_estate
+                localPrefs.real_estate &&
+                localPrefs.ulip
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
             >
-              All Assets (5/5)
+              All Assets (6/6)
             </button>
 
             <button
@@ -268,7 +288,8 @@ export default function CustomizeAssetsModal({
                 localPrefs.stocks &&
                 !localPrefs.fixed_income &&
                 !localPrefs.gold &&
-                !localPrefs.real_estate
+                !localPrefs.real_estate &&
+                !localPrefs.ulip
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
@@ -284,7 +305,8 @@ export default function CustomizeAssetsModal({
                 localPrefs.stocks &&
                 localPrefs.fixed_income &&
                 localPrefs.gold &&
-                !localPrefs.real_estate
+                !localPrefs.real_estate &&
+                localPrefs.ulip
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
@@ -305,7 +327,7 @@ export default function CustomizeAssetsModal({
                 {formatRupee(previewNetWorth)}
               </p>
               <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Aggregating {activeCoreCount} of 5 core wealth categories
+                Aggregating {activeCoreCount} of {countActiveAssets(localPrefs).total} core wealth categories
               </span>
             </div>
             <button
@@ -348,6 +370,8 @@ export default function CustomizeAssetsModal({
                   ? "gold"
                   : opt.key === "real_estate"
                   ? "real_estate"
+                  : opt.key === "ulip"
+                  ? "ulip"
                   : "insurance_cover";
               const assetVal = values ? values[valKey] : undefined;
 

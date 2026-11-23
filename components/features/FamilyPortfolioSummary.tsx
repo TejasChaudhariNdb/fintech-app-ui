@@ -17,18 +17,21 @@ interface ProfileBreakdown {
   fixed_income_value?: number;
   gold_value?: number;
   real_estate_value?: number;
+  ulip_value?: number;
   total_value: number;
   mf_invested?: number;
   stock_invested?: number;
   fi_invested?: number;
   gold_invested?: number;
   re_invested?: number;
+  ulip_invested?: number;
   total_invested?: number;
   mf_gain?: number;
   stock_gain?: number;
   fi_gain?: number;
   gold_gain?: number;
   re_gain?: number;
+  ulip_gain?: number;
   total_gain?: number;
   return_pct?: number;
   day_change?: number;
@@ -68,16 +71,19 @@ interface FamilyPortfolioSummaryProps {
   fiProfit?: number;
   goldProfit?: number;
   reProfit?: number;
+  ulipProfit?: number;
   mfInvested?: number;
   stockInvested?: number;
   fiInvested?: number;
   goldInvested?: number;
   reInvested?: number;
+  ulipInvested?: number;
   mfCurrent?: number;
   stockCurrent?: number;
   fiCurrent?: number;
   goldCurrent?: number;
   reCurrent?: number;
+  ulipCurrent?: number;
   profileBreakdown?: ProfileBreakdown[];
   assetPrefs?: NetWorthAssetPreferences;
 }
@@ -125,6 +131,7 @@ function ProfileCard({
   const showFi = assetPrefs?.fixed_income ?? true;
   const showGold = assetPrefs?.gold ?? true;
   const showRe = assetPrefs?.real_estate ?? true;
+  const showUlip = assetPrefs?.ulip ?? true;
 
   const mfValue       = Number(p.mutual_fund_value) || 0;
   const stockValue    = Number(p.stock_value)    || 0;
@@ -147,6 +154,10 @@ function ProfileCard({
   const fiReturnPct   = fiInvested > 0 ? (fiGain / fiInvested) * 100 : 0;
   const goldReturnPct = goldInvested > 0 ? (goldGain / goldInvested) * 100 : 0;
   const reReturnPct   = reInvested > 0 ? (reGain / reInvested) * 100 : 0;
+  const ulipValue     = Number(p.ulip_value)    || 0;
+  const ulipInvested  = Number(p.ulip_invested) || 0;
+  const ulipGain      = isFinite(Number(p.ulip_gain)) ? Number(p.ulip_gain) : (ulipValue - ulipInvested);
+  const ulipReturnPct = ulipInvested > 0 ? (ulipGain / ulipInvested) * 100 : 0;
 
   // Dynamically calculate effective totals for this profile based on active asset preferences
   let totalValue = 0;
@@ -171,6 +182,10 @@ function ProfileCard({
     totalValue += reValue;
     totalInvested += reInvested;
   }
+  if (showUlip) {
+    totalValue += ulipValue;
+    totalInvested += ulipInvested;
+  }
   const totalGain = totalValue - totalInvested;
   const returnPct = isFinite(Number(p.return_pct)) ? Number(p.return_pct) : (totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0);
 
@@ -179,7 +194,8 @@ function ProfileCard({
   const hasFi    = showFi && (fiValue > 0 || fiInvested > 0);
   const hasGold  = showGold && (goldValue > 0 || goldInvested > 0);
   const hasRe    = showRe && (reValue > 0 || reInvested > 0);
-  const hasAnyAlternative = hasFi || hasGold || hasRe;
+  const hasUlip  = showUlip && ulipValue > 0;
+  const hasAnyAlternative = hasFi || hasGold || hasRe || hasUlip;
 
   const dayChangePctToDisplay = p.day_change_pct !== undefined ? p.day_change_pct : returnPct;
   const isHeaderDayPositive = dayChangePctToDisplay >= 0;
@@ -587,6 +603,43 @@ function ProfileCard({
                 </div>
               </div>
             )}
+            {/* BUG-106 */}
+            {(showUlip && hasUlip) && (
+              <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                    <span className="text-[11px] sm:text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">ULIPs</span>
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-neutral-400 dark:text-neutral-500">Fund Value</span>
+                      <PrivacyMask>
+                        <span className="font-bold text-neutral-900 dark:text-white tabular-nums">₹{fmt(ulipValue)}</span>
+                      </PrivacyMask>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-neutral-400 dark:text-neutral-500">Premiums Paid</span>
+                      <PrivacyMask blurStrength="sm">
+                        <span className="font-medium text-neutral-600 dark:text-neutral-400 tabular-nums">₹{fmt(ulipInvested)}</span>
+                      </PrivacyMask>
+                    </div>
+                    <div className="flex justify-between items-center pt-1.5 border-t border-neutral-100 dark:border-white/5">
+                      <span className="text-neutral-400 dark:text-neutral-500 font-medium">Gain / Loss</span>
+                      <PrivacyMask>
+                        <span className={`font-bold tabular-nums ${ulipGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                          {ulipGain >= 0 ? "+" : ""}₹{fmt(ulipGain)}
+                        </span>
+                      </PrivacyMask>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-neutral-200/60 dark:border-white/10 flex items-center justify-between text-[10px]">
+                  <span className="text-neutral-400 dark:text-neutral-500">Return %</span>
+                  <span className={`font-bold tabular-nums ${ulipReturnPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>{ulipReturnPct >= 0 ? "+" : "-"}{fmtPct(ulipReturnPct)}%</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Overall Gain/Loss bar */}
@@ -631,16 +684,19 @@ export default function FamilyPortfolioSummary({
   fiProfit = 0,
   goldProfit = 0,
   reProfit = 0,
+  ulipProfit = 0,
   mfInvested = 0,
   stockInvested = 0,
   fiInvested = 0,
   goldInvested = 0,
   reInvested = 0,
+  ulipInvested = 0,
   mfCurrent,
   stockCurrent,
   fiCurrent,
   goldCurrent,
   reCurrent,
+  ulipCurrent,
   mfDayChange,
   mfDayChangePct,
   stockDayChange,
@@ -659,6 +715,7 @@ export default function FamilyPortfolioSummary({
   const showFi = assetPrefs?.fixed_income ?? true;
   const showGold = assetPrefs?.gold ?? true;
   const showRe = assetPrefs?.real_estate ?? true;
+  const showUlip = assetPrefs?.ulip ?? true;
 
   const mfCurrentVal = mfCurrent ?? (mfInvested + mfProfit);
   const stockCurrentVal = stockCurrent ?? (stockInvested + stockProfit);
@@ -671,6 +728,8 @@ export default function FamilyPortfolioSummary({
   const fiReturnPct = fiInvested > 0 ? (fiProfit / fiInvested) * 100 : 0;
   const goldReturnPct = goldInvested > 0 ? (goldProfit / goldInvested) * 100 : 0;
   const reReturnPct = reInvested > 0 ? (reProfit / reInvested) * 100 : 0;
+  const ulipCurrentVal = ulipCurrent ?? (ulipInvested + ulipProfit);
+  const ulipReturnPct = ulipInvested > 0 ? (ulipProfit / ulipInvested) * 100 : 0;
 
   return (
     <Card className="p-5 sm:p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -764,6 +823,18 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
+              {/* BUG-106 */}
+              {showUlip && ulipInvested > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                    ULIPs
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(ulipInvested)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -842,6 +913,18 @@ export default function FamilyPortfolioSummary({
                   </span>
                   <PrivacyMask>
                     <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(reCurrentVal)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {/* BUG-106 */}
+              {showUlip && ulipCurrentVal > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                    ULIPs
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(ulipCurrentVal)}</span>
                   </PrivacyMask>
                 </div>
               )}
@@ -1032,6 +1115,25 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                   <span className={`text-xs ${reProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
                     ({reProfit >= 0 ? "+" : ""}{fmtPct(reReturnPct)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+            {/* BUG-106 */}
+            {showUlip && (ulipProfit !== 0 || ulipInvested > 0) && (
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                  ULIPs
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask blurStrength="sm">
+                    <span className={`font-semibold ${ulipProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {ulipProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(ulipProfit))}
+                    </span>
+                  </PrivacyMask>
+                  <span className={`text-xs ${ulipProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                    ({ulipProfit >= 0 ? "+" : ""}{fmtPct(ulipReturnPct)}%)
                   </span>
                 </div>
               </div>
