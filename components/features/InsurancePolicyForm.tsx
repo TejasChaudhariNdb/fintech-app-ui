@@ -32,6 +32,10 @@ export interface InsurancePolicyFormData {
   status?: string;
   notes?: string;
   profile_id?: number;
+  /** BUG-106 ULIP: last premium date for limited-pay plans; null clears it */
+  premium_paid_until?: string | null;
+  /** BUG-106 ULIP: total premiums actually paid, when it differs from the schedule; null clears it */
+  premiums_paid_override?: number | null;
 }
 
 interface InsurancePolicyFormProps {
@@ -110,6 +114,11 @@ export default function InsurancePolicyForm({
     initialData?.nominee_name || ""
   );
   const [notes, setNotes] = useState<string>(initialData?.notes || "");
+  const [paidUntil, setPaidUntil] = useState<string>(initialData?.premium_paid_until || "");
+  const [paidOverrideStr, setPaidOverrideStr] = useState<string>(
+    initialData?.premiums_paid_override ? String(initialData.premiums_paid_override) : ""
+  );
+  const isUlip = policyType === "ULIP_ENDOWMENT";
   const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
     if (initialData?.profile_id) return String(initialData.profile_id);
     if (activeProfileId && activeProfileId !== "all") return activeProfileId;
@@ -180,6 +189,8 @@ export default function InsurancePolicyForm({
         status: initialData?.status || "ACTIVE",
         notes: notes.trim() || undefined,
         profile_id: resolvedProfileId || undefined,
+        premium_paid_until: isUlip && paidUntil ? paidUntil : null,
+        premiums_paid_override: isUlip && parseFloat(paidOverrideStr) > 0 ? parseFloat(paidOverrideStr) : null,
       });
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to save insurance policy.");
@@ -343,7 +354,7 @@ export default function InsurancePolicyForm({
 
         <div>
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Annual Premium (₹) <span className="text-red-500">*</span>
+            {frequency === "SINGLE" ? "Single Premium" : "Annual Premium"} (₹) <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-400">
@@ -363,7 +374,8 @@ export default function InsurancePolicyForm({
 
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[10px] text-neutral-400 uppercase font-semibold">Frequency:</span>
-            {["ANNUAL", "HALF_YEARLY", "MONTHLY"].map((f) => (
+            {/* Many ULIPs are bought with one single premium */}
+            {(isUlip ? ["SINGLE", "ANNUAL", "HALF_YEARLY", "MONTHLY"] : ["ANNUAL", "HALF_YEARLY", "MONTHLY"]).map((f) => (
               <button
                 key={f}
                 type="button"
@@ -418,6 +430,44 @@ export default function InsurancePolicyForm({
           />
         </div>
       </div>
+
+      {/* ── ULIP: PREMIUMS PAID (for fund gain / XIRR) ── */}
+      {isUlip && frequency !== "SINGLE" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+              Premiums Paid Until (Optional)
+            </label>
+            <DatePicker
+              value={paidUntil}
+              clearable
+              onChange={(v) => setPaidUntil(v)}
+              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
+            />
+            <p className="text-[10px] text-neutral-400 mt-1">
+              Date of the last premium for limited-pay plans (e.g. pay 5 years, cover 10). Leave empty if you still pay.
+            </p>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+              Total Premiums Paid (Optional)
+            </label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              inputMode="decimal"
+              placeholder="Worked out from the premium and dates"
+              value={paidOverrideStr}
+              onChange={(e) => setPaidOverrideStr(e.target.value)}
+              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none tabular-nums placeholder:text-neutral-400"
+            />
+            <p className="text-[10px] text-neutral-400 mt-1">
+              Only if it differs, e.g. the premium changed or top-ups were made.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── POLICY NUMBER & NOMINEE ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

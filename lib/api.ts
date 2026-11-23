@@ -1089,6 +1089,18 @@ export const api = {
     api.clearPortfolioCache();
     return res;
   },
+  // BUG-106: replace the funds a ULIP holds (units x NAV)
+  setUlipFunds: async (
+    policyId: number,
+    funds: { fund_name: string; units: number; nav: number; nav_date?: string | null }[]
+  ) => {
+    const res = await api.fetch(`/insurance/policies/${policyId}/funds`, {
+      method: "PUT",
+      body: JSON.stringify({ funds }),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
   deleteInsurancePolicy: async (id: number) => {
     const res = await api.fetch(`/insurance/policies/${id}`, {
       method: "DELETE",

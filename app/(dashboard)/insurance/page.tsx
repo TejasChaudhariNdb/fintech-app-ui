@@ -8,6 +8,8 @@ import Card from "@/components/ui/Card";
 import PrivacyMask from "@/components/ui/PrivacyMask";
 import InsurancePolicyModal from "@/components/features/InsurancePolicyModal";
 import { InsurancePolicyFormData } from "@/components/features/InsurancePolicyForm";
+import UlipFundsModal, { UlipFundRow } from "@/components/features/UlipFundsModal";
+import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 import {
   Shield,
   ShieldCheck,
@@ -26,7 +28,31 @@ import {
   Sparkles,
   User,
   CheckCircle2,
+  TrendingUp,
 } from "lucide-react";
+
+// BUG-106: a ULIP's funds and returns (null until funds are entered)
+interface UlipReturns {
+  funds: (UlipFundRow & { id: number; value: number })[];
+  fund_value: number;
+  premiums_paid: number;
+  premiums_count: number;
+  gain: number;
+  return_pct: number | null;
+  xirr: number | null;
+  held_under_one_year: boolean;
+  nav_date: string | null;
+  counts_as_investment: boolean;
+}
+
+interface UlipTotals {
+  count: number;
+  fund_value: number;
+  premiums_paid: number;
+  gain: number;
+  return_pct: number | null;
+  xirr: number | null;
+}
 
 interface InsurancePolicyItem {
   id: number;
@@ -51,6 +77,9 @@ interface InsurancePolicyItem {
   status: string;
   notes?: string | null;
   created_at?: string | null;
+  premium_paid_until?: string | null;
+  premiums_paid_override?: number | null;
+  ulip?: UlipReturns | null;
 }
 
 interface InsuranceSummary {
@@ -62,6 +91,11 @@ interface InsuranceSummary {
   renewal_due_count: number;
   renewal_due_premium: number;
   type_counts: Record<string, number>;
+  ulip?: UlipTotals;
+}
+
+function signedINR(v: number): string {
+  return `${v >= 0 ? "+" : "-"}₹${Math.abs(Math.round(v)).toLocaleString("en-IN")}`;
 }
 
 function formatINRShort(val: number): string {
@@ -105,6 +139,7 @@ export default function InsuranceVaultPage() {
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InsurancePolicyItem | null>(null);
+  const [fundsItem, setFundsItem] = useState<InsurancePolicyItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -163,6 +198,13 @@ export default function InsuranceVaultPage() {
       await api.addInsurancePolicy(payload as any);
       showToast("Policy added successfully");
     }
+    await loadData();
+  };
+
+  const handleSaveFunds = async (funds: UlipFundRow[]) => {
+    if (!fundsItem) return;
+    await api.setUlipFunds(fundsItem.id, funds);
+    showToast(funds.length ? "ULIP funds updated" : "ULIP funds removed");
     await loadData();
   };
 
@@ -315,6 +357,48 @@ export default function InsuranceVaultPage() {
           </div>
         </Card>
       </div>
+
+      {/* ── ULIP INVESTMENTS (BUG-106) ── */}
+      {summary?.ulip && summary.ulip.count > 0 && (
+        <Card className="p-4 sm:p-5">
+          <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mb-2 flex items-center gap-1">
+            <TrendingUp size={14} className="text-emerald-500" />
+            <span>ULIP Investments ({summary.ulip.count})</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Fund Value</div>
+              <div className="text-base sm:text-xl font-black text-neutral-900 dark:text-white tabular-nums">
+                <PrivacyMask>{formatINRShort(summary.ulip.fund_value)}</PrivacyMask>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Premiums Paid</div>
+              <div className="text-base sm:text-xl font-bold text-neutral-700 dark:text-neutral-200 tabular-nums">
+                <PrivacyMask>{formatINRShort(summary.ulip.premiums_paid)}</PrivacyMask>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Gain</div>
+              <div className={`text-base sm:text-xl font-bold tabular-nums ${summary.ulip.gain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                <PrivacyMask>{signedINR(summary.ulip.gain)}</PrivacyMask>
+                {summary.ulip.return_pct !== null && (
+                  <span className="text-xs font-semibold ml-1">({summary.ulip.return_pct >= 0 ? "+" : ""}{summary.ulip.return_pct.toFixed(2)}%)</span>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">XIRR</div>
+              <div className={`text-base sm:text-xl font-bold tabular-nums ${(summary.ulip.xirr ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {summary.ulip.xirr !== null ? `${summary.ulip.xirr.toFixed(2)}%` : "--"}
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-neutral-400 mt-2">
+            Premiums include the insurer&apos;s charges, so XIRR is your real return on the money paid.
+          </p>
+        </Card>
+      )}
 
       {/* ── FILTER TABS ── */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -502,6 +586,82 @@ export default function InsuranceVaultPage() {
                   </div>
                 </div>
 
+                {item.policy_type === "ULIP_ENDOWMENT" && (() => {
+                  const u = item.ulip;
+                  if (!u) {
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setFundsItem(item)}
+                        className="mt-3 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-500/40 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+                      >
+                        <Plus size={14} /> Add fund units &amp; NAV to track its value
+                      </button>
+                    );
+                  }
+                  const short = u.held_under_one_year;
+                  const x = rateToShow(u.xirr, u.return_pct, short);
+                  return (
+                    <div className="mt-3 rounded-2xl bg-neutral-50 dark:bg-white/[0.03] p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">
+                          Fund value{u.nav_date ? ` · NAV ${formatDatePretty(u.nav_date)}` : ""}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setFundsItem(item)}
+                          className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                        >
+                          Update funds
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <div>
+                          <div className="text-[10px] text-neutral-400">Value</div>
+                          <div className="text-sm font-black text-neutral-900 dark:text-white tabular-nums">
+                            <PrivacyMask>₹{Math.round(u.fund_value).toLocaleString("en-IN")}</PrivacyMask>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-neutral-400">Paid ({u.premiums_count})</div>
+                          <div className="text-sm font-bold text-neutral-700 dark:text-neutral-200 tabular-nums">
+                            <PrivacyMask>₹{Math.round(u.premiums_paid).toLocaleString("en-IN")}</PrivacyMask>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-neutral-400">Gain</div>
+                          <div className={`text-sm font-bold tabular-nums ${u.gain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                            <PrivacyMask>{signedINR(u.gain)}</PrivacyMask>
+                          </div>
+                        </div>
+                        <div title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
+                          <div className="text-[10px] text-neutral-400">{rateLabel("XIRR", short)}</div>
+                          <div className={`text-sm font-bold tabular-nums ${(x ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                            {x !== null ? `${x.toFixed(2)}%` : "--"}
+                          </div>
+                        </div>
+                      </div>
+                      {u.funds.length > 1 && (
+                        <div className="text-[11px] text-neutral-500 space-y-0.5">
+                          {u.funds.map((f) => (
+                            <div key={f.id} className="flex justify-between gap-2">
+                              <span className="truncate">{f.fund_name}</span>
+                              <span className="tabular-nums shrink-0">
+                                <PrivacyMask>₹{Math.round(f.value).toLocaleString("en-IN")}</PrivacyMask>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!u.counts_as_investment && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                          {item.status.toLowerCase()} policy: not counted in the ULIP total.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {item.notes && (
                   <p className="text-[11px] text-neutral-400 italic pt-2.5 truncate">
                     Notes: {item.notes}
@@ -536,9 +696,19 @@ export default function InsuranceVaultPage() {
                 status: editingItem.status,
                 notes: editingItem.notes || undefined,
                 profile_id: editingItem.profile_id,
+                premium_paid_until: editingItem.premium_paid_until ?? null,
+                premiums_paid_override: editingItem.premiums_paid_override ?? null,
               }
             : null
         }
+      />
+
+      <UlipFundsModal
+        isOpen={!!fundsItem}
+        onClose={() => setFundsItem(null)}
+        policyName={fundsItem?.policy_name || ""}
+        initialFunds={fundsItem?.ulip?.funds || []}
+        onSave={handleSaveFunds}
       />
 
       {/* ── FLOATING TOAST NOTIFICATION ── */}
