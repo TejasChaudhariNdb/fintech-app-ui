@@ -25,7 +25,7 @@ interface SchemeCardProps {
   returnPct: number;
   xirr?: number | null;
   cagr?: number | null;
-  /** BUG-072: first purchase under a year ago -> show the plain return in XIRR and CAGR. */
+  /** BUG-072: first purchase under a year ago -> show the plain return in XIRR. */
   heldUnderOneYear?: boolean;
   dayChange?: number;
   dayChangePct?: number;
