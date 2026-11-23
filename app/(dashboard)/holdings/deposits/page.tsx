@@ -26,6 +26,7 @@ import {
   Clock,
   Sparkles,
   Download,
+  Receipt,
   Search,
   LayoutGrid,
   ListFilter,
@@ -222,6 +223,15 @@ export default function FixedIncomePage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Tax report: interest per FY for the ITR (like the Stocks / MF capital gains download).
+  const taxFyOptions = useMemo(() => {
+    const now = new Date();
+    const end = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+    return [0, 1, 2, 3].map((i) => `${end - i}-${String(end - i + 1).slice(2)}`);
+  }, []);
+  // April to July is filing season for the year just ended.
+  const [taxFy, setTaxFy] = useState(() => taxFyOptions[new Date().getMonth() + 1 >= 4 && new Date().getMonth() + 1 <= 7 ? 1 : 0]);
+  const [downloadingTax, setDownloadingTax] = useState(false);
 
   // View & Filter states
   const [viewMode, setViewMode] = useState<ViewMode>("GRID");
@@ -591,6 +601,38 @@ export default function FixedIncomePage() {
             <Download size={14} className="text-neutral-500 dark:text-neutral-400" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
+
+          <div className="flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 shadow-2xs">
+            <select
+              value={taxFy}
+              onChange={(e) => setTaxFy(e.target.value)}
+              aria-label="Financial year for the tax report"
+              className="bg-transparent border-none text-neutral-700 dark:text-neutral-200 text-xs font-semibold outline-none py-1"
+            >
+              {taxFyOptions.map((fy) => (
+                <option key={fy} value={fy} className="dark:bg-surface text-neutral-900 dark:text-white">FY {fy}</option>
+              ))}
+            </select>
+            <button
+              onClick={async () => {
+                setDownloadingTax(true);
+                try {
+                  await api.downloadInterestScheduleCSV(`FY ${taxFy}`, activeProfileId);
+                  showToast(`Interest for FY ${taxFy} downloaded`);
+                } catch {
+                  showToast("Could not download the tax report");
+                } finally {
+                  setDownloadingTax(false);
+                }
+              }}
+              disabled={downloadingTax}
+              title="Download interest income for this FY: each payout with tax status, amount received and TDS (for your ITR)"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer disabled:opacity-60"
+            >
+              {downloadingTax ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} className="text-emerald-600 dark:text-emerald-400" />}
+              <span className="hidden sm:inline">Tax report</span>
+            </button>
+          </div>
 
           <button
             onClick={handleRefresh}
