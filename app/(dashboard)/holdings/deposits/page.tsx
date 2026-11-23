@@ -10,6 +10,7 @@ import FixedIncomeModal from "@/components/features/FixedIncomeModal";
 import { FixedIncomeFormData } from "@/components/features/FixedIncomeForm";
 import DebtBulkUploadModal from "@/components/features/DebtBulkUploadModal";
 import InterestReceiptEditModal, { InterestReceiptItemData } from "@/components/features/InterestReceiptEditModal";
+import RegularIncomePanel from "@/components/features/RegularIncomePanel";
 import {
   Building2,
   Plus,
@@ -25,6 +26,7 @@ import {
   Clock,
   Sparkles,
   Download,
+  Receipt,
   Search,
   LayoutGrid,
   ListFilter,
@@ -110,6 +112,7 @@ interface SummaryData {
 interface InterestScheduleItem {
   receipt_id?: number | null;
   holding_id: number;
+  source?: "FIXED_INCOME" | "SGB" | "INCOME";
   due_date: string;
   reference: string;
   instrument_name: string;
@@ -119,8 +122,8 @@ interface InterestScheduleItem {
   profile_id?: number;
   tax_status: string;
   payout_frequency: string;
-  principal_amount: number;
-  interest_rate_pct: number;
+  principal_amount: number | null;
+  interest_rate_pct: number | null;
   expected_amount: number;
   is_received: boolean;
   actual_amount?: number | null;
@@ -220,6 +223,15 @@ export default function FixedIncomePage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Tax report: interest per FY for the ITR (like the Stocks / MF capital gains download).
+  const taxFyOptions = useMemo(() => {
+    const now = new Date();
+    const end = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+    return [0, 1, 2, 3].map((i) => `${end - i}-${String(end - i + 1).slice(2)}`);
+  }, []);
+  // April to July is filing season for the year just ended.
+  const [taxFy, setTaxFy] = useState(() => taxFyOptions[new Date().getMonth() + 1 >= 4 && new Date().getMonth() + 1 <= 7 ? 1 : 0]);
+  const [downloadingTax, setDownloadingTax] = useState(false);
 
   // View & Filter states
   const [viewMode, setViewMode] = useState<ViewMode>("GRID");
@@ -294,6 +306,7 @@ export default function FixedIncomePage() {
     loadScheduleData();
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      if (params.get("view") === "schedule") setViewMode("SCHEDULE"); // linked from the Tax page
       if (params.get("added") === "true") {
         showToast("Deposit holding saved successfully");
         const newUrl = window.location.pathname;
@@ -316,7 +329,7 @@ export default function FixedIncomePage() {
     setScheduleData((prev) => {
       if (!prev) return prev;
       const updated = prev.items.map((it) => {
-        if (it.holding_id === item.holding_id && it.due_date === item.due_date) {
+        if (it.source === item.source && it.holding_id === item.holding_id && it.due_date === item.due_date) {
           return {
             ...it,
             is_received: nextReceived,
@@ -345,6 +358,7 @@ export default function FixedIncomePage() {
     try {
       await api.updateInterestReceipt({
         holding_id: item.holding_id,
+        source: item.source,
         due_date: item.due_date,
         is_received: nextReceived,
         actual_amount: nextReceived ? (item.actual_amount ?? item.expected_amount) : undefined,
@@ -364,6 +378,7 @@ export default function FixedIncomePage() {
     setEditingReceipt({
       receipt_id: item.receipt_id,
       holding_id: item.holding_id,
+      source: item.source,
       due_date: item.due_date,
       reference: item.reference,
       instrument_name: item.instrument_name,
@@ -383,6 +398,7 @@ export default function FixedIncomePage() {
 
   const handleSaveReceiptDetails = async (payload: {
     holding_id: number;
+    source?: string;
     due_date: string;
     is_received: boolean;
     actual_amount: number;
@@ -397,7 +413,7 @@ export default function FixedIncomePage() {
   };
 
   const exportScheduleCSV = () => {
-    window.open(api.getInterestScheduleExportUrl(selectedFy, activeProfileId), "_blank");
+    api.downloadInterestScheduleCSV(selectedFy, activeProfileId).catch(() => showToast("Could not download the CSV"));
   };
 
   const handleOpenAdd = () => {
@@ -585,6 +601,38 @@ export default function FixedIncomePage() {
             <Download size={14} className="text-neutral-500 dark:text-neutral-400" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
+
+          <div className="flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-xl bg-white dark:bg-white/5 border border-neutral-200 dark:border-white/10 shadow-2xs">
+            <select
+              value={taxFy}
+              onChange={(e) => setTaxFy(e.target.value)}
+              aria-label="Financial year for the tax report"
+              className="bg-transparent border-none text-neutral-700 dark:text-neutral-200 text-xs font-semibold outline-none py-1"
+            >
+              {taxFyOptions.map((fy) => (
+                <option key={fy} value={fy} className="dark:bg-surface text-neutral-900 dark:text-white">FY {fy}</option>
+              ))}
+            </select>
+            <button
+              onClick={async () => {
+                setDownloadingTax(true);
+                try {
+                  await api.downloadInterestScheduleCSV(`FY ${taxFy}`, activeProfileId);
+                  showToast(`Interest for FY ${taxFy} downloaded`);
+                } catch {
+                  showToast("Could not download the tax report");
+                } finally {
+                  setDownloadingTax(false);
+                }
+              }}
+              disabled={downloadingTax}
+              title="Download interest income for this FY: each payout with tax status, amount received and TDS (for your ITR)"
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer disabled:opacity-60"
+            >
+              {downloadingTax ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} className="text-emerald-600 dark:text-emerald-400" />}
+              <span className="hidden sm:inline">Tax report</span>
+            </button>
+          </div>
 
           <button
             onClick={handleRefresh}
@@ -892,6 +940,8 @@ export default function FixedIncomePage() {
       ) : viewMode === "SCHEDULE" ? (
         /* ── INTEREST CASH FLOW SCHEDULE (Feedback #83 / #1824 - Sreekanth P) ── */
         <div className="space-y-4">
+          <RegularIncomePanel onChanged={() => loadScheduleData(selectedFy, scheduleStatusFilter)} />
+
           {/* Controls Bar: FY Selector + Status Pills + Export */}
           <div className="bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/10 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1038,7 +1088,7 @@ export default function FixedIncomePage() {
                   No interest receipts found for {selectedFy || "this period"}
                 </p>
                 <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                  Add a fixed deposit, SCSS, or corporate bond with periodic payout frequency (Monthly, Quarterly, Half-Yearly) to see projected receipts.
+                  Add a fixed deposit, SCSS, PMVVY or bond with a periodic payout, an SGB under Gold, or a pension / salary above to see projected receipts.
                 </p>
               </div>
             ) : (
@@ -1066,7 +1116,7 @@ export default function FixedIncomePage() {
                     {scheduleData.items.map((it, idx) => {
                       return (
                         <tr
-                          key={`${it.holding_id}_${it.due_date}_${idx}`}
+                          key={`${it.source}_${it.holding_id}_${it.due_date}_${idx}`}
                           className={`hover:bg-neutral-50/80 dark:hover:bg-white/5 transition-colors ${
                             it.is_received ? "bg-emerald-50/20 dark:bg-emerald-950/10" : ""
                           }`}
@@ -1636,6 +1686,7 @@ export default function FixedIncomePage() {
                 compounding_frequency: editingItem.compounding_frequency,
                 payout_frequency: (editingItem as any).payout_frequency,
                 payout_bank_account: (editingItem as any).payout_bank_account,
+                payout_date_basis: (editingItem as any).payout_date_basis,
                 start_date: editingItem.start_date,
                 maturity_date: editingItem.maturity_date,
                 maturity_amount: editingItem.maturity_amount,

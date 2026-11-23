@@ -283,31 +283,8 @@ export default function MutualFundsPage() {
   const handleDownloadTaxReport = async () => {
     setIsDownloadingReport(true);
     try {
-      const token = localStorage.getItem("access_token");
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      if (activeProfileId) {
-        headers["x-profile-id"] = String(activeProfileId);
-      }
-      
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const res = await fetch(`${API_URL}/api/reports/capital-gains/csv?financial_year=${selectedFy}`, {
-        headers
-      });
-      
-      if (!res.ok) throw new Error("Failed to download tax report");
-      
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `capital_gains_report_${selectedFy}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      // Was fetch(`${API_URL}/api/reports/...`): no /api prefix on the backend, so it always failed.
+      await api.downloadCapitalGainsCSV(selectedFy, "mutual_fund", "summary");
       showToast("Tax report downloaded successfully", "success");
     } catch (e) {
       console.error(e);
