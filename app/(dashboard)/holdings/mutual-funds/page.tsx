@@ -235,7 +235,7 @@ export default function MutualFundsPage() {
     // BUG-044: restore the saved sort
     const savedSort = localStorage.getItem("mf_sort_by");
     const allowedSorts = [
-      "xirr", "cagr", "dayChangePct", "dayChange", "gains", "profit",
+      "xirr", "dayChangePct", "dayChange", "gains", "profit",
       "value", "name", "rank", "categoryRank", "overallRank",
     ];
     if (savedSort && allowedSorts.includes(savedSort)) {
@@ -1093,7 +1093,6 @@ export default function MutualFundsPage() {
                 aria-label="Sort schemes"
                 className="px-3 py-2 bg-neutral-100 dark:bg-white/5 border border-transparent focus:border-primary-500 rounded-xl text-xs font-medium text-neutral-600 dark:text-neutral-300 outline-none cursor-pointer">
                 <option value="xirr">Sort: XIRR (%)</option>
-                <option value="cagr">Sort: CAGR (%)</option>
                 <option value="dayChangePct">Sort: Daily Change (%)</option>
                 <option value="dayChange">Sort: Daily P&amp;L (₹)</option>
                 <option value="gains">Sort: Overall Return (%)</option>
@@ -1291,19 +1290,12 @@ export default function MutualFundsPage() {
                             {(() => {
                               const short = Boolean(scheme.held_under_one_year);
                               const x = scheme.xirr === undefined || scheme.xirr === null ? null : rateToShow(scheme.xirr, scheme.return_pct, short);
-                              const c = scheme.cagr === undefined || scheme.cagr === null ? null : rateToShow(scheme.cagr, scheme.return_pct, short);
                               return (
                                 <>
                                   <div title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
                                     <span className="text-neutral-400 mr-1">{rateLabel("XIRR", short)}:</span>
                                     <span className={`font-bold ${x !== null ? (x >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
                                       {x !== null ? `${x.toFixed(2)}%` : "--"}
-                                    </span>
-                                  </div>
-                                  <div title={short ? UNDER_ONE_YEAR_NOTE : undefined}>
-                                    <span className="text-neutral-400 mr-1">{rateLabel("CAGR", short)}:</span>
-                                    <span className={`font-bold ${c !== null ? (c >= 0 ? "text-emerald-500" : "text-red-500") : "text-neutral-500"}`}>
-                                      {c !== null ? `${c.toFixed(2)}%` : "--"}
                                     </span>
                                   </div>
                                 </>
