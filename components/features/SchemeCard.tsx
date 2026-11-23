@@ -353,6 +353,11 @@ export default function SchemeCard({
 
         {/* Metrics Grid */}
         <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {/* Cost of the units held today, so value vs invested reads at a glance (as Groww / Coin show) */}
+          <MetricItem
+            label="Invested"
+            value={<PrivacyMask>₹{Math.round(current - profit).toLocaleString("en-IN")}</PrivacyMask>}
+          />
           <MetricItem
             label="NAV"
             value={`₹${nav.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`}
@@ -478,7 +483,7 @@ function MetricItem({
   title,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   highlight?: "positive" | "negative";
   title?: string;
 }) {
