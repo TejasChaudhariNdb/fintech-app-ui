@@ -1,155 +1,146 @@
 "use client";
-import DatePicker from "@/components/ui/DatePicker";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
+// Tax page: capital gains (by fund type, with the 23 Jul 2024 rate change, 31 Jan 2018 grandfathering and loss
+// set-off worked out by the backend) and interest income, for one FY. Redesigned 2026-11-23 after a user report.
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  FileSpreadsheet,
-  Download,
   Calendar,
-  Filter,
-  ArrowUpRight,
-  ArrowDownRight,
-  TrendingUp,
-  ShieldCheck,
-  Building2,
-  PieChart,
-  RefreshCw,
-  Search,
-  Sparkles,
-  Info,
-  HelpCircle,
+  Download,
   Pencil,
-  X,
-  CheckCircle2,
-  AlertCircle
+  Search,
+  AlertTriangle,
+  Info,
+  Loader2,
+  TrendingUp,
+  TrendingDown,
+  Receipt,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, CapitalGainRecord, CapitalGainsSummary, FyTaxSummary } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
+import PrivacyMask from "@/components/ui/PrivacyMask";
 import InterestIncomeSection from "@/components/features/InterestIncomeSection";
+import TradeEditModal from "@/components/features/TradeEditModal";
 
-interface RecordItem {
-  buy_tx_id?: number;
-  sell_tx_id?: number;
-  code: string;
-  scrip: string;
-  isin: string;
-  bought_date: string;
-  bought_qty: number;
-  bought_rate: number;
-  bought_value: number;
-  sold_date: string;
-  sold_qty: number;
-  sold_rate: number;
-  sold_value: number;
-  fmv_2018_01_31?: number;
-  ltcg?: number;
-  profit_loss: number;
-  gain_loss?: number;
-  holding_period: number;
-  holding_period_days?: number;
-  tax_rate_pct?: number;
-  est_tax?: number;
-  asset_type: string;
+const inr = (n: number) => `${n < 0 ? "−" : ""}₹${Math.abs(Math.round(n)).toLocaleString("en-IN")}`;
+const SLAB_KEY = "tax_slab_rate";
+const TYPE_LABEL: Record<string, string> = { EQUITY: "Equity", DEBT: "Debt", OTHER: "Gold / Intl" };
+const SLAB_OPTIONS = [null, 0, 5, 10, 15, 20, 30];
+
+function defaultFy(): string {
+  // April to July is filing season for the year just ended; otherwise show the current year.
+  const now = new Date();
+  const m = now.getMonth() + 1;
+  const startOfCurrent = m >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+  const start = m >= 4 && m <= 7 ? startOfCurrent - 1 : startOfCurrent;
+  return `${start}-${String(start + 1).slice(2)}`;
 }
 
-interface SummaryData {
-  financial_year: string;
-  start_date: string;
-  end_date: string;
-  total_ltcg: number;
-  total_stcg: number;
-  net_realized_gain: number;
-  total_buy_value: number;
-  total_sale_value: number;
-  total_trades: number;
-  ltcg_count: number;
-  stcg_count: number;
-  total_stcg_gain?: number;
-  total_ltcg_gain?: number;
-  total_realized_gain?: number;
-  est_stcg_tax: number;
-  est_ltcg_tax: number;
-  total_est_tax: number;
-  ltcg_records: RecordItem[];
-  stcg_records: RecordItem[];
+const card = "bg-white dark:bg-[#0F1219] border border-neutral-200/80 dark:border-white/5 rounded-3xl shadow-xs";
+const selectCls =
+  "bg-neutral-100 dark:bg-white/10 border border-neutral-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-white outline-none focus:border-primary-500 cursor-pointer";
+
+function GainText({ value }: { value: number }) {
+  return (
+    <span className={`tabular-nums font-bold ${value > 0 ? "text-emerald-600 dark:text-emerald-400" : value < 0 ? "text-rose-600 dark:text-rose-400" : "text-neutral-500"}`}>
+      <PrivacyMask>{value > 0 ? "+" : ""}{inr(value)}</PrivacyMask>
+    </span>
+  );
+}
+
+function FyTaxTable({ fy, slabChosen }: { fy: FyTaxSummary; slabChosen: boolean }) {
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-[11px] uppercase tracking-wider text-neutral-500 border-b border-neutral-100 dark:border-white/5 text-left">
+              <th className="py-2 pr-3 font-semibold">Type</th>
+              <th className="py-2 pr-3 font-semibold text-right">Gain</th>
+              <th className="py-2 pr-3 font-semibold text-right">After losses</th>
+              <th className="py-2 pr-3 font-semibold text-right">Taxable</th>
+              <th className="py-2 font-semibold text-right">Tax</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
+            {fy.lines.map((l) => (
+              <tr key={l.rate_key}>
+                <td className="py-2 pr-3 text-neutral-800 dark:text-neutral-200">{l.label}</td>
+                <td className="py-2 pr-3 text-right tabular-nums"><PrivacyMask>{inr(l.gain)}</PrivacyMask></td>
+                <td className="py-2 pr-3 text-right tabular-nums text-neutral-600 dark:text-neutral-400"><PrivacyMask>{inr(l.after_set_off)}</PrivacyMask></td>
+                <td className="py-2 pr-3 text-right tabular-nums text-neutral-600 dark:text-neutral-400"><PrivacyMask>{inr(l.taxable)}</PrivacyMask></td>
+                <td className="py-2 text-right tabular-nums font-bold text-neutral-900 dark:text-white">
+                  {l.tax === null ? <span className="text-xs font-medium text-neutral-500">at your slab</span> : <PrivacyMask>{inr(l.tax)}</PrivacyMask>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="text-xs text-neutral-600 dark:text-neutral-400 space-y-1">
+        {fy.equity_ltcg_exemption_used > 0 && (
+          <li>
+            Equity LTCG exemption used: <PrivacyMask>{inr(fy.equity_ltcg_exemption_used)}</PrivacyMask> of {inr(fy.equity_ltcg_exemption_limit)}.
+          </li>
+        )}
+        {(fy.st_loss > 0 || fy.lt_loss > 0) && (
+          <li>
+            Losses set off: short-term <PrivacyMask>{inr(fy.st_loss)}</PrivacyMask> (against any gain), long-term{" "}
+            <PrivacyMask>{inr(fy.lt_loss)}</PrivacyMask> (only against long-term gains), highest-taxed gains first.
+          </li>
+        )}
+        {(fy.st_loss_carry_forward > 0 || fy.lt_loss_carry_forward > 0) && (
+          <li className="text-amber-700 dark:text-amber-400">
+            Loss to carry forward (up to 8 years, if you file on time): short-term <PrivacyMask>{inr(fy.st_loss_carry_forward)}</PrivacyMask>, long-term{" "}
+            <PrivacyMask>{inr(fy.lt_loss_carry_forward)}</PrivacyMask>.
+          </li>
+        )}
+        {fy.slab_gain_taxable > 0 && !slabChosen && (
+          <li>
+            <PrivacyMask>{inr(fy.slab_gain_taxable)}</PrivacyMask> is taxed at your income slab (debt funds, short-term non-equity). Pick your slab above to include it.
+          </li>
+        )}
+      </ul>
+    </div>
+  );
 }
 
 export default function ReportsPage() {
   const { activeProfileId } = useProfile();
-  const [mounted, setMounted] = useState(false);
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-
-  const [financialYear, setFinancialYear] = useState<string>("all");
+  const [financialYear, setFinancialYear] = useState<string>(defaultFy);
   const [assetClass, setAssetClass] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<"ltcg" | "stcg">("ltcg");
-
-  const [summary, setSummary] = useState<SummaryData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [slabRate, setSlabRate] = useState<number | null>(() => {
+    try {
+      const v = localStorage.getItem(SLAB_KEY);
+      return v === null || v === "" ? null : Number(v);
+    } catch {
+      return null;
+    }
+  });
+  const [summary, setSummary] = useState<CapitalGainsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingType, setDownloadingType] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Trade Edit Modal State
-  const [editingRecord, setEditingRecord] = useState<RecordItem | null>(null);
-  const [editBoughtDate, setEditBoughtDate] = useState<string>("");
-  const [editSoldDate, setEditSoldDate] = useState<string>("");
-  const [editBoughtRate, setEditBoughtRate] = useState<string>("");
-  const [editSoldRate, setEditSoldRate] = useState<string>("");
-  const [editQuantity, setEditQuantity] = useState<string>("");
-  const [savingEdit, setSavingEdit] = useState<boolean>(false);
-  const [editSuccessMsg, setEditSuccessMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Fixed scroll lock for iOS/mobile when editingRecord is open
-  useEffect(() => {
-    if (editingRecord) {
-      const scrollY = window.scrollY;
-      const originalOverflow = document.body.style.overflow;
-      const originalPosition = document.body.style.position;
-      const originalTop = document.body.style.top;
-      const originalWidth = document.body.style.width;
-      const originalHtmlOverflow = document.documentElement.style.overflow;
-
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.overflow = "hidden";
-      document.body.style.position = "fixed";
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = "100%";
-
-      return () => {
-        document.documentElement.style.overflow = originalHtmlOverflow;
-        document.body.style.overflow = originalOverflow;
-        document.body.style.position = originalPosition;
-        document.body.style.top = originalTop;
-        document.body.style.width = originalWidth;
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [editingRecord]);
+  const [termFilter, setTermFilter] = useState<"all" | "lt" | "st">("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingRecord, setEditingRecord] = useState<CapitalGainRecord | null>(null);
 
   const fyOptions = useMemo(() => {
-    const options: string[] = ["all"];
-    const endYear = currentMonth >= 4 ? currentYear : currentYear - 1;
-    for (let y = endYear; y >= 2014; y--) {
-      options.push(`${y}-${(y + 1).toString().slice(2)}`);
-    }
-    return options;
-  }, [currentYear, currentMonth]);
+    const now = new Date();
+    const end = now.getMonth() + 1 >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+    const out: string[] = [];
+    for (let y = end; y >= 2014; y--) out.push(`${y}-${String(y + 1).slice(2)}`);
+    return [...out, "all"];
+  }, []);
 
   const fetchSummary = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.getCapitalGainsSummary(financialYear, assetClass);
-      setSummary(data);
-    } catch (e: any) {
-      console.error("Failed to fetch capital gains summary", e);
-      setError(e.message || "Failed to load capital gains data.");
+      setSummary(await api.getCapitalGainsSummary(financialYear, assetClass, slabRate));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load your capital gains.");
     } finally {
       setLoading(false);
     }
@@ -157,607 +148,395 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchSummary();
-  }, [financialYear, assetClass, activeProfileId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [financialYear, assetClass, slabRate, activeProfileId]);
+
+  const changeSlab = (v: string) => {
+    const next = v === "" ? null : Number(v);
+    setSlabRate(next);
+    try {
+      localStorage.setItem(SLAB_KEY, v);
+    } catch {
+      /* private mode: not remembered */
+    }
+  };
 
   const handleDownload = async (reportType: string) => {
     try {
       setDownloadingType(reportType);
       await api.downloadCapitalGainsCSV(financialYear, assetClass, reportType);
-    } catch (e: any) {
-      alert("Failed to download CSV: " + (e.message || "Unknown error"));
+    } catch (e) {
+      alert("Could not download the CSV: " + (e instanceof Error ? e.message : "unknown error"));
     } finally {
       setDownloadingType(null);
     }
   };
 
-  const openEditModal = (r: RecordItem) => {
-    setEditingRecord(r);
-    setEditBoughtDate(r.bought_date || "");
-    setEditSoldDate(r.sold_date || "");
-    setEditBoughtRate(r.bought_rate ? String(r.bought_rate) : "");
-    setEditSoldRate(r.sold_rate ? String(r.sold_rate) : "");
-    setEditQuantity(r.bought_qty ? String(r.bought_qty) : "");
-    setEditSuccessMsg(null);
-  };
-
-  const handleSaveTradeEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingRecord) return;
-
-    try {
-      setSavingEdit(true);
-      await api.updateTradeDetails({
-        asset_type: editingRecord.asset_type,
-        buy_tx_id: editingRecord.buy_tx_id,
-        sell_tx_id: editingRecord.sell_tx_id,
-        bought_date: editBoughtDate || null,
-        sold_date: editSoldDate || null,
-        bought_rate: editBoughtRate ? parseFloat(editBoughtRate) : null,
-        sold_rate: editSoldRate ? parseFloat(editSoldRate) : null,
-        quantity: editQuantity ? parseFloat(editQuantity) : null,
-      });
-
-      setEditSuccessMsg("Trade details updated successfully!");
-      setTimeout(() => {
-        setEditingRecord(null);
-        setEditSuccessMsg(null);
-        fetchSummary();
-      }, 1000);
-    } catch (err: any) {
-      alert("Failed to update trade: " + (err.message || "Unknown error"));
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
-  const recordsToFilter =
-    activeTab === "ltcg"
-      ? summary?.ltcg_records || []
-      : summary?.stcg_records || [];
-
-  const currentRecords = useMemo(() => {
-    if (!searchTerm) return recordsToFilter;
-    const term = searchTerm.toLowerCase();
-    return recordsToFilter.filter(
+  const records = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    return (summary?.records || []).filter(
       (r) =>
-        r.scrip.toLowerCase().includes(term) ||
-        r.code.toLowerCase().includes(term) ||
-        (r.isin && r.isin.toLowerCase().includes(term))
+        (termFilter === "all" || (termFilter === "lt") === r.long_term) &&
+        (typeFilter === "all" || r.tax_class === typeFilter) &&
+        (!term || r.scrip.toLowerCase().includes(term) || r.code.toLowerCase().includes(term) || (r.isin || "").toLowerCase().includes(term))
     );
-  }, [recordsToFilter, searchTerm]);
+  }, [summary, termFilter, typeFilter, searchTerm]);
+
+  const isAllTime = financialYear === "all";
+  const fyLabel = isAllTime ? "all years" : `FY ${financialYear}`;
+  const selectedFy = summary?.fy_summaries.find((f) => f.financial_year === financialYear);
+  const w = summary?.warnings;
+  const hasWarnings = !!w && (w.fmv_missing > 0 || w.cost_estimated > 0 || w.indexation_used > 0);
+  const typesPresent = Array.from(new Set((summary?.records || []).map((r) => r.tax_class)));
+
+  const downloads = [
+    { type: "it_portal_112a", title: "Schedule 112A", desc: "Equity LTCG, ready for the ITR portal upload" },
+    { type: "summary", title: "All trades (Schedule CG)", desc: "Every sale with its tax treatment" },
+    { type: "ltcg_detailed", title: "Long-term statement", desc: "Lot-wise LTCG with 31 Jan 2018 values" },
+    { type: "stcg_detailed", title: "Short-term statement", desc: "Lot-wise STCG" },
+  ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-linear-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 md:p-8 rounded-3xl text-white shadow-xl relative overflow-hidden border border-white/10">
-        <div className="absolute right-0 top-0 -mr-16 -mt-16 w-72 h-72 bg-primary-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-primary-200 text-xs font-semibold backdrop-blur-md">
-            <Sparkles size={14} className="text-primary-400" />
-            Tax & Capital Gains Hub
-          </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Tax Filing & Capital Gains Reports
-          </h1>
-          <p className="text-sm text-neutral-300 max-w-xl leading-relaxed">
-            Download tax-ready CSV statements for income tax return (ITR) filing and review realized profit & loss for {financialYear === "all" ? "All Time" : `Financial Year ${financialYear}`}.
+    <div className="space-y-5 max-w-7xl mx-auto pb-12">
+      {/* Header + controls */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Tax report</h1>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            Capital gains on mutual funds and stocks, and interest income, for your ITR.
           </p>
         </div>
-
-        {/* Global Controls */}
-        <div className="relative z-10 flex flex-wrap items-center gap-3">
-          {/* Financial Year Selector */}
-          <div className="flex items-center gap-2 bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/15 rounded-2xl px-3.5 py-2 text-xs font-semibold">
-            <Calendar size={16} className="text-primary-300" />
-            <span className="text-neutral-300">Financial Year:</span>
-            <select
-              value={financialYear}
-              onChange={(e) => setFinancialYear(e.target.value)}
-              className="bg-transparent text-white font-bold outline-none cursor-pointer pr-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2">
+            <Calendar size={16} className="text-neutral-400" aria-hidden />
+            <span className="sr-only">Financial year</span>
+            <select value={financialYear} onChange={(e) => setFinancialYear(e.target.value)} className={selectCls}>
               {fyOptions.map((fy) => (
-                <option key={fy} value={fy} className="bg-slate-900 text-white">
-                  {fy === "all" ? "All Time (All Years)" : `FY ${fy}`}
-                </option>
+                <option key={fy} value={fy}>{fy === "all" ? "All years" : `FY ${fy}`}</option>
               ))}
             </select>
-          </div>
-
-          {/* Asset Class Filter */}
-          <div className="flex items-center gap-2 bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/15 rounded-2xl px-3.5 py-2 text-xs font-semibold">
-            <Filter size={16} className="text-primary-300" />
-            <select
-              value={assetClass}
-              onChange={(e) => setAssetClass(e.target.value)}
-              className="bg-transparent text-white font-bold outline-none cursor-pointer">
-              <option value="all" className="bg-slate-900 text-white">All Investments</option>
-              <option value="equity" className="bg-slate-900 text-white">Stocks Only</option>
-              <option value="mutual_fund" className="bg-slate-900 text-white">Mutual Funds Only</option>
+          </label>
+          <label>
+            <span className="sr-only">Investments</span>
+            <select value={assetClass} onChange={(e) => setAssetClass(e.target.value)} className={selectCls}>
+              <option value="all">Mutual funds &amp; stocks</option>
+              <option value="mutual_fund">Mutual funds</option>
+              <option value="equity">Stocks</option>
             </select>
-          </div>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-neutral-500">
+            <span>Your slab</span>
+            <select value={slabRate === null ? "" : String(slabRate)} onChange={(e) => changeSlab(e.target.value)} className={selectCls}>
+              {SLAB_OPTIONS.map((v) => (
+                <option key={String(v)} value={v === null ? "" : String(v)}>{v === null ? "Not set" : `${v}%`}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 space-y-4">
-          <div className="animate-spin rounded-full h-10 w-10 border-3 border-primary-500 border-t-transparent" />
-          <p className="text-xs text-neutral-500 font-medium">Computing FIFO capital gains & tax statements...</p>
+        <div className={`${card} py-16 flex flex-col items-center gap-3 text-neutral-500`}>
+          <Loader2 size={28} className="animate-spin text-primary-500" />
+          <p className="text-sm">Matching every sale to its purchase (FIFO)…</p>
         </div>
       ) : error ? (
-        <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 text-rose-700 dark:text-rose-400 flex items-center justify-between">
+        <div className="p-5 rounded-3xl bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/30 text-rose-700 dark:text-rose-400 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold">{error}</p>
-          <button
-            onClick={fetchSummary}
-            className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-all cursor-pointer">
+          <button onClick={fetchSummary} className="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 cursor-pointer">
             Retry
           </button>
         </div>
       ) : summary ? (
         <>
-          {/* Key Metric Overview Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Net Realized Gain */}
-            <div className="p-5 rounded-3xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/30 relative overflow-hidden shadow-xs">
-              <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">Net Realized Gain</span>
-                <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
-                  <TrendingUp size={16} />
-                </div>
+          {/* Headline numbers */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: "Estimated tax", value: summary.estimated_tax, note: slabRate === null && summary.slab_gain_taxable > 0 ? "Excl. slab-rate gains, cess" : "Excl. 4% cess & surcharge", strong: true },
+              { label: "Short-term gains", value: summary.total_stcg, note: `${summary.stcg_count} sale${summary.stcg_count === 1 ? "" : "s"}` },
+              { label: "Long-term gains", value: summary.total_ltcg, note: `${summary.ltcg_count} sale${summary.ltcg_count === 1 ? "" : "s"} · taxable value` },
+              { label: "Profit / loss", value: summary.net_realized_gain, note: `Sold for ${inr(summary.total_sale_value)}` },
+            ].map((s) => (
+              <div key={s.label} className={`p-4 rounded-3xl border ${s.strong ? "bg-slate-900 dark:bg-white/5 border-slate-900 dark:border-white/10 text-white" : "bg-white dark:bg-[#0F1219] border-neutral-200/80 dark:border-white/5"}`}>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider ${s.strong ? "text-slate-300" : "text-neutral-500"}`}>{s.label}</p>
+                <p className={`text-xl sm:text-2xl font-black tabular-nums mt-1 ${s.strong ? "text-amber-300" : "text-neutral-900 dark:text-white"}`}>
+                  <PrivacyMask>{inr(s.value)}</PrivacyMask>
+                </p>
+                <p className={`text-[11px] mt-0.5 ${s.strong ? "text-slate-400" : "text-neutral-500"}`}>{s.note}</p>
               </div>
-              <p className={`text-2xl font-extrabold ${summary.net_realized_gain >= 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-600 dark:text-rose-400"}`}>
-                ₹{summary.net_realized_gain.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-              <div className="mt-2 text-[11px] text-emerald-600/80 dark:text-emerald-400/70 font-medium flex items-center justify-between">
-                <span>Total Trades: {summary.total_trades}</span>
-                <span>Sell Val: ₹{summary.total_sale_value.toLocaleString("en-IN")}</span>
-              </div>
-            </div>
-
-            {/* Long-Term Capital Gain (LTCG) */}
-            <div className="p-5 rounded-3xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/30 relative overflow-hidden shadow-xs">
-              <div className="flex items-center justify-between text-indigo-700 dark:text-indigo-400 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">LTCG (&gt;365 Days)</span>
-                <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/40">
-                  <ShieldCheck size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-extrabold text-indigo-900 dark:text-indigo-200">
-                ₹{summary.total_ltcg.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-              <div className="mt-2 text-[11px] text-indigo-600/80 dark:text-indigo-400/70 font-medium flex items-center justify-between">
-                <span>{summary.ltcg_count} Long-term trades</span>
-                <span>Exemption: ₹1.25 Lakh/yr</span>
-              </div>
-            </div>
-
-            {/* Short-Term Capital Gain (STCG) */}
-            <div className="p-5 rounded-3xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/30 relative overflow-hidden shadow-xs">
-              <div className="flex items-center justify-between text-amber-700 dark:text-amber-400 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider">STCG (≤365 Days)</span>
-                <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40">
-                  <Building2 size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-extrabold text-amber-900 dark:text-amber-200">
-                ₹{summary.total_stcg.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-              <div className="mt-2 text-[11px] text-amber-600/80 dark:text-amber-400/70 font-medium flex items-center justify-between">
-                <span>{summary.stcg_count} Short-term trades</span>
-                <span>Tax Rate: 20%</span>
-              </div>
-            </div>
-
-            {/* Estimated Tax Liability */}
-            <div className="p-5 rounded-3xl bg-slate-900 dark:bg-[#111622] text-white border border-slate-800 dark:border-white/10 relative overflow-hidden shadow-xs">
-              <div className="flex items-center justify-between text-amber-400 mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-neutral-400">Total Estimated Tax</span>
-                <div className="p-2 rounded-xl bg-amber-400/10 text-amber-400">
-                  <PieChart size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-extrabold text-amber-400">
-                ₹{summary.total_est_tax.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-              <div className="mt-2 text-[11px] text-neutral-400 font-medium flex items-center justify-between">
-                <span>STCG Tax: ₹{summary.est_stcg_tax.toLocaleString("en-IN")}</span>
-                <span>LTCG Tax: ₹{summary.est_ltcg_tax.toLocaleString("en-IN")}</span>
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Download CSV Action Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* 1. IT Portal Template Card */}
-            <div className="p-6 rounded-3xl bg-white dark:bg-[#0F1219] border border-neutral-200/80 dark:border-white/5 shadow-xs hover:border-primary-500/40 transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-primary-50 dark:bg-primary-950/50 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold">
-                  <FileSpreadsheet size={20} />
+          {summary.total_trades === 0 ? (
+            <div className={`${card} p-6 flex items-start gap-3`}>
+              <Info size={18} className="text-neutral-400 shrink-0 mt-0.5" />
+              <div className="text-sm text-neutral-600 dark:text-neutral-300 space-y-1">
+                <p className="font-semibold text-neutral-900 dark:text-white">No mutual fund or stock sales in {fyLabel}.</p>
+                <p>
+                  Capital gains come only from selling. If you sold through another app (Groww, Zerodha, Kuvera), import that account&apos;s CAS or
+                  tradebook first so those sales show here. FD and bond interest is not a capital gain; it is shown below.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+              {/* Tax working */}
+              <div className={`${card} p-4 sm:p-6 xl:col-span-3 space-y-4`}>
+                <div className="flex items-center gap-2">
+                  <Receipt size={18} className="text-primary-600 dark:text-primary-400" />
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">How your tax is worked out</h2>
                 </div>
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold mb-1.5">
-                    Official Tax Template
+                {isAllTime ? (
+                  <div className="space-y-3">
+                    {summary.fy_summaries.map((fy) => (
+                      <details key={fy.financial_year} className="group rounded-2xl border border-neutral-100 dark:border-white/5 p-3">
+                        <summary className="flex items-center justify-between cursor-pointer text-sm font-semibold text-neutral-900 dark:text-white">
+                          <span>FY {fy.financial_year}</span>
+                          <span className="tabular-nums"><PrivacyMask>{inr(fy.estimated_tax)}</PrivacyMask></span>
+                        </summary>
+                        <div className="pt-3">
+                          <FyTaxTable fy={fy} slabChosen={slabRate !== null} />
+                        </div>
+                      </details>
+                    ))}
                   </div>
-                  <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-                    Income Tax Portal CSV (Schedule 112A)
-                  </h3>
-                </div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Formatted CSV file designed for direct upload to the official Income Tax e-Filing portal for filing ITR-2 / ITR-3.
+                ) : selectedFy ? (
+                  <FyTaxTable fy={selectedFy} slabChosen={slabRate !== null} />
+                ) : null}
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  Rates: equity short-term 15% (sold before 23 Jul 2024) / 20% after; equity long-term (held over 12 months) 10% / 12.5% above ₹1 lakh
+                  (₹1.25 lakh from FY 2024-25). Debt funds bought from 1 Apr 2023 are taxed at your slab. An estimate: check with your CA or the ITR
+                  utility before filing.
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-neutral-400">ITR Upload Ready</span>
-                <button
-                  onClick={() => handleDownload("it_portal_112a")}
-                  disabled={downloadingType === "it_portal_112a"}
-                  className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-                  {downloadingType === "it_portal_112a" ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Download size={15} />
-                  )}
-                  Download File
-                </button>
-              </div>
-            </div>
-
-            {/* 2. Detailed LTCG Report Card */}
-            <div className="p-6 rounded-3xl bg-white dark:bg-[#0F1219] border border-neutral-200/80 dark:border-white/5 shadow-xs hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                  <ShieldCheck size={20} />
+              {/* By type + attention */}
+              <div className="xl:col-span-2 space-y-4">
+                <div className={`${card} p-4 sm:p-6 space-y-3`}>
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">By investment type</h2>
+                  <ul className="divide-y divide-neutral-100 dark:divide-white/5">
+                    {summary.groups.map((g) => (
+                      <li key={`${g.asset_type}_${g.tax_class}`} className="py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-neutral-900 dark:text-white">{g.label}</p>
+                          <p className="text-[11px] text-neutral-500">{g.count} sale{g.count === 1 ? "" : "s"}</p>
+                        </div>
+                        <div className="text-right text-xs space-y-0.5">
+                          <p>Short <GainText value={g.short_term_gain} /></p>
+                          <p>Long <GainText value={g.long_term_gain} /></p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold mb-1.5">
-                    Long-Term Statement
+                {hasWarnings && w && (
+                  <div className="p-4 sm:p-5 rounded-3xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/70 dark:bg-amber-950/20 space-y-2">
+                    <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+                      <AlertTriangle size={16} />
+                      <h2 className="text-sm font-bold">Check before filing</h2>
+                    </div>
+                    <ul className="text-xs text-amber-900/90 dark:text-amber-200/90 space-y-1.5 list-disc pl-4">
+                      {w.cost_estimated > 0 && (
+                        <li>{w.cost_estimated} sale{w.cost_estimated === 1 ? " has" : "s have"} no matching purchase in Arthavi, so the cost is your average cost. Import your full history (CAS from the first purchase) or edit the trade.</li>
+                      )}
+                      {w.fmv_missing > 0 && (
+                        <li>{w.fmv_missing} sale{w.fmv_missing === 1 ? "" : "s"} of units bought before 1 Feb 2018 without a 31 Jan 2018 price, so the gain is not grandfathered and may be too high.</li>
+                      )}
+                      {w.indexation_used > 0 && (
+                        <li>{w.indexation_used} long-term non-equity sale{w.indexation_used === 1 ? "" : "s"} before 23 Jul 2024 use indexed cost (CII).</li>
+                      )}
+                    </ul>
                   </div>
-                  <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-                    Long-Term Capital Gains Statement
-                  </h3>
-                </div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Itemized statement for trades held over 365 days. Includes purchase rates, sale rates, and taxable LTCG totals.
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-neutral-400">{summary.ltcg_count} Trades</span>
-                <button
-                  onClick={() => handleDownload("ltcg_detailed")}
-                  disabled={downloadingType === "ltcg_detailed"}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-                  {downloadingType === "ltcg_detailed" ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Download size={15} />
-                  )}
-                  Download Statement
-                </button>
+                )}
               </div>
             </div>
+          )}
 
-            {/* 3. Detailed STCG Report Card */}
-            <div className="p-6 rounded-3xl bg-white dark:bg-[#0F1219] border border-neutral-200/80 dark:border-white/5 shadow-xs hover:border-amber-500/40 transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-                  <Building2 size={20} />
-                </div>
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 text-[10px] font-bold mb-1.5">
-                    Short-Term Statement
-                  </div>
-                  <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-                    Short-Term Capital Gains Statement
-                  </h3>
-                </div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Itemized statement for trades held 365 days or less. Displays buy/sell rates, quantities, holding periods, and net gain.
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-neutral-400">{summary.stcg_count} Trades</span>
-                <button
-                  onClick={() => handleDownload("stcg_detailed")}
-                  disabled={downloadingType === "stcg_detailed"}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-                  {downloadingType === "stcg_detailed" ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  ) : (
-                    <Download size={15} />
-                  )}
-                  Download Statement
-                </button>
-              </div>
-            </div>
-          </div>
-
+          {/* Interest income (FDs, bonds, SGB, PPF) */}
           <InterestIncomeSection financialYear={financialYear} />
 
-          {/* Realized Capital Gain Transactions Preview Table */}
-          <div className="bg-white dark:bg-[#0F1219] rounded-3xl border border-neutral-200/80 dark:border-white/5 overflow-hidden shadow-xs">
-            {/* Table Header & Controls */}
-            <div className="p-4 sm:p-6 border-b border-neutral-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                {/* Tabs */}
-                <div className="flex p-1 bg-neutral-100 dark:bg-white/5 rounded-2xl">
+          {/* Downloads */}
+          {summary.total_trades > 0 && (
+            <div className={`${card} p-4 sm:p-6 space-y-3`}>
+              <h2 className="text-base font-bold text-neutral-900 dark:text-white">Downloads for {fyLabel}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {downloads.map((d) => (
                   <button
-                    onClick={() => setActiveTab("ltcg")}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "ltcg"
-                        ? "bg-white dark:bg-[#151A23] text-primary-600 dark:text-primary-400 shadow-xs"
-                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-                    }`}>
-                    Long-Term (LTCG: {summary.ltcg_count})
+                    key={d.type}
+                    onClick={() => handleDownload(d.type)}
+                    disabled={downloadingType !== null}
+                    className="text-left p-3.5 rounded-2xl border border-neutral-200 dark:border-white/10 hover:border-primary-500/60 hover:bg-primary-50/40 dark:hover:bg-primary-950/20 transition-all cursor-pointer disabled:opacity-60 flex items-start gap-3"
+                  >
+                    {downloadingType === d.type ? (
+                      <Loader2 size={16} className="animate-spin text-primary-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <Download size={16} className="text-primary-600 dark:text-primary-400 shrink-0 mt-0.5" />
+                    )}
+                    <span>
+                      <span className="block text-sm font-bold text-neutral-900 dark:text-white">{d.title}</span>
+                      <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">{d.desc}</span>
+                    </span>
                   </button>
-                  <button
-                    onClick={() => setActiveTab("stcg")}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      activeTab === "stcg"
-                        ? "bg-white dark:bg-[#151A23] text-primary-600 dark:text-primary-400 shadow-xs"
-                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
-                    }`}>
-                    Short-Term (STCG: {summary.stcg_count})
-                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Every sale */}
+          {summary.total_trades > 0 && (
+            <div className={`${card} overflow-hidden`}>
+              <div className="p-4 sm:p-6 space-y-3 border-b border-neutral-100 dark:border-white/5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <h2 className="text-base font-bold text-neutral-900 dark:text-white">Every sale ({records.length})</h2>
+                  <div className="relative md:w-72">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" aria-hidden />
+                    <input
+                      type="search"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search fund, stock or ISIN"
+                      aria-label="Search sales"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-sm outline-none focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {([["all", "All"], ["st", `Short-term (${summary.stcg_count})`], ["lt", `Long-term (${summary.ltcg_count})`]] as const).map(([id, label]) => (
+                    <button
+                      key={id}
+                      onClick={() => setTermFilter(id)}
+                      aria-pressed={termFilter === id}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${termFilter === id ? "bg-primary-600 text-white" : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400"}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  {typesPresent.length > 1 && <span className="w-px bg-neutral-200 dark:bg-white/10 mx-1" />}
+                  {typesPresent.length > 1 &&
+                    ["all", ...typesPresent].map((tc) => (
+                      <button
+                        key={tc}
+                        onClick={() => setTypeFilter(tc)}
+                        aria-pressed={typeFilter === tc}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${typeFilter === tc ? "bg-slate-800 dark:bg-white text-white dark:text-slate-900" : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400"}`}
+                      >
+                        {tc === "all" ? "All types" : TYPE_LABEL[tc]}
+                      </button>
+                    ))}
                 </div>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-72">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                <input
-                  type="text"
-                  placeholder="Search by stock, scheme, or ISIN..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 rounded-2xl bg-neutral-100 dark:bg-white/5 text-xs text-neutral-900 dark:text-white outline-none border border-transparent focus:border-primary-500/50 transition-all"
-                />
-              </div>
-            </div>
+              {records.length === 0 ? (
+                <p className="p-8 text-center text-sm text-neutral-500">No sales match.</p>
+              ) : (
+                <>
+                  {/* Desktop table */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-[11px] uppercase tracking-wider text-neutral-500 bg-neutral-50 dark:bg-white/[0.02] text-left">
+                          <th className="py-3 px-4 font-semibold">Fund / stock</th>
+                          <th className="py-3 px-3 font-semibold">Bought</th>
+                          <th className="py-3 px-3 font-semibold">Sold</th>
+                          <th className="py-3 px-3 font-semibold text-right">Cost</th>
+                          <th className="py-3 px-3 font-semibold text-right">Sale value</th>
+                          <th className="py-3 px-3 font-semibold text-right">Taxable gain</th>
+                          <th className="py-3 px-3 font-semibold"><span className="sr-only">Edit</span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100 dark:divide-white/5">
+                        {records.map((r, i) => (
+                          <tr key={`${r.sell_tx_id}_${r.buy_tx_id}_${i}`} className="hover:bg-neutral-50/70 dark:hover:bg-white/[0.02]">
+                            <td className="py-3 px-4 max-w-xs">
+                              <p className="font-semibold text-neutral-900 dark:text-white truncate" title={r.scrip}>{r.scrip}</p>
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-300">
+                                  {r.asset_type === "STOCK" ? "Stock" : "MF"} · {TYPE_LABEL[r.tax_class]}
+                                </span>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${r.long_term ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300" : "bg-amber-500/10 text-amber-700 dark:text-amber-300"}`}>
+                                  {r.rate_label}
+                                </span>
+                                {r.cost_estimated && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-500/10 text-rose-700 dark:text-rose-300">Cost estimated</span>}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap tabular-nums">
+                              <p className="text-neutral-800 dark:text-neutral-200">{r.bought_date}</p>
+                              <p className="text-[11px] text-neutral-500">{r.bought_qty} @ ₹{r.bought_rate.toLocaleString("en-IN")}</p>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap tabular-nums">
+                              <p className="text-neutral-800 dark:text-neutral-200">{r.sold_date}</p>
+                              <p className="text-[11px] text-neutral-500">@ ₹{r.sold_rate.toLocaleString("en-IN")} · {r.holding_period} days</p>
+                            </td>
+                            <td className="py-3 px-3 text-right tabular-nums"><PrivacyMask>{inr(r.bought_value)}</PrivacyMask></td>
+                            <td className="py-3 px-3 text-right tabular-nums"><PrivacyMask>{inr(r.sold_value)}</PrivacyMask></td>
+                            <td className="py-3 px-3 text-right">
+                              <GainText value={r.taxable_gain} />
+                              {Math.abs(r.taxable_gain - r.profit_loss) >= 1 && (
+                                <p className="text-[10px] text-neutral-500">
+                                  Profit {inr(r.profit_loss)} · {r.fmv_2018_01_31 ? "31 Jan 2018 value" : "indexed cost"}
+                                </p>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <button
+                                onClick={() => setEditingRecord(r)}
+                                aria-label={`Edit sale of ${r.scrip}`}
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-950/40 cursor-pointer"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-            {/* Table Body */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-neutral-50 dark:bg-white/2 text-neutral-500 dark:text-neutral-400 font-bold border-b border-neutral-100 dark:border-white/5">
-                  <tr>
-                    <th className="py-3.5 px-4">Security / ISIN</th>
-                    <th className="py-3.5 px-4">Buy Date</th>
-                    <th className="py-3.5 px-4 text-right">Buy Qty & Rate</th>
-                    <th className="py-3.5 px-4 text-right">Buy Amount</th>
-                    <th className="py-3.5 px-4">Sale Date</th>
-                    <th className="py-3.5 px-4 text-right">Sale Rate</th>
-                    <th className="py-3.5 px-4 text-right">Sale Amount</th>
-                    {activeTab === "ltcg" && (
-                      <th className="py-3.5 px-4 text-right">Jan 31, 2018 FMV</th>
-                    )}
-                    <th className="py-3.5 px-4 text-right">Realized P&L</th>
-                    <th className="py-3.5 px-4 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
-                  {currentRecords.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={activeTab === "ltcg" ? 10 : 9}
-                        className="py-12 text-center text-neutral-400">
-                        No {activeTab.toUpperCase()} realized gain transactions found for {financialYear === "all" ? "All Time" : `FY ${financialYear}`}.
-                      </td>
-                    </tr>
-                  ) : (
-                    currentRecords.map((r, idx) => (
-                      <tr key={idx} className="hover:bg-neutral-50/60 dark:hover:bg-white/2 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-neutral-900 dark:text-white max-w-xs truncate">
-                            {r.scrip}
+                  {/* Phone cards */}
+                  <ul className="md:hidden divide-y divide-neutral-100 dark:divide-white/5">
+                    {records.map((r, i) => (
+                      <li key={`${r.sell_tx_id}_${r.buy_tx_id}_${i}`} className="p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm text-neutral-900 dark:text-white line-clamp-2">{r.scrip}</p>
+                            <p className="text-[11px] text-neutral-500 mt-0.5">{r.rate_label}{r.cost_estimated ? " · cost estimated" : ""}</p>
                           </div>
-                          <div className="text-[10px] text-neutral-400 flex items-center gap-2">
-                            <span>{r.code}</span>
-                            {r.isin && <span>• ISIN: {r.isin}</span>}
-                            <span className="px-1.5 py-0.2 rounded-md bg-neutral-100 dark:bg-white/10 text-neutral-500 font-semibold">
-                              {r.asset_type}
-                            </span>
+                          <div className="text-right shrink-0 flex items-start gap-1">
+                            <div>
+                              <GainText value={r.taxable_gain} />
+                              <p className="text-[10px] text-neutral-500 flex items-center justify-end gap-0.5">
+                                {r.taxable_gain >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />} taxable
+                              </p>
+                            </div>
+                            <button onClick={() => setEditingRecord(r)} aria-label={`Edit sale of ${r.scrip}`} className="p-1.5 text-neutral-400 cursor-pointer">
+                              <Pencil size={14} />
+                            </button>
                           </div>
-                        </td>
-                        <td className="py-3.5 px-4 font-medium text-neutral-600 dark:text-neutral-400">
-                          {r.bought_date}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-medium">
-                          <div>{r.bought_qty.toLocaleString("en-IN")}</div>
-                          <div className="text-[10px] text-neutral-400">@ ₹{r.bought_rate.toFixed(2)}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-medium">
-                          ₹{r.bought_value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3.5 px-4 font-medium text-neutral-600 dark:text-neutral-400">
-                          {r.sold_date}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-medium">
-                          ₹{r.sold_rate.toFixed(2)}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-medium">
-                          ₹{r.sold_value.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </td>
-                        {activeTab === "ltcg" && (
-                          <td className="py-3.5 px-4 text-right font-medium text-neutral-500">
-                            {r.fmv_2018_01_31 && r.fmv_2018_01_31 > 0 ? `₹${r.fmv_2018_01_31.toFixed(2)}` : "-"}
-                          </td>
-                        )}
-                        <td className="py-3.5 px-4 text-right font-extrabold">
-                          <span className={r.profit_loss >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
-                            {r.profit_loss >= 0 ? "+" : ""}₹{r.profit_loss.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => openEditModal(r)}
-                            className="p-1.5 rounded-xl bg-neutral-100 dark:bg-white/5 hover:bg-primary-50 dark:hover:bg-primary-950/40 text-neutral-600 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
-                            title="Edit Trade Dates & Rates">
-                            <Pencil size={13} />
-                            <span>Edit</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px] text-neutral-600 dark:text-neutral-400 tabular-nums">
+                          <p>Bought {r.bought_date}<br /><PrivacyMask>{inr(r.bought_value)}</PrivacyMask></p>
+                          <p className="text-right">Sold {r.sold_date}<br /><PrivacyMask>{inr(r.sold_value)}</PrivacyMask></p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </>
       ) : null}
 
-      {/* Edit Trade Modal Overlay via Portal */}
-      {mounted &&
-        editingRecord &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-sm touch-none overscroll-none animate-fade-in"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setEditingRecord(null);
-            }}
-            onTouchMove={(e) => {
-              if (e.target === e.currentTarget) e.preventDefault();
-            }}
-          >
-            <div
-              className="bg-white dark:bg-[#13161f] border-t sm:border border-neutral-200/90 dark:border-white/10 rounded-t-3xl sm:rounded-3xl max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden touch-pan-y overscroll-contain animate-in fade-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Mobile grab handle */}
-              <div className="sm:hidden pt-2.5 pb-0 flex justify-center shrink-0">
-                <div className="w-10 h-1 rounded-full bg-neutral-300 dark:bg-white/20" />
-              </div>
-
-              {/* Modal Header */}
-              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-white/5 px-6 py-3.5 shrink-0 bg-white dark:bg-[#13161f]">
-                <div className="min-w-0 pr-2">
-                  <h3 className="text-base font-extrabold text-neutral-900 dark:text-white truncate">
-                    Edit Trade Details
-                  </h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                    {editingRecord.scrip} ({editingRecord.asset_type})
-                  </p>
-                </div>
-                <button
-                  onClick={() => setEditingRecord(null)}
-                  className="p-1.5 rounded-xl text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5 transition-all cursor-pointer shrink-0"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6 overflow-y-auto flex-1 touch-pan-y overscroll-contain">
-                {editSuccessMsg ? (
-                  <div className="py-6 flex flex-col items-center justify-center space-y-2 text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 size={36} />
-                    <p className="text-sm font-bold">{editSuccessMsg}</p>
-                  </div>
-                ) : (
-                  <form id="edit-trade-form" onSubmit={handleSaveTradeEdit} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Buy Date */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                          Buy Date
-                        </label>
-                        <DatePicker
-                          value={editBoughtDate}
-                          clearable
-                          onChange={(v) => setEditBoughtDate(v)}
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                        />
-                      </div>
-
-                      {/* Sale Date */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                          Sale Date
-                        </label>
-                        <DatePicker
-                          value={editSoldDate}
-                          clearable
-                          onChange={(v) => setEditSoldDate(v)}
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                        />
-                      </div>
-
-                      {/* Buy Rate */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                          Buy Rate (₹)
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          placeholder="e.g. 150.00"
-                          value={editBoughtRate}
-                          onChange={(e) => setEditBoughtRate(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                        />
-                      </div>
-
-                      {/* Sale Rate */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                          Sale Rate (₹)
-                        </label>
-                        <input
-                          type="number"
-                          step="any"
-                          placeholder="e.g. 200.00"
-                          value={editSoldRate}
-                          onChange={(e) => setEditSoldRate(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-                        Quantity / Units
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="e.g. 50"
-                        value={editQuantity}
-                        onChange={(e) => setEditQuantity(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 border border-neutral-200 dark:border-white/10 text-xs text-neutral-900 dark:text-white font-medium outline-none focus:border-primary-500"
-                      />
-                    </div>
-                  </form>
-                )}
-              </div>
-
-              {/* Sticky Footer */}
-              {!editSuccessMsg && (
-                <div className="px-6 py-3.5 border-t border-neutral-100 dark:border-white/5 bg-neutral-50/80 dark:bg-[#13161f]/95 backdrop-blur-sm flex items-center justify-end gap-2 shrink-0 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-3.5">
-                  <button
-                    type="button"
-                    onClick={() => setEditingRecord(null)}
-                    className="px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400 text-xs font-bold hover:bg-neutral-200 dark:hover:bg-white/10 transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    form="edit-trade-form"
-                    disabled={savingEdit}
-                    className="px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-95 shadow-xs"
-                  >
-                    {savingEdit ? (
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
-                    ) : null}
-                    Save Trade Details
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>,
-          document.body
-        )}
+      {editingRecord && (
+        <TradeEditModal
+          record={editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSaved={() => {
+            setEditingRecord(null);
+            fetchSummary();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -50,6 +50,87 @@ export type RegularIncomePayload = {
 
 export type RegularIncome = RegularIncomePayload & { id: number; owner: string };
 
+export type CapitalGainRecord = {
+  buy_tx_id?: number | null;
+  sell_tx_id?: number | null;
+  code: string;
+  scrip: string;
+  isin: string;
+  asset_type: "MUTUAL_FUND" | "STOCK";
+  tax_class: "EQUITY" | "DEBT" | "OTHER";
+  rate_key: string;
+  rate_label: string;
+  long_term: boolean;
+  gain_type: "LTCG" | "STCG";
+  financial_year: string;
+  bought_date: string;
+  bought_qty: number;
+  bought_rate: number;
+  bought_value: number;
+  sold_date: string;
+  sold_qty: number;
+  sold_rate: number;
+  sold_value: number;
+  fmv_2018_01_31: number | null;
+  fmv_missing: boolean;
+  cost_estimated: boolean;
+  profit_loss: number;
+  taxable_gain: number;
+  holding_period: number;
+};
+
+export type FyTaxLine = {
+  rate_key: string;
+  label: string;
+  long_term: boolean;
+  equity: boolean;
+  gain: number;
+  after_set_off: number;
+  taxable: number;
+  tax: number | null; // null = slab rate not chosen
+};
+
+export type FyTaxSummary = {
+  financial_year: string;
+  lines: FyTaxLine[];
+  st_loss: number;
+  lt_loss: number;
+  st_loss_carry_forward: number;
+  lt_loss_carry_forward: number;
+  equity_ltcg_exemption_limit: number;
+  equity_ltcg_exemption_used: number;
+  estimated_tax: number;
+  slab_gain_taxable: number;
+  slab_tax_included: boolean;
+};
+
+export type CapitalGainsSummary = {
+  financial_year: string;
+  total_trades: number;
+  ltcg_count: number;
+  stcg_count: number;
+  total_ltcg: number;
+  total_stcg: number;
+  net_realized_gain: number;
+  total_buy_value: number;
+  total_sale_value: number;
+  estimated_tax: number;
+  slab_gain_taxable: number;
+  slab_rate: number | null;
+  fy_summaries: FyTaxSummary[];
+  groups: {
+    asset_type: string;
+    tax_class: string;
+    label: string;
+    short_term_gain: number;
+    long_term_gain: number;
+    count: number;
+    sale_value: number;
+  }[];
+  warnings: { fmv_missing: number; cost_estimated: number; indexation_used: number; slab_trades: number };
+  records: CapitalGainRecord[];
+};
+
 export type InterestIncomeSummary = {
   financial_year: string;
   schedule_fy: string; // fy value for downloadInterestScheduleCSV
@@ -672,10 +753,11 @@ export const api = {
     return api.fetch(`/reports/interest-income?${params.toString()}`);
   },
 
-  getCapitalGainsSummary: (financialYear?: string, assetClass: string = "all") => {
+  getCapitalGainsSummary: (financialYear?: string, assetClass: string = "all", slabRate?: number | null): Promise<CapitalGainsSummary> => {
     const params = new URLSearchParams();
     if (financialYear) params.append("financial_year", financialYear);
     params.append("asset_class", assetClass);
+    if (slabRate !== undefined && slabRate !== null) params.append("slab_rate", String(slabRate));
     return api.fetch(`/reports/capital-gains/summary?${params.toString()}`);
   },
 
