@@ -2,9 +2,9 @@
 // plain return, labelled, instead of a yearly rate that magnifies a few weeks' move (-4% shown as
 // -19%). The server still sends the annualised XIRR (used for sorting) and a `held_under_one_year` flag.
 
-export const UNDER_ONE_YEAR_NOTE = "Held under 1 year: XIRR and CAGR show the plain return, not a yearly rate.";
+export const UNDER_ONE_YEAR_NOTE = "Held under 1 year: XIRR shows the plain return, not a yearly rate.";
 
-/** The value to show in an XIRR / CAGR box. */
+/** The value to show in an XIRR box. */
 export function rateToShow(
   annualPct: number | null | undefined,
   plainReturnPct: number | null | undefined,

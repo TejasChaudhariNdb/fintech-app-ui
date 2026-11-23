@@ -25,7 +25,7 @@ interface SchemeCardProps {
   returnPct: number;
   xirr?: number | null;
   cagr?: number | null;
-  /** BUG-072: first purchase under a year ago -> show the plain return in XIRR and CAGR. */
+  /** BUG-072: first purchase under a year ago -> show the plain return in XIRR. */
   heldUnderOneYear?: boolean;
   dayChange?: number;
   dayChangePct?: number;
@@ -61,7 +61,6 @@ export default function SchemeCard({
   profit = 0,
   returnPct,
   xirr,
-  cagr,
   heldUnderOneYear = false,
   dayChange = 0,
   dayChangePct = 0,
@@ -85,7 +84,6 @@ export default function SchemeCard({
   // BUG-072: plain return under a year (both boxes), the yearly rates after that
   // (a box with no value from the server stays hidden, as before)
   const xirrShown = xirr === undefined || xirr === null ? null : rateToShow(xirr, returnPct, heldUnderOneYear);
-  const cagrShown = cagr === undefined || cagr === null ? null : rateToShow(cagr, returnPct, heldUnderOneYear);
   const isDayPositive = dayChange >= 0;
 
   const getRelationForProfile = (profileId: number) => {
@@ -355,6 +353,11 @@ export default function SchemeCard({
 
         {/* Metrics Grid */}
         <div className="mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {/* Cost of the units held today, so value vs invested reads at a glance (as Groww / Coin show) */}
+          <MetricItem
+            label="Invested"
+            value={<PrivacyMask>₹{Math.round(current - profit).toLocaleString("en-IN")}</PrivacyMask>}
+          />
           <MetricItem
             label="NAV"
             value={`₹${nav.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`}
@@ -376,14 +379,8 @@ export default function SchemeCard({
               title={heldUnderOneYear ? UNDER_ONE_YEAR_NOTE : undefined}
             />
           )}
-          {cagrShown !== null && (
-            <MetricItem
-              label={rateLabel("CAGR", heldUnderOneYear)}
-              value={`${cagrShown.toFixed(2)}%`}
-              highlight={cagrShown >= 0 ? "positive" : "negative"}
-              title={heldUnderOneYear ? UNDER_ONE_YEAR_NOTE : undefined}
-            />
-          )}
+          {/* CAGR is not shown for funds: with several buys or any redemption it measures the units
+              still held from the first-ever purchase date, so it misleads (user feedback 2026-11-23). */}
           {categoryRank && (
             <MetricItem
               label="Cat. Rank"
@@ -391,8 +388,14 @@ export default function SchemeCard({
             />
           )}
         </div>
-        {heldUnderOneYear && (xirrShown !== null || cagrShown !== null) && (
+        {heldUnderOneYear && xirrShown !== null && (
           <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">{UNDER_ONE_YEAR_NOTE}</p>
+        )}
+        {!heldUnderOneYear && xirrShown !== null && xirrShown >= 0 !== returnPct >= 0 && (
+          <p className="mt-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+            XIRR covers every rupee in and out of this fund, including units already redeemed. The
+            overall {returnPct >= 0 ? "gain" : "loss"} is on the units you hold today.
+          </p>
         )}
       </div>
 
@@ -480,7 +483,7 @@ function MetricItem({
   title,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   highlight?: "positive" | "negative";
   title?: string;
 }) {

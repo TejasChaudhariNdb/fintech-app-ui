@@ -41,6 +41,7 @@ import {
   Loader2,
   Compass,
   SlidersHorizontal,
+  Pencil,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -224,6 +225,7 @@ export default function ProfilePage() {
   const [newFamilyRelation, setNewFamilyRelation] = useState("");
   const [newFamilyPan, setNewFamilyPan] = useState("");
   const [newFamilyProfileType, setNewFamilyProfileType] = useState("INDIVIDUAL");
+  const [editingFamilyProfileId, setEditingFamilyProfileId] = useState<number | null>(null);
   const [isSavingFamilyProfile, setIsSavingFamilyProfile] = useState(false);
   const [hasUnreadUpdates, setHasUnreadUpdates] = useState(false);
 
@@ -770,13 +772,24 @@ export default function ProfilePage() {
     }
     setIsSavingFamilyProfile(true);
     try {
-      await api.createProfile({
-        name: newFamilyName.trim(),
-        relation: newFamilyRelation.trim(),
-        profile_type: newFamilyProfileType,
-        pan: newFamilyPan.trim() || undefined,
-      });
-      showToast("Profile created successfully", "success");
+      if (editingFamilyProfileId !== null) {
+        // "" clears the PAN on the backend; undefined would leave it unchanged
+        await api.updateProfile(editingFamilyProfileId, {
+          name: newFamilyName.trim(),
+          relation: newFamilyRelation.trim(),
+          profile_type: newFamilyProfileType,
+          pan: newFamilyPan.trim(),
+        });
+      } else {
+        await api.createProfile({
+          name: newFamilyName.trim(),
+          relation: newFamilyRelation.trim(),
+          profile_type: newFamilyProfileType,
+          pan: newFamilyPan.trim() || undefined,
+        });
+      }
+      showToast(editingFamilyProfileId !== null ? "Profile updated" : "Profile created successfully", "success");
+      setEditingFamilyProfileId(null);
       setShowAddFamilyProfileModal(false);
       setNewFamilyName("");
       setNewFamilyRelation("");
@@ -784,7 +797,7 @@ export default function ProfilePage() {
       setFamilyRelationChoice("");
       await refreshProfiles();
     } catch (err: any) {
-      const msg = cleanErrorMessage(err, "Failed to create profile");
+      const msg = cleanErrorMessage(err, editingFamilyProfileId !== null ? "Failed to update profile" : "Failed to create profile");
       showToast(msg, "error");
     } finally {
       setIsSavingFamilyProfile(false);
@@ -1101,6 +1114,7 @@ export default function ProfilePage() {
                 setNewFamilyRelation("");
                 setNewFamilyPan("");
                 setNewFamilyProfileType("INDIVIDUAL");
+                setEditingFamilyProfileId(null);
                 setShowAddFamilyProfileModal(true);
               }}
               className="flex items-center gap-1 text-[11px] font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors cursor-pointer"
@@ -1169,6 +1183,23 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="flex items-center gap-2 sm:self-center self-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingFamilyProfileId(p.id);
+                          setFamilyRelationChoice("Other"); // skips the picker; relation stays editable
+                          setNewFamilyName(p.name);
+                          setNewFamilyRelation(p.relation.charAt(0) + p.relation.slice(1).toLowerCase());
+                          setNewFamilyPan(p.pan || "");
+                          setNewFamilyProfileType(p.profile_type || "INDIVIDUAL");
+                          setShowAddFamilyProfileModal(true);
+                        }}
+                        className="text-xs font-semibold p-1.5 rounded-xl border border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Edit Profile"
+                        aria-label={`Edit ${p.name}`}
+                      >
+                        <Pencil size={14} />
+                      </button>
                       {!p.is_default && (
                         <button
                           type="button"
@@ -2060,8 +2091,11 @@ export default function ProfilePage() {
       {/* Add Family Profile Modal */}
       <Modal
         isOpen={showAddFamilyProfileModal}
-        onClose={() => setShowAddFamilyProfileModal(false)}
-        title="Add Family Profile"
+        onClose={() => {
+          setShowAddFamilyProfileModal(false);
+          setEditingFamilyProfileId(null);
+        }}
+        title={editingFamilyProfileId !== null ? "Edit Profile" : "Add Family Profile"}
       >
         <form onSubmit={handleCreateFamilyProfile} className="space-y-5">
           {!familyRelationChoice ? (
@@ -2098,15 +2132,17 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-neutral-100 dark:border-white/5">
                 <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                  Profile Details for {familyRelationChoice}
+                  {editingFamilyProfileId !== null ? "Edit profile details" : `Profile Details for ${familyRelationChoice}`}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setFamilyRelationChoice("")}
-                  className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:underline text-left"
-                >
-                  Change relation
-                </button>
+                {editingFamilyProfileId === null && (
+                  <button
+                    type="button"
+                    onClick={() => setFamilyRelationChoice("")}
+                    className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:underline text-left"
+                  >
+                    Change relation
+                  </button>
+                )}
               </div>
 
               {/* Profile Name */}
@@ -2193,21 +2229,23 @@ export default function ProfilePage() {
               </div>
 
               <div className="pt-2 flex gap-3">
-                <Button
-                  type="button"
-                  onClick={() => setFamilyRelationChoice("")}
-                  className="flex-1"
-                  variant="secondary"
-                >
-                  Back
-                </Button>
+                {editingFamilyProfileId === null && (
+                  <Button
+                    type="button"
+                    onClick={() => setFamilyRelationChoice("")}
+                    className="flex-1"
+                    variant="secondary"
+                  >
+                    Back
+                  </Button>
+                )}
                 <Button
                   type="submit"
                   isLoading={isSavingFamilyProfile}
                   className="flex-1"
                   variant="primary"
                 >
-                  Create Profile
+                  {editingFamilyProfileId !== null ? "Save Changes" : "Create Profile"}
                 </Button>
               </div>
             </div>
