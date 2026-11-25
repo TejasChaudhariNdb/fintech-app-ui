@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useProfile } from "@/context/ProfileContext";
 import CorporateActionModal from "@/components/features/CorporateActionModal";
+import TradeChargesFields, { EMPTY_CHARGES, chargesFromTx, chargesPayload, type TradeCharges } from "@/components/features/TradeChargesFields";
 
 type StockHolding = {
   id: number;
@@ -52,6 +53,8 @@ type StockTransaction = {
   date: string;
   amount: number;
   notes?: string | null;
+  charges?: number | null;
+  stt?: number | null;
 };
 
 type StockFundamentals = {
@@ -107,6 +110,7 @@ type EditableTransaction = {
   quantity: string;
   price: string;
   date: string;
+  fees: TradeCharges;
 };
 
 export default function StockDetailPage() {
@@ -132,6 +136,7 @@ export default function StockDetailPage() {
     quantity: "",
     price: "",
     date: new Date().toISOString().split("T")[0],
+    fees: EMPTY_CHARGES,
   });
   const [toast, setToast] = useState({
     message: "",
@@ -234,6 +239,7 @@ export default function StockDetailPage() {
           price: Number(newTxForm.price),
           date: newTxForm.date,
           transaction_type: newTxForm.transaction_type,
+          ...chargesPayload(newTxForm.fees),
         },
         activeProfileId && activeProfileId !== "all" ? String(activeProfileId) : undefined,
         { signal: controller.signal }
@@ -245,6 +251,7 @@ export default function StockDetailPage() {
         quantity: "",
         price: holding?.current_price ? String(holding.current_price) : "",
         date: new Date().toISOString().split("T")[0],
+        fees: EMPTY_CHARGES,
       });
       await loadPageData();
       showToast("Transaction added successfully", "success");
@@ -269,6 +276,7 @@ export default function StockDetailPage() {
         price: Number(editingTx.price),
         date: editingTx.date,
         transaction_type: editingTx.transaction_type,
+        ...chargesPayload(editingTx.fees),
       });
       setEditingTx(null);
       await loadPageData();
@@ -415,6 +423,7 @@ export default function StockDetailPage() {
                   quantity: "",
                   price: holding?.current_price ? String(holding.current_price) : "",
                   date: new Date().toISOString().split("T")[0],
+                  fees: EMPTY_CHARGES,
                 });
                 setIsAddTxOpen(true);
               }}
@@ -532,6 +541,7 @@ export default function StockDetailPage() {
                           quantity: String(tx.quantity),
                           price: String(tx.price),
                           date: tx.date,
+                          fees: chargesFromTx(tx),
                         })
                       }
                       className="rounded-full p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-primary-600 dark:hover:bg-white/10 dark:hover:text-primary-400">
@@ -931,6 +941,7 @@ export default function StockDetailPage() {
               }
               required
             />
+            <TradeChargesFields value={editingTx.fees} onChange={(fees) => setEditingTx({ ...editingTx, fees })} />
             <DatePicker
               label="Date"
               value={editingTx.date}
@@ -1007,6 +1018,7 @@ export default function StockDetailPage() {
             }
             required
           />
+          <TradeChargesFields value={newTxForm.fees} onChange={(fees) => setNewTxForm({ ...newTxForm, fees })} />
           <DatePicker
             label="Transaction Date"
             value={newTxForm.date}
