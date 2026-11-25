@@ -289,20 +289,26 @@ export default function FixedIncomeForm({
       return { maturityVal: principalNum, interestVal: (principalNum * rateNum * years) / 100, totalYears: years };
     }
 
-    let maturityVal = principalNum;
+    // Bank method, same as backend compound_between(): whole periods by calendar months from the start
+    // date, then simple interest (days / 365) on the days left over.
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const startUtc = Date.UTC(sy, sm - 1, sd);
+    const [ey, em, ed] = maturityDate.split("-").map(Number);
+    const endUtc = Date.UTC(ey, em - 1, ed);
+    const addMonths = (k: number) => {
+      const lastDay = new Date(Date.UTC(sy, sm - 1 + k + 1, 0)).getUTCDate();  // relativedelta clamps to month end
+      return Date.UTC(sy, sm - 1 + k, Math.min(sd, lastDay));
+    };
+    const dayMs = 86_400_000;
+    let maturityVal: number;
     if (frequency === "SIMPLE") {
-      const interest = (principalNum * rateNum * years) / 100;
-      maturityVal = principalNum + interest;
+      maturityVal = principalNum * (1 + (rateNum / 100) * Math.round((endUtc - startUtc) / dayMs) / 365);
     } else {
-      const freqMap: Record<string, number> = {
-        MONTHLY: 12,
-        QUARTERLY: 4,
-        HALF_YEARLY: 2,
-        ANNUALLY: 1,
-      };
-      const n = freqMap[frequency] || 4;
-      const ratePerPeriod = rateNum / (100 * n);
-      maturityVal = principalNum * Math.pow(1 + ratePerPeriod, n * years);
+      const months = ({ MONTHLY: 1, QUARTERLY: 3, HALF_YEARLY: 6, ANNUALLY: 12 } as Record<string, number>)[frequency] || 3;
+      let periods = 0;
+      while (periods < 2400 && addMonths(months * (periods + 1)) <= endUtc) periods++;
+      const leftoverDays = Math.round((endUtc - addMonths(months * periods)) / dayMs);
+      maturityVal = principalNum * Math.pow(1 + (rateNum / 100) * (months / 12), periods) * (1 + (rateNum / 100) * leftoverDays / 365);
     }
 
     const interestVal = Math.max(0, maturityVal - principalNum);
