@@ -67,8 +67,8 @@ const PRESETS_BY_TYPE: Record<
   ],
   POST_OFFICE: [
     { label: "PO-TD: 1-5 Yr (7.5%)", name: "Post Office Time Deposit (PO-TD)", rate: 7.50, freq: "QUARTERLY", tenureMonths: 60, is80C: true },
-    { label: "PO-MIS: Monthly (7.4%)", name: "Post Office Monthly Income (PO-MIS)", rate: 7.40, freq: "MONTHLY", tenureMonths: 60 },
-    { label: "PO-SCSS: Senior (8.2%)", name: "Senior Citizen Savings (PO-SCSS)", rate: 8.20, freq: "QUARTERLY", tenureMonths: 60, is80C: true },
+    { label: "PO-MIS: Monthly (7.4%)", name: "Post Office Monthly Income (PO-MIS)", rate: 7.40, freq: "MONTHLY", payout: "MONTHLY", tenureMonths: 60 },
+    { label: "PO-SCSS: Senior (8.2%)", name: "Senior Citizen Savings (PO-SCSS)", rate: 8.20, freq: "QUARTERLY", payout: "QUARTERLY", tenureMonths: 60, is80C: true },
     { label: "NSC: 5-Yr (7.7%)", name: "National Savings Certificate (NSC)", rate: 7.70, freq: "ANNUALLY", tenureMonths: 60, is80C: true },
     { label: "KVP (7.5%)", name: "Kisan Vikas Patra (KVP)", rate: 7.50, freq: "ANNUALLY", tenureMonths: 115 },
     // BUG-095: LIC-run pension scheme (closed to new investors 31 Mar 2023); 7.4% a year paid monthly for 10 years.
@@ -183,7 +183,7 @@ export default function FixedIncomeForm({
     initialData?.compounding_frequency || "QUARTERLY"
   );
   const [payoutFreq, setPayoutFreq] = useState<string>(
-    initialData?.payout_frequency || "QUARTERLY"
+    initialData?.payout_frequency || "AT_MATURITY"  // 2026-11-25: was "QUARTERLY", which marked cumulative FDs as payouts
   );
   const [payoutBasis, setPayoutBasis] = useState<string>(initialData?.payout_date_basis || "");
   const [payoutBankAccount, setPayoutBankAccount] = useState<string>(
@@ -279,8 +279,13 @@ export default function FixedIncomeForm({
     const days = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 3600 * 24));
     const years = days / 365.25;
 
-    // BUG-107: interest is paid out along the way, so only the principal comes back at maturity (matches backend)
-    if (payoutFreq !== "AT_MATURITY") {
+    // BUG-107: interest is paid out along the way, so only the principal comes back at maturity. Same rule as
+    // backend pays_out_interest(): bonds, a payout bank account, or a payout scheme by name (SCSS, MIS, PMVVY).
+    const paysOut = payoutFreq !== "AT_MATURITY" && (
+      depositType === "RBI_BOND" || depositType === "TAX_FREE_BOND" || payoutBankAccount.trim() !== "" ||
+      /SCSS|SENIOR CITIZEN SAVINGS|PMVVY|VAYA VANDANA|\bMIS\b|MONTHLY INCOME/i.test(`${institution} ${fdrNumber} ${notes}`)
+    );
+    if (paysOut) {
       return { maturityVal: principalNum, interestVal: (principalNum * rateNum * years) / 100, totalYears: years };
     }
 
@@ -366,8 +371,8 @@ export default function FixedIncomeForm({
     } else if (typeId === "RBI_BOND") {
       setFrequency("HALF_YEARLY");
       setPayoutFreq("HALF_YEARLY");
-    } else if (typeId === "POST_OFFICE") {
-      setPayoutFreq("QUARTERLY");
+    } else {
+      setPayoutFreq("AT_MATURITY");  // bank / corporate / post office: cumulative unless the user picks a payout
     }
   };
 
@@ -843,7 +848,7 @@ export default function FixedIncomeForm({
           className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
         />
         <p className="text-[11px] text-neutral-500 mt-1">
-          Used to auto-populate your Interest Schedule and verify receipt credits.
+          For a payout FD, add the account the interest goes to: Arthavi then counts the interest as paid out, so the maturity shows only your principal.
         </p>
       </div>
 
