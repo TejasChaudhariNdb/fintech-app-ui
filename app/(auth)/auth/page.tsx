@@ -19,7 +19,7 @@ import {
   FileSpreadsheet,
   Users,
 } from "lucide-react";
-import { api, clearOfflineCache } from "@/lib/api";
+import { api, clearOfflineCache, saveAccessToken } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -47,7 +47,7 @@ function AuthForm() {
     clearOfflineCache();
     const impersonateToken = searchParams.get("impersonate_token");
     if (impersonateToken) {
-      localStorage.setItem("access_token", impersonateToken);
+      saveAccessToken(impersonateToken);
       router.replace("/");
       return;
     }
@@ -139,7 +139,7 @@ function AuthForm() {
     setShowReactivate(false);
     try {
       const data = await api.login(email, password);
-      localStorage.setItem("access_token", data.access_token);
+      saveAccessToken(data.access_token);
       localStorage.setItem("user_email", email);
       analytics.identifyUser(email, email);
       analytics.track({ name: "auth_login_success", properties: { method: "email" } });
@@ -163,7 +163,7 @@ function AuthForm() {
     setError("");
     try {
       const data = await api.reactivate(email, password);
-      localStorage.setItem("access_token", data.access_token);
+      saveAccessToken(data.access_token);
       localStorage.setItem("user_email", email);
       analytics.identifyUser(email, email);
       analytics.track({ name: "auth_reactivation_success", properties: { method: "email" } });
@@ -186,7 +186,7 @@ function AuthForm() {
     setError("");
     try {
       const data = await api.register(email, password, "other");
-      localStorage.setItem("access_token", data.access_token);
+      saveAccessToken(data.access_token);
       localStorage.setItem("user_email", email);
       analytics.identifyUser(email, email, { signup_source: "other" });
       analytics.track({ name: "auth_register_success", properties: { method: "email" } });

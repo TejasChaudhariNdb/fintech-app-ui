@@ -262,9 +262,26 @@ function formatErrorDetail(detail: unknown): string {
 // removed on logout; once they fill Safari's storage, saving the login token fails (iPhone login loop).
 export function clearOfflineCache() {
   if (typeof window === "undefined") return;
-  Object.keys(localStorage)
-    .filter((k) => k.split(":").length === 3)
-    .forEach((k) => localStorage.removeItem(k));
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.split(":").length === 3)
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // Storage blocked entirely (e.g. Safari "Block All Cookies"): nothing to clear
+  }
+}
+
+export const STORAGE_BLOCKED_MESSAGE =
+  "Your browser couldn't save your login. Check that cookies aren't blocked in Safari settings, or clear this site's data, then try again.";
+
+// Clears the offline cache first so a full cache can't block the login; throws a readable error if storage still refuses.
+export function saveAccessToken(token: string) {
+  clearOfflineCache();
+  try {
+    localStorage.setItem("access_token", token);
+  } catch {
+    throw new Error(STORAGE_BLOCKED_MESSAGE);
+  }
 }
 
 function handleUnauthorized(endpoint: string) {

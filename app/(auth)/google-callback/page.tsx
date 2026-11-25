@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { api, clearOfflineCache } from "@/lib/api";
+import { api, saveAccessToken, STORAGE_BLOCKED_MESSAGE } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 
 function GoogleCallbackHandler() {
@@ -47,8 +47,7 @@ function GoogleCallbackHandler() {
         const redirectUri = window.location.origin + "/google-callback";
         const data = await api.googleLoginWithCode(code!, redirectUri);
         
-        clearOfflineCache();
-        localStorage.setItem("access_token", data.access_token);
+        saveAccessToken(data.access_token);
         
         if (data.is_new_user) {
           analytics.track({
@@ -82,6 +81,9 @@ function GoogleCallbackHandler() {
           if (err.reactivationToken) {
             localStorage.setItem("reactivation_token", err.reactivationToken);
           }
+        } else if (err.message === STORAGE_BLOCKED_MESSAGE) {
+          // Keep the message on screen; going back to /login would just loop
+          setError(STORAGE_BLOCKED_MESSAGE);
         } else {
           setError(err.message || "Failed to complete Google authentication.");
           setTimeout(() => {
@@ -105,7 +107,7 @@ function GoogleCallbackHandler() {
     try {
       const data = await api.reactivateGoogle(reactivationToken);
       
-      localStorage.setItem("access_token", data.access_token);
+      saveAccessToken(data.access_token);
       localStorage.removeItem("reactivation_token");
       
       analytics.track({
@@ -161,7 +163,16 @@ function GoogleCallbackHandler() {
             </div>
             <h1 className="text-xl font-bold text-neutral-900 dark:text-white">Authentication Failed</h1>
             <p className="text-neutral-500 dark:text-neutral-400 text-sm">{error}</p>
-            <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-2">Redirecting to login...</p>
+            {error === STORAGE_BLOCKED_MESSAGE ? (
+              <button
+                onClick={() => router.push("/login")}
+                className="w-full py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Back to login
+              </button>
+            ) : (
+              <p className="text-neutral-400 dark:text-neutral-500 text-xs mt-2">Redirecting to login...</p>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

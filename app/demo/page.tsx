@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, clearOfflineCache } from "@/lib/api";
+import { api, saveAccessToken, STORAGE_BLOCKED_MESSAGE } from "@/lib/api";
 
 export default function DemoPage() {
   const router = useRouter();
@@ -14,7 +14,6 @@ export default function DemoPage() {
         // Clear existing session first to ensure clean demo start
         localStorage.removeItem("access_token");
         localStorage.removeItem("user_email");
-        clearOfflineCache();
 
         const email = process.env.NEXT_PUBLIC_DEMO_EMAIL || "";
         const password = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "";
@@ -25,7 +24,7 @@ export default function DemoPage() {
           );
         }
         const data = await api.login(email, password);
-        localStorage.setItem("access_token", data.access_token);
+        saveAccessToken(data.access_token);
         localStorage.setItem("user_email", email);
 
         // Add a flag so we can maybe show a welcome banner or tour later
@@ -34,6 +33,11 @@ export default function DemoPage() {
         router.replace("/");
       } catch (err: any) {
         console.error("Demo login failed", err);
+        // Storage problem: keep the message on screen, retrying from /login would fail the same way
+        if (err.message === STORAGE_BLOCKED_MESSAGE) {
+          setError(STORAGE_BLOCKED_MESSAGE);
+          return;
+        }
         setError(
           "Failed to initialize demo. Please try again or login manually.",
         );
