@@ -126,6 +126,10 @@ const SUPPORTED_BROKERS = [
  */
 async function mergeCsvFiles(files: File[]): Promise<File> {
   if (files.length === 1) return files[0];
+  // Merging reads files as text, which garbles binary Excel; Excel must go alone.
+  if (files.some((f) => !f.name.toLowerCase().endsWith(".csv"))) {
+    throw new Error("Excel (.xlsx) files must be uploaded one at a time. Remove the other files, or save them all as CSV.");
+  }
 
   let headerLine = "";
   const dataLines: string[] = [];
@@ -1083,7 +1087,7 @@ export default function TradebookImportModal({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".csv"
+                      accept=".csv,.xlsx"
                       multiple
                       onChange={(e) => handleFilesSelected(Array.from(e.target.files || []))}
                       className="hidden"
@@ -1163,7 +1167,7 @@ export default function TradebookImportModal({
                         </div>
                         <div>
                           <p className="font-bold text-sm text-neutral-900 dark:text-white">
-                            Drop 1 or multiple Tradebook CSVs here
+                            Drop 1 or multiple Tradebook CSVs here (or one .xlsx)
                           </p>
                           <p className="text-xs text-neutral-400 mt-0.5">
                             Export yearly statements from Zerodha/Groww and drop all at once
