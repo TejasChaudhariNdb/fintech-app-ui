@@ -279,6 +279,11 @@ export default function FixedIncomeForm({
     const days = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 3600 * 24));
     const years = days / 365.25;
 
+    // BUG-107: interest is paid out along the way, so only the principal comes back at maturity (matches backend)
+    if (payoutFreq !== "AT_MATURITY") {
+      return { maturityVal: principalNum, interestVal: (principalNum * rateNum * years) / 100, totalYears: years };
+    }
+
     let maturityVal = principalNum;
     if (frequency === "SIMPLE") {
       const interest = (principalNum * rateNum * years) / 100;
