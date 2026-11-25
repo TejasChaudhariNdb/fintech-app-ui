@@ -19,7 +19,7 @@ import {
   FileSpreadsheet,
   Users,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, clearOfflineCache } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -44,6 +44,7 @@ function AuthForm() {
 
   // ── Auth guard, error from URL & page-view tracking ─────────────────────
   useEffect(() => {
+    clearOfflineCache();
     const impersonateToken = searchParams.get("impersonate_token");
     if (impersonateToken) {
       localStorage.setItem("access_token", impersonateToken);

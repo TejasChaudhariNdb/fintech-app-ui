@@ -258,6 +258,15 @@ function formatErrorDetail(detail: unknown): string {
   return "Please check the values you entered.";
 }
 
+// Offline cache entries are the only "email:cacheKey:profileId" keys. They pile up across accounts and are never
+// removed on logout; once they fill Safari's storage, saving the login token fails (iPhone login loop).
+export function clearOfflineCache() {
+  if (typeof window === "undefined") return;
+  Object.keys(localStorage)
+    .filter((k) => k.split(":").length === 3)
+    .forEach((k) => localStorage.removeItem(k));
+}
+
 function handleUnauthorized(endpoint: string) {
   if (typeof window === "undefined") return;
   const isAuthEndpoint = endpoint.startsWith("/auth");
@@ -464,10 +473,15 @@ export const api = {
         const userEmail = localStorage.getItem("user_email") || "anonymous";
         const cacheProfileId = activeProfileId || "default";
         const namespacedKey = `${userEmail}:${options.cacheKey}:${cacheProfileId}`;
-        localStorage.setItem(
-          namespacedKey,
-          JSON.stringify({ timestamp: Date.now(), data }),
-        );
+        try {
+          localStorage.setItem(
+            namespacedKey,
+            JSON.stringify({ timestamp: Date.now(), data }),
+          );
+        } catch {
+          // Storage full (Safari allows ~5 MB): drop the offline cache instead of failing a good response
+          clearOfflineCache();
+        }
       }
 
       return data;

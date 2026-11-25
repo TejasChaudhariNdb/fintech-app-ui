@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, clearOfflineCache } from "@/lib/api";
 import { analytics } from "@/lib/analytics";
 
 function GoogleCallbackHandler() {
@@ -47,6 +47,7 @@ function GoogleCallbackHandler() {
         const redirectUri = window.location.origin + "/google-callback";
         const data = await api.googleLoginWithCode(code!, redirectUri);
         
+        clearOfflineCache();
         localStorage.setItem("access_token", data.access_token);
         
         if (data.is_new_user) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, clearOfflineCache } from "@/lib/api";
 
 export default function DemoPage() {
   const router = useRouter();
@@ -14,6 +14,7 @@ export default function DemoPage() {
         // Clear existing session first to ensure clean demo start
         localStorage.removeItem("access_token");
         localStorage.removeItem("user_email");
+        clearOfflineCache();
 
         const email = process.env.NEXT_PUBLIC_DEMO_EMAIL || "";
         const password = process.env.NEXT_PUBLIC_DEMO_PASSWORD || "";
@@ -23,7 +24,6 @@ export default function DemoPage() {
             "Demo credentials not configured in environment (NEXT_PUBLIC_DEMO_EMAIL/PASSWORD)",
           );
         }
-        console.log(email)
         const data = await api.login(email, password);
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("user_email", email);
