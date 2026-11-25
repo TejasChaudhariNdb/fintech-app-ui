@@ -52,6 +52,7 @@ import TradebookImportModal from "@/components/features/TradebookImportModal";
 import CorporateActionModal from "@/components/features/CorporateActionModal";
 import FixStockSymbolModal from "@/components/features/FixStockSymbolModal";
 import DematReconcileModal from "@/components/features/DematReconcileModal";
+import TradeChargesFields, { EMPTY_CHARGES, chargesPayload } from "@/components/features/TradeChargesFields";
 import { rateLabel, rateToShow, UNDER_ONE_YEAR_NOTE } from "@/lib/returnsDisplay";
 
 export default function StocksPage() {
@@ -166,6 +167,7 @@ export default function StocksPage() {
     date: new Date().toISOString().split("T")[0],
     transaction_type: "BUY" as "BUY" | "SELL",
   });
+  const [stockFees, setStockFees] = useState(EMPTY_CHARGES);  // BUG-111
   const [stockModalTab, setStockModalTab] = useState<"MANUAL" | "IMPORT">(
     "MANUAL",
   );
@@ -422,6 +424,7 @@ export default function StocksPage() {
         price: Number(stockForm.price),
         date: stockForm.date,
         transaction_type: stockForm.transaction_type,
+        ...chargesPayload(stockFees),
       }, targetProfileId, { signal: controller.signal });
 
       if (isFirst) {
@@ -470,6 +473,7 @@ export default function StocksPage() {
     setManualError(null);
     setShowStockModal(false);
     setStockModalTab("MANUAL");
+    setStockFees(EMPTY_CHARGES);
     setStockForm({
       symbol: "",
       quantity: "",
@@ -1699,6 +1703,7 @@ export default function StocksPage() {
                 required
               />
             </div>
+            <TradeChargesFields value={stockFees} onChange={setStockFees} />
             <DatePicker
               label="Date"
               value={stockForm.date}

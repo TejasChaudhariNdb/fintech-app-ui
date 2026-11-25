@@ -638,6 +638,8 @@ export const api = {
       price: number;
       date: string;
       transaction_type: "BUY" | "SELL";
+      charges?: number | null;  // BUG-111: whole trade, ₹
+      stt?: number | null;
     },
     profileId?: string,
     options?: { signal?: AbortSignal }
@@ -668,6 +670,8 @@ export const api = {
       date: string;
       transaction_type: string;
       notes?: string;
+      charges?: number | null;  // BUG-111
+      stt?: number | null;
     },
   ) =>
     api.fetch(`/equity/transaction/${id}`, {

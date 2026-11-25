@@ -11,6 +11,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import Input from "@/components/ui/Input";
 import AddTransactionModal from "@/components/features/AddTransactionModal";
+import TradeChargesFields, { EMPTY_CHARGES, chargesPayload } from "@/components/features/TradeChargesFields";
 import { Search, Calendar, Filter, Download, Plus, Trash2, CalendarClock, ReceiptText } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useProfile } from "@/context/ProfileContext";
@@ -42,6 +43,7 @@ export default function ActivityPage() {
     date: new Date().toISOString().split("T")[0],
     transaction_type: "BUY" as "BUY" | "SELL",
   });
+  const [stockFees, setStockFees] = useState(EMPTY_CHARGES);  // BUG-111
   const [isValidSymbol, setIsValidSymbol] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -224,6 +226,7 @@ export default function ActivityPage() {
         price: Number(stockForm.price),
         date: stockForm.date,
         transaction_type: stockForm.transaction_type,
+        ...chargesPayload(stockFees),
       });
       showToast("Stock transaction added", "success");
       setShowAddStock(false);
@@ -357,6 +360,7 @@ export default function ActivityPage() {
                           transaction_type: "BUY",
                         });
                         setIsValidSymbol(false);
+                        setStockFees(EMPTY_CHARGES);
                         setShowAddStock(true);
                       }}
                       className="w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-neutral-50 dark:hover:bg-white/5 font-semibold text-neutral-800 dark:text-neutral-200 flex items-center justify-between"
@@ -613,6 +617,7 @@ export default function ActivityPage() {
                 required
               />
             </div>
+            <TradeChargesFields value={stockFees} onChange={setStockFees} />
             <DatePicker
               label="Date"
               value={stockForm.date}
