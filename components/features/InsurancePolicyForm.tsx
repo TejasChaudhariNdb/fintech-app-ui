@@ -119,6 +119,8 @@ export default function InsurancePolicyForm({
     initialData?.premiums_paid_override ? String(initialData.premiums_paid_override) : ""
   );
   const isUlip = policyType === "ULIP_ENDOWMENT";
+  // BUG-114: limited-pay life plans (term or endowment) stop premiums before cover ends
+  const hasPaidUntil = isUlip || policyType === "TERM_LIFE";
   const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
     if (initialData?.profile_id) return String(initialData.profile_id);
     if (activeProfileId && activeProfileId !== "all") return activeProfileId;
@@ -189,7 +191,7 @@ export default function InsurancePolicyForm({
         status: initialData?.status || "ACTIVE",
         notes: notes.trim() || undefined,
         profile_id: resolvedProfileId || undefined,
-        premium_paid_until: isUlip && paidUntil ? paidUntil : null,
+        premium_paid_until: hasPaidUntil && paidUntil ? paidUntil : null,
         premiums_paid_override: isUlip && parseFloat(paidOverrideStr) > 0 ? parseFloat(paidOverrideStr) : null,
       });
     } catch (err: any) {
@@ -431,8 +433,8 @@ export default function InsurancePolicyForm({
         </div>
       </div>
 
-      {/* ── ULIP: PREMIUMS PAID (for fund gain / XIRR) ── */}
-      {isUlip && frequency !== "SINGLE" && (
+      {/* ── PREMIUMS PAID UNTIL (paid-up plans; ULIP also uses it for fund gain / XIRR) ── */}
+      {hasPaidUntil && frequency !== "SINGLE" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
             <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
@@ -448,6 +450,7 @@ export default function InsurancePolicyForm({
               Date of the last premium for limited-pay plans (e.g. pay 5 years, cover 10). Leave empty if you still pay.
             </p>
           </div>
+          {isUlip && (
           <div>
             <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
               Total Premiums Paid (Optional)
@@ -466,6 +469,7 @@ export default function InsurancePolicyForm({
               Only if it differs, e.g. the premium changed or top-ups were made.
             </p>
           </div>
+          )}
         </div>
       )}
 

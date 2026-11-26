@@ -73,6 +73,7 @@ interface InsurancePolicyItem {
   days_to_renewal?: number | null;
   is_renewal_due_soon: boolean;
   is_overdue: boolean;
+  is_paid_up?: boolean;
   nominee_name?: string | null;
   status: string;
   notes?: string | null;
@@ -505,7 +506,11 @@ export default function InsuranceVaultPage() {
 
                     {/* Renewal Badge & Actions */}
                     <div className="flex items-center gap-2">
-                      {isOverdue ? (
+                      {item.is_paid_up ? (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                          Paid up
+                        </span>
+                      ) : isOverdue ? (
                         <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30">
                           Overdue
                         </span>
@@ -571,7 +576,7 @@ export default function InsuranceVaultPage() {
                         Next Premium Due
                       </span>
                       <span className="text-xs sm:text-sm font-bold text-neutral-800 dark:text-neutral-200">
-                        {formatDatePretty(item.next_premium_due_date)}
+                        {item.is_paid_up ? "Not applicable (paid up)" : formatDatePretty(item.next_premium_due_date)}
                       </span>
                     </div>
 
