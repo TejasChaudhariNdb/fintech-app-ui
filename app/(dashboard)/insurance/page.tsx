@@ -236,14 +236,8 @@ export default function InsuranceVaultPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-neutral-900 dark:text-white tracking-tight flex items-center gap-2">
-            <span>Insurance Policies</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 flex items-center gap-1">
-              <Shield size={12} /> Family Safety Net
-            </span>
+            <span>Insurance</span>
           </h2>
-          <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-            Track family term life cover, health insurance floaters, and upcoming premium renewals
-          </p>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto">
@@ -286,7 +280,7 @@ export default function InsuranceVaultPage() {
                 {formatINRShort(summary.renewal_due_premium)})
               </div>
               <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                Ensure timely payment before the grace period to avoid policy lapse or loss of health waiting credits.
+                Pay before the grace period ends.
               </p>
             </div>
           </div>
@@ -305,9 +299,6 @@ export default function InsuranceVaultPage() {
               {summary ? formatINRShort(summary.total_life_cover) : "₹0"}
             </PrivacyMask>
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Pure Term Protection
-          </div>
         </Card>
 
         <Card className="p-4 sm:p-5">
@@ -320,14 +311,11 @@ export default function InsuranceVaultPage() {
               {summary ? formatINRShort(summary.total_health_cover) : "₹0"}
             </PrivacyMask>
           </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            Hospitalization Floater
-          </div>
         </Card>
 
         <Card className="p-4 sm:p-5">
           <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mb-1">
-            Annual Premium Outgo
+            Yearly Premiums
           </div>
           <div className="text-lg sm:text-2xl font-black text-neutral-900 dark:text-white tabular-nums">
             <PrivacyMask>
@@ -335,13 +323,13 @@ export default function InsuranceVaultPage() {
             </PrivacyMask>
           </div>
           <div className="text-[11px] text-neutral-400 mt-1">
-            Across {summary?.active_policies_count || 0} active policies
+            {summary?.active_policies_count || 0} active {summary?.active_policies_count === 1 ? "policy" : "policies"}
           </div>
         </Card>
 
         <Card className="p-4 sm:p-5">
           <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mb-1">
-            Safety Net Score
+            Cover Status
           </div>
           <div className="text-lg sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
             <ShieldCheck size={22} />
@@ -352,9 +340,6 @@ export default function InsuranceVaultPage() {
                 ? "Moderate"
                 : "Needs Cover"}
             </span>
-          </div>
-          <div className="text-[11px] text-neutral-400 mt-1">
-            10x-15x income benchmark
           </div>
         </Card>
       </div>
@@ -404,10 +389,10 @@ export default function InsuranceVaultPage() {
       {/* ── FILTER TABS ── */}
       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         {[
-          { id: "ALL", label: `All Policies (${policies.length})` },
-          { id: "TERM_LIFE", label: "Term Life Insurance" },
-          { id: "HEALTH", label: "Health / Medical" },
-          { id: "MOTOR", label: "Motor / Vehicle" },
+          { id: "ALL", label: `All (${policies.length})` },
+          { id: "TERM_LIFE", label: "Term life" },
+          { id: "HEALTH", label: "Health" },
+          { id: "MOTOR", label: "Motor" },
           { id: "OTHERS", label: "ULIP & Endowment" },
         ].map((f) => (
           <button

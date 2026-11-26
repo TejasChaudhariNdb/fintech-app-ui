@@ -26,9 +26,6 @@ export default function InsurancePolicyModal({
       title={isEditing ? "Edit Policy" : "Add Insurance Policy"}
     >
       <div className="pb-4">
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4 -mt-1">
-          Store term life, health floater, or motor policies with renewal countdowns and family protection summaries.
-        </p>
         <InsurancePolicyForm
           initialData={initialData}
           onSave={async (data) => {

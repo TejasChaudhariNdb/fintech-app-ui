@@ -8,12 +8,7 @@ import {
   Heart,
   Car,
   FileText,
-  Calendar,
-  AlertCircle,
-  Building,
-  User,
-  Sparkles,
-  Check,
+  ChevronDown,
 } from "lucide-react";
 
 export interface InsurancePolicyFormData {
@@ -46,6 +41,7 @@ interface InsurancePolicyFormProps {
 }
 
 const PRESET_INSURERS = [
+  "LIC of India",
   "HDFC Life",
   "Star Health",
   "ICICI Prudential",
@@ -53,18 +49,12 @@ const PRESET_INSURERS = [
   "Tata AIA Life",
   "Care Health (Religare)",
   "Max Life",
-  "LIC of India",
   "Bajaj Allianz",
 ];
 
-const SUM_ASSURED_CHIPS = [
-  { label: "₹10 Lakh", val: 1000000 },
-  { label: "₹25 Lakh", val: 2500000 },
-  { label: "₹50 Lakh", val: 5000000 },
-  { label: "₹1 Crore", val: 10000000 },
-  { label: "₹1.5 Crore", val: 15000000 },
-  { label: "₹2 Crore", val: 20000000 },
-];
+const LABEL = "block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1";
+const INPUT =
+  "w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-xl px-3 py-2.5 text-sm text-neutral-900 dark:text-white outline-none placeholder:text-neutral-400";
 
 export default function InsurancePolicyForm({
   initialData,
@@ -167,6 +157,10 @@ export default function InsurancePolicyForm({
       setErrorMsg("Please select a policy start date.");
       return;
     }
+    if (hasPaidUntil && paidUntil && (paidUntil < startDate || (endDate && paidUntil > endDate))) {
+      setErrorMsg("Last premium date must be between the start date and the cover end date.");
+      return;
+    }
 
     const resolvedProfileId = selectedProfileId
       ? parseInt(selectedProfileId)
@@ -199,18 +193,18 @@ export default function InsurancePolicyForm({
     }
   };
 
+  const hasMoreDetails = !!(initialData?.policy_number || initialData?.nominee_name || initialData?.notes || initialData?.premiums_paid_override);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* ── PROFILE SELECTOR (If multi-profile) ── */}
       {profiles.length > 1 && (
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Insured Family Member
-          </label>
+          <label className={LABEL}>For</label>
           <select
             value={selectedProfileId}
             onChange={(e) => setSelectedProfileId(e.target.value)}
-            className="w-full bg-neutral-50 dark:bg-black/20 border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-xl px-3.5 py-2.5 text-sm font-semibold outline-none transition-all dark:text-white"
+            className={INPUT}
           >
             {profiles.map((p) => (
               <option key={p.id} value={p.id}>
@@ -222,146 +216,108 @@ export default function InsurancePolicyForm({
       )}
 
       {/* ── POLICY TYPE SELECTOR ── */}
-      <div>
-        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-          Protection Type
-        </label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {[
-            { id: "TERM_LIFE", label: "Term Life Cover", icon: Shield },
-            { id: "HEALTH", label: "Health / Medical", icon: Heart },
-            { id: "MOTOR", label: "Motor / Vehicle", icon: Car },
-            { id: "ULIP_ENDOWMENT", label: "Endowment / ULIP", icon: FileText },
-          ].map((item) => {
-            const Icon = item.icon;
-            const isSelected = policyType === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setPolicyType(item.id);
-                  if (item.id === "HEALTH" && sumAssuredStr === "10000000") {
-                    setSumAssuredStr("1500000"); // Standard ₹15L health cover
-                  } else if (item.id === "TERM_LIFE" && sumAssuredStr === "1500000") {
-                    setSumAssuredStr("10000000"); // Standard ₹1 Cr term cover
-                  }
-                }}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer ${
-                  isSelected
-                    ? "bg-indigo-50 dark:bg-indigo-500/15 border-indigo-500 text-indigo-950 dark:text-indigo-300 ring-2 ring-indigo-500/20 shadow-xs"
-                    : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-neutral-300"
-                }`}
-              >
-                <Icon size={18} className="mb-1 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-xs font-bold">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      <div className="grid grid-cols-4 gap-2">
+        {[
+          { id: "TERM_LIFE", label: "Term life", icon: Shield },
+          { id: "HEALTH", label: "Health", icon: Heart },
+          { id: "MOTOR", label: "Motor", icon: Car },
+          { id: "ULIP_ENDOWMENT", label: "ULIP / Endowment", icon: FileText },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isSelected = policyType === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => {
+                setPolicyType(item.id);
+                if (item.id === "HEALTH" && sumAssuredStr === "10000000") {
+                  setSumAssuredStr("1500000"); // Standard ₹15L health cover
+                } else if (item.id === "TERM_LIFE" && sumAssuredStr === "1500000") {
+                  setSumAssuredStr("10000000"); // Standard ₹1 Cr term cover
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-1 px-1 py-2 rounded-xl border text-center transition-colors ${
+                isSelected
+                  ? "bg-indigo-50 dark:bg-indigo-500/15 border-indigo-500 text-indigo-700 dark:text-indigo-300"
+                  : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300"
+              }`}
+            >
+              <Icon size={16} />
+              <span className="text-[11px] font-semibold leading-tight">{item.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── INSURER & PLAN NAME ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Insurance Company <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Building size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-            <input
-              type="text"
-              placeholder="e.g. HDFC Life, Star Health"
-              value={insurerName}
-              onChange={(e) => setInsurerName(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl pl-10 pr-4 py-2.5 text-sm font-semibold text-neutral-900 dark:text-white outline-none"
-            />
-          </div>
-
-          {/* Quick Insurer Chips */}
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            {PRESET_INSURERS.slice(0, 5).map((name) => (
-              <button
-                key={name}
-                type="button"
-                onClick={() => setInsurerName(name)}
-                className="text-[10px] px-2 py-0.5 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 font-medium transition-colors"
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+      <div>
+        <label className={LABEL}>Insurance company</label>
+        <input
+          type="text"
+          placeholder="e.g. LIC, HDFC Life"
+          value={insurerName}
+          onChange={(e) => setInsurerName(e.target.value)}
+          className={INPUT}
+        />
+        <div className="flex gap-1.5 mt-1.5 overflow-x-auto no-scrollbar">
+          {PRESET_INSURERS.slice(0, 4).map((name) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setInsurerName(name)}
+              className="shrink-0 text-[11px] px-2 py-0.5 rounded-md bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300"
+            >
+              {name}
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Plan / Policy Name <span className="text-red-500">*</span>
-          </label>
+      <div>
+        <label className={LABEL}>Plan name</label>
+        <input
+          type="text"
+          placeholder="e.g. Jeevan Anand, Optima Secure"
+          value={policyName}
+          onChange={(e) => setPolicyName(e.target.value)}
+          className={INPUT}
+        />
+      </div>
+
+      {/* ── COVER, PREMIUM & FREQUENCY ── */}
+      <div>
+        <label className={LABEL}>
+          Cover (sum assured)
+          {sumAssuredNum >= 100000 && (
+            <span className="ml-1.5 text-indigo-600 dark:text-indigo-400 font-semibold">
+              {sumAssuredNum >= 10000000
+                ? `₹${(sumAssuredNum / 10000000).toFixed(2)} Cr`
+                : `₹${(sumAssuredNum / 100000).toFixed(1)} L`}
+            </span>
+          )}
+        </label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">₹</span>
           <input
-            type="text"
-            placeholder="e.g. Click 2 Protect, Optima Secure"
-            value={policyName}
-            onChange={(e) => setPolicyName(e.target.value)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-4 py-2.5 text-sm font-semibold text-neutral-900 dark:text-white outline-none"
+            type="number"
+            step="any"
+            min="1000"
+            inputMode="decimal"
+            placeholder="1,00,00,000"
+            value={sumAssuredStr}
+            onChange={(e) => setSumAssuredStr(e.target.value)}
+            className={`${INPUT} pl-7 tabular-nums`}
           />
         </div>
       </div>
 
-      {/* ── SUM ASSURED & ANNUAL PREMIUM ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
-              Sum Assured (Cover) <span className="text-red-500">*</span>
-            </label>
-            <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400">
-              {sumAssuredNum >= 10000000
-                ? `₹${(sumAssuredNum / 10000000).toFixed(2)} Cr Cover`
-                : sumAssuredNum >= 100000
-                ? `₹${(sumAssuredNum / 100000).toFixed(1)} Lakh Cover`
-                : ""}
-            </span>
-          </div>
-
+          <label className={LABEL}>{frequency === "SINGLE" ? "Single premium" : "Premium per year"}</label>
           <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-400">
-              ₹
-            </span>
-            <input
-              type="number"
-              step="any"
-              min="1000"
-              inputMode="decimal"
-              placeholder="1,00,00,000"
-              value={sumAssuredStr}
-              onChange={(e) => setSumAssuredStr(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl pl-8 pr-4 py-3 text-base font-bold text-neutral-900 dark:text-white outline-none tabular-nums"
-            />
-          </div>
-
-          {/* Quick Sum Assured Chips */}
-          <div className="flex items-center gap-1 mt-2 flex-wrap">
-            {SUM_ASSURED_CHIPS.map((chip) => (
-              <button
-                key={chip.label}
-                type="button"
-                onClick={() => setSumAssuredStr(String(chip.val))}
-                className="px-2 py-0.5 rounded-md text-[10px] bg-neutral-100 hover:bg-neutral-200 dark:bg-white/5 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-300 transition-colors"
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            {frequency === "SINGLE" ? "Single Premium" : "Annual Premium"} (₹) <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-neutral-400">
-              ₹
-            </span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">₹</span>
             <input
               type="number"
               step="any"
@@ -370,154 +326,93 @@ export default function InsurancePolicyForm({
               placeholder="18,500"
               value={premiumStr}
               onChange={(e) => setPremiumStr(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl pl-8 pr-4 py-3 text-base font-bold text-neutral-900 dark:text-white outline-none tabular-nums"
+              className={`${INPUT} pl-7 tabular-nums`}
             />
           </div>
-
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] text-neutral-400 uppercase font-semibold">Frequency:</span>
+        </div>
+        <div>
+          <label className={LABEL}>Paid</label>
+          <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className={INPUT}>
+            <option value="ANNUAL">Yearly</option>
+            <option value="HALF_YEARLY">Half-yearly</option>
+            <option value="MONTHLY">Monthly</option>
             {/* Many ULIPs are bought with one single premium */}
-            {(isUlip ? ["SINGLE", "ANNUAL", "HALF_YEARLY", "MONTHLY"] : ["ANNUAL", "HALF_YEARLY", "MONTHLY"]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFrequency(f)}
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
-                  frequency === f
-                    ? "bg-indigo-600 text-white"
-                    : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-400"
-                }`}
-              >
-                {f.replace("_", "-")}
-              </button>
-            ))}
-          </div>
+            {(isUlip || frequency === "SINGLE") && <option value="SINGLE">Single (one time)</option>}
+          </select>
         </div>
       </div>
 
-      {/* ── POLICY DATES & NEXT RENEWAL ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      {/* ── DATES ── */}
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Policy Start Date <span className="text-red-500">*</span>
-          </label>
-          <DatePicker
-            value={startDate}
-            onChange={(v) => setStartDate(v)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
-          />
+          <label className={LABEL}>Start date</label>
+          <DatePicker value={startDate} onChange={(v) => setStartDate(v)} className={INPUT} />
         </div>
-
         <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Next Premium Due Date
-          </label>
-          <DatePicker
-            value={nextDueDate}
-            clearable
-            onChange={(v) => setNextDueDate(v)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
-          />
+          <label className={LABEL}>Cover ends</label>
+          <DatePicker value={endDate} clearable onChange={(v) => setEndDate(v)} className={INPUT} />
         </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Coverage End Date
-          </label>
-          <DatePicker
-            value={endDate}
-            clearable
-            onChange={(v) => setEndDate(v)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
-          />
-        </div>
+        {frequency !== "SINGLE" && (
+          <div>
+            <label className={LABEL}>Next premium due</label>
+            <DatePicker value={nextDueDate} clearable onChange={(v) => setNextDueDate(v)} className={INPUT} />
+          </div>
+        )}
+        {/* Paid-up plans: last premium date (ULIP also uses it for fund gain / XIRR) */}
+        {hasPaidUntil && frequency !== "SINGLE" && (
+          <div>
+            <label className={LABEL}>Last premium date</label>
+            <DatePicker value={paidUntil} clearable onChange={(v) => setPaidUntil(v)} className={INPUT} />
+            <p className="text-[10px] text-neutral-400 mt-1">For limited-pay plans. A past date marks it paid up.</p>
+          </div>
+        )}
       </div>
 
-      {/* ── PREMIUMS PAID UNTIL (paid-up plans; ULIP also uses it for fund gain / XIRR) ── */}
-      {hasPaidUntil && frequency !== "SINGLE" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div>
-            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-              Premiums Paid Until (Optional)
-            </label>
-            <DatePicker
-              value={paidUntil}
-              clearable
-              onChange={(v) => setPaidUntil(v)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
-            />
-            <p className="text-[10px] text-neutral-400 mt-1">
-              Date of the last premium for limited-pay plans (e.g. pay 5 years, cover 10). Leave empty if you still pay.
-            </p>
+      {/* ── OPTIONAL DETAILS ── */}
+      <details open={hasMoreDetails} className="group rounded-xl border border-neutral-200 dark:border-white/10">
+        <summary className="flex items-center justify-between cursor-pointer list-none px-3 py-2.5 text-sm font-medium text-neutral-600 dark:text-neutral-300">
+          More details (optional)
+          <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="space-y-3 px-3 pb-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={LABEL}>Policy number</label>
+              <input type="text" value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} className={INPUT} />
+            </div>
+            <div>
+              <label className={LABEL}>Nominee</label>
+              <input type="text" value={nominee} onChange={(e) => setNominee(e.target.value)} className={INPUT} />
+            </div>
           </div>
-          {isUlip && (
-          <div>
-            <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-              Total Premiums Paid (Optional)
-            </label>
-            <input
-              type="number"
-              step="any"
-              min="0"
-              inputMode="decimal"
-              placeholder="Worked out from the premium and dates"
-              value={paidOverrideStr}
-              onChange={(e) => setPaidOverrideStr(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none tabular-nums placeholder:text-neutral-400"
-            />
-            <p className="text-[10px] text-neutral-400 mt-1">
-              Only if it differs, e.g. the premium changed or top-ups were made.
-            </p>
-          </div>
+          {isUlip && frequency !== "SINGLE" && (
+            <div>
+              <label className={LABEL}>Total premiums paid</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                inputMode="decimal"
+                placeholder="Leave empty to work it out"
+                value={paidOverrideStr}
+                onChange={(e) => setPaidOverrideStr(e.target.value)}
+                className={`${INPUT} tabular-nums`}
+              />
+              <p className="text-[10px] text-neutral-400 mt-1">Only if premiums changed or you made top-ups</p>
+            </div>
           )}
-        </div>
-      )}
-
-      {/* ── POLICY NUMBER & NOMINEE ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Policy Number (Optional)
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. 008129410"
-            value={policyNumber}
-            onChange={(e) => setPolicyNumber(e.target.value)}
-            className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            Nominee Name (Optional)
-          </label>
-          <div className="relative">
-            <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <div>
+            <label className={LABEL}>Notes / riders</label>
             <input
               type="text"
-              placeholder="e.g. Spouse / Mother"
-              value={nominee}
-              onChange={(e) => setNominee(e.target.value)}
-              className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl pl-10 pr-4 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
+              placeholder="e.g. Critical illness rider"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className={INPUT}
             />
           </div>
         </div>
-      </div>
-
-      {/* ── NOTES ── */}
-      <div>
-        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-          Notes / Riders (Optional)
-        </label>
-        <input
-          type="text"
-          placeholder="e.g. Critical illness rider added, auto-debit on HDFC card"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-indigo-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none placeholder:text-neutral-400"
-        />
-      </div>
+      </details>
 
       {/* ── ERROR MESSAGE ── */}
       {errorMsg && (
@@ -549,7 +444,7 @@ export default function InsurancePolicyForm({
               <span>Saving...</span>
             </>
           ) : (
-            <span>{initialData ? "Update Policy" : "Save Insurance Policy"}</span>
+            <span>{initialData ? "Update Policy" : "Save Policy"}</span>
           )}
         </button>
       </div>
