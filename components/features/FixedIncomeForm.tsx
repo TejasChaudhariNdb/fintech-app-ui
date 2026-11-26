@@ -105,6 +105,7 @@ const ASSET_TYPES = [
   { id: "RBI_BOND", label: "RBI Bonds" },
   { id: "TAX_FREE_BOND", label: "Tax-Free Bonds" },
   { id: "PPF", label: "PPF" },
+  { id: "EPF", label: "EPF" },  // same balance-based form as PPF
   { id: "RD", label: "Recurring (RD)" },
   // BUG-116
   { id: "NCD", label: "NCD" },
@@ -166,7 +167,7 @@ export default function FixedIncomeForm({
   const [currentBalanceStr, setCurrentBalanceStr] = useState<string>(
     initialData?.current_balance
       ? String(initialData.current_balance)
-      : initialData?.deposit_type === "PPF" && initialData?.principal_amount
+      : (initialData?.deposit_type === "PPF" || initialData?.deposit_type === "EPF") && initialData?.principal_amount
       ? String(initialData.principal_amount)
       : ""
   );
@@ -201,11 +202,11 @@ export default function FixedIncomeForm({
   const [maturityDate, setMaturityDate] = useState<string>(() => {
     if (initialData?.maturity_date) return initialData.maturity_date;
     const d = new Date();
-    d.setFullYear(d.getFullYear() + (initialData?.deposit_type === "PPF" ? 15 : 1));
+    d.setFullYear(d.getFullYear() + (initialData?.deposit_type === "PPF" || initialData?.deposit_type === "EPF" ? 15 : 1));
     return d.toISOString().split("T")[0];
   });
   const [isTaxSaving, setIsTaxSaving] = useState<boolean>(
-    initialData?.is_tax_saving || (initialData?.deposit_type === "PPF") || false
+    initialData?.is_tax_saving || initialData?.deposit_type === "PPF" || initialData?.deposit_type === "EPF" || false
   );
   const [notes, setNotes] = useState<string>(initialData?.notes || "");
   const [selectedProfileId, setSelectedProfileId] = useState<string>(() => {
@@ -228,6 +229,7 @@ export default function FixedIncomeForm({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const isPPF = depositType === "PPF" || depositType === "EPF";
+  const ppfName = depositType === "EPF" ? "EPF" : "PPF";
 
   // Auto-calculation of Maturity Value
   const principalNum = isPPF
@@ -366,8 +368,9 @@ export default function FixedIncomeForm({
         setMaturityDate(st.toISOString().split("T")[0]);
       }
     }
-    if (typeId === "PPF") {
-      setRateStr("7.10");
+    if (typeId === "PPF" || typeId === "EPF") {
+      setRateStr(typeId === "EPF" ? "8.25" : "7.10");
+      if (typeId === "EPF") setInstitution("EPFO");
       setFrequency("ANNUALLY");
       setPayoutFreq("ANNUALLY");
       setIsTaxSaving(true);
@@ -402,7 +405,7 @@ export default function FixedIncomeForm({
     if (principalNum <= 0) {
       setErrorMsg(
         isPPF
-          ? "Please enter your current PPF account balance."
+          ? `Please enter your current ${ppfName} account balance.`
           : "Please enter a valid principal deposit amount."
       );
       return;
@@ -542,6 +545,8 @@ export default function FixedIncomeForm({
               ? "Issuer"
               : depositType === "OTHER"
               ? "Investment Name"
+              : depositType === "EPF"
+              ? "Employer / EPFO"
               : isPPF
               ? "Bank / Post Office Branch"
               : "Bank / Institution"}{" "}
@@ -611,7 +616,7 @@ export default function FixedIncomeForm({
         <div className="space-y-4 p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-500/20">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-              PPF Balance &amp; Contributions
+              {ppfName} Balance &amp; Contributions
             </span>
           </div>
 
@@ -639,7 +644,7 @@ export default function FixedIncomeForm({
                 />
               </div>
               <p className="text-[11px] text-neutral-500 mt-1">
-                Latest closing balance from your PPF passbook / netbanking.
+                Latest closing balance from your {ppfName} passbook{depositType === "EPF" ? " (EPFO portal / UMANG)" : " / netbanking"}.
               </p>
             </div>
 
@@ -784,7 +789,9 @@ export default function FixedIncomeForm({
             </div>
           ) : (
             <p className="text-[11px] text-neutral-500 mt-1">
-              Current Govt PPF interest rate is 7.10% compounded annually.
+              {depositType === "EPF"
+                ? "EPF interest rate is 8.25% (declared yearly by EPFO), credited annually."
+                : "Current Govt PPF interest rate is 7.10% compounded annually."}
             </p>
           )}
         </div>
@@ -812,7 +819,7 @@ export default function FixedIncomeForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
           <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
-            {isPPF ? "PPF Account Number (Optional)" : "FDR / Reference # (Optional)"}
+            {depositType === "EPF" ? "UAN / Member ID (Optional)" : isPPF ? "PPF Account Number (Optional)" : "FDR / Reference # (Optional)"}
           </label>
           <input
             type="text"
