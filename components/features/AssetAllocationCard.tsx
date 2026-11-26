@@ -22,6 +22,7 @@ const COLORS = {
   "Fixed Income": "#06B6D4", // Cyan-500
   "Real Estate": "#EC4899", // Pink-500
   ULIPs: "#7C3AED", // Violet-600 (BUG-106)
+  NPS: "#0284C7", // Sky-600 (BUG-092)
   Other: "#9CA3AF", // Gray-400
 };
 
