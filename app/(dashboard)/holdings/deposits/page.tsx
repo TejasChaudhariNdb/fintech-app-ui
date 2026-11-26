@@ -161,6 +161,25 @@ function matchesTypeFilter(type: string | undefined, filter: string): boolean {
   return type === filter;
 }
 
+// Categories shown as summary cards and filter chips (BUG-115)
+const FI_CATEGORIES = [
+  { id: "BANK_FD", label: "Bank FDs", chip: "Bank FDs" },
+  { id: "CORPORATE_FD", label: "Corporate FDs", chip: "Corporate FDs (Bajaj/Shriram/MM)" },
+  { id: "POST_OFFICE", label: "Post Office", chip: "Post Office (MIS/SCSS)" },
+  { id: "RBI_BOND", label: "RBI Bonds", chip: "RBI Bonds" },
+  { id: "TAX_FREE_BOND", label: "Tax-Free Bonds", chip: "Tax-Free Bonds (NHAI/REC)" },
+  { id: "PPF", label: "PPF / EPF", chip: "PPF / EPF" },
+  { id: "RD", label: "RDs", chip: "RDs" },
+  { id: "BONDS", label: "NCDs & Bonds", chip: "NCDs & Bonds" },
+  { id: "OTHER", label: "Others", chip: "Others" },
+];
+
+// Money put in, same basis as the backend summary: PPF / EPF use deposits (or balance), others the principal
+function investedOf(h: { deposit_type: string; principal_amount: number; cumulative_deposits?: number | null; current_balance?: number | null }): number {
+  if (h.deposit_type === "PPF" || h.deposit_type === "EPF") return h.cumulative_deposits || h.current_balance || h.principal_amount || 0;
+  return h.principal_amount || 0;
+}
+
 function formatINRShort(val: number): string {
   const abs = Math.abs(val);
   if (abs >= 10000000) {
@@ -906,19 +925,54 @@ export default function FixedIncomePage() {
           </div>
         </div>
 
+        {/* Category summary (BUG-115): total per category at a glance; tap to filter */}
+        {(() => {
+          const cats = FI_CATEGORIES.map((c) => {
+            const items = holdings.filter((h) => matchesTypeFilter(h.deposit_type, c.id));
+            return {
+              ...c,
+              count: items.length,
+              value: items.reduce((sum, h) => sum + (h.current_value || 0), 0),
+              invested: items.reduce((sum, h) => sum + investedOf(h), 0),
+            };
+          }).filter((c) => c.count > 0);
+          if (cats.length < 2) return null;
+          return (
+            <div>
+              <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">By category</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {cats.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setActiveFilter(activeFilter === c.id ? "ALL" : c.id)}
+                    className={`text-left p-3 rounded-xl border transition-colors ${
+                      activeFilter === c.id
+                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10"
+                        : "border-neutral-200 dark:border-white/10 bg-white dark:bg-white/5 hover:border-neutral-300"
+                    }`}
+                  >
+                    <div className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 truncate">
+                      {c.label} <span className="font-normal">({c.count})</span>
+                    </div>
+                    <div className="text-base font-bold text-neutral-900 dark:text-white tabular-nums">
+                      <PrivacyMask>{formatINRShort(c.value)}</PrivacyMask>
+                    </div>
+                    <div className="text-[10px] text-neutral-400 tabular-nums">
+                      Invested <PrivacyMask>{formatINRShort(c.invested)}</PrivacyMask>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
           {[
             { id: "ALL", label: `All (${holdings.length})` },
-            { id: "BANK_FD", label: "Bank FDs" },
-            { id: "CORPORATE_FD", label: "Corporate FDs (Bajaj/Shriram/MM)" },
-            { id: "POST_OFFICE", label: "Post Office (MIS/SCSS)" },
-            { id: "RBI_BOND", label: "RBI Bonds" },
-            { id: "TAX_FREE_BOND", label: "Tax-Free Bonds (NHAI/REC)" },
-            { id: "PPF", label: "PPF / EPF" },
-            { id: "RD", label: "RDs" },
-            { id: "BONDS", label: "NCDs & Bonds" },
-            { id: "OTHER", label: "Others" },
+            ...FI_CATEGORIES.map((c) => ({ id: c.id, label: c.chip })),
           ]
             // hide categories with no deposits, unless it is the one selected
             .filter((f) => f.id === "ALL" || f.id === activeFilter || holdings.some((h) => matchesTypeFilter(h.deposit_type, f.id)))
