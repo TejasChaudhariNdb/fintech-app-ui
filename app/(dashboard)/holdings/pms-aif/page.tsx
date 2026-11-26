@@ -4,7 +4,7 @@
 // out (withdrawal, distribution), plus the latest value from the manager's statement. Backend works out
 // net invested, gain and XIRR.
 import React, { useCallback, useEffect, useState } from "react";
-import { BriefcaseBusiness, Pencil, Plus, Trash2, X } from "lucide-react";
+import { BriefcaseBusiness, Pencil, Plus, Receipt, Trash2, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useProfile } from "@/context/ProfileContext";
 import Card from "@/components/ui/Card";
@@ -29,6 +29,7 @@ interface AltInvestment {
   status: string;
   notes: string | null;
   flows: Flow[];
+  gains: Gain[];
   value: number;
   put_in: number;
   taken_out: number;
@@ -38,6 +39,7 @@ interface AltInvestment {
   xirr: number | null;
   held_under_one_year: boolean;
 }
+interface Gain { financial_year: string; stcg: number; ltcg: number }
 interface Summary { count: number; value: number; invested: number; gain: number; xirr: number | null }
 
 const MANAGERS: Record<Kind, string[]> = {
@@ -65,6 +67,7 @@ export default function PmsAifPage() {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<AltInvestment | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [gainsItem, setGainsItem] = useState<AltInvestment | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -216,12 +219,24 @@ export default function PmsAifPage() {
                     {a.lock_in_until > today() ? `Locked in until ${a.lock_in_until}` : `Lock-in ended ${a.lock_in_until}`}
                   </div>
                 )}
+                {/* BUG-120: realised gains from the manager's capital gains statement, for the Tax page */}
+                <button
+                  type="button"
+                  onClick={() => setGainsItem(a)}
+                  className="w-full flex items-center justify-between gap-2 pt-2.5 border-t border-neutral-100 dark:border-white/5 text-xs font-semibold text-orange-600 dark:text-orange-400"
+                >
+                  <span className="flex items-center gap-1.5"><Receipt size={14} /> Capital gains (STCG / LTCG)</span>
+                  <span className="text-neutral-400 font-medium">
+                    {a.gains.length ? `${a.gains.length} year${a.gains.length > 1 ? "s" : ""} entered` : "Add from statement"}
+                  </span>
+                </button>
               </Card>
             );
           })}
         </div>
       )}
 
+      <GainsModal item={gainsItem} onClose={() => setGainsItem(null)} onSaved={async () => { setGainsItem(null); await load(); }} />
       <AltInvestmentModal isOpen={formOpen} onClose={() => setFormOpen(false)} initial={editing} onSaved={async () => { setFormOpen(false); await load(); }} />
     </div>
   );
@@ -445,6 +460,99 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
           <button type="button" onClick={onClose} disabled={saving} className="flex-1 py-3 rounded-xl border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 font-semibold text-sm">Cancel</button>
           <button type="button" onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm disabled:opacity-50">
             {saving ? "Saving…" : initial ? "Update" : "Save"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// Financial years from the current one back six years, e.g. "2026-27", "2025-26", ...
+function recentFys(): string[] {
+  const d = new Date();
+  const start = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+  return Array.from({ length: 7 }, (_, i) => `${start - i}-${String((start - i + 1) % 100).padStart(2, "0")}`);
+}
+
+type GainDraft = { financial_year: string; stcg: string; ltcg: string };
+
+function GainsModal({ item, onClose, onSaved }: { item: AltInvestment | null; onClose: () => void; onSaved: () => Promise<void> }) {
+  const [rows, setRows] = useState<GainDraft[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fys = recentFys();
+
+  useEffect(() => {
+    if (!item) return;
+    setError(null);
+    setRows(item.gains.length
+      ? item.gains.map((g) => ({ financial_year: g.financial_year, stcg: String(g.stcg || ""), ltcg: String(g.ltcg || "") }))
+      : [{ financial_year: fys[1], stcg: "", ltcg: "" }]);
+    // Reset only when the modal opens, so a parent re-render never wipes what is being typed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item]);
+
+  const update = (i: number, patch: Partial<GainDraft>) => setRows((prev) => prev.map((g, idx) => (idx === i ? { ...g, ...patch } : g)));
+
+  const handleSave = async () => {
+    if (!item) return;
+    setError(null);
+    const gains = rows
+      .filter((g) => g.stcg.trim() !== "" || g.ltcg.trim() !== "")
+      .map((g) => ({ financial_year: g.financial_year, stcg: parseFloat(g.stcg) || 0, ltcg: parseFloat(g.ltcg) || 0 }));
+    if (new Set(gains.map((g) => g.financial_year)).size !== gains.length) return setError("Each financial year can be entered once.");
+    setSaving(true);
+    try {
+      await api.saveAltGains(item.id, gains);
+      await onSaved();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={!!item} onClose={onClose} title="Capital gains (from statement)">
+      <div className="space-y-4 pb-4">
+        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          Copy the realised short-term and long-term gains for each financial year from {item?.manager}&apos;s capital gains statement.
+          Enter a loss as a negative number. These are added to your Tax page.
+        </p>
+        {rows.map((g, i) => (
+          <div key={i} className="grid grid-cols-2 gap-2 pb-3 border-b border-neutral-100 dark:border-white/5 last:border-0">
+            <div className="col-span-2 flex items-center gap-2">
+              <select aria-label="Financial year" value={g.financial_year} onChange={(e) => update(i, { financial_year: e.target.value })} className={INPUT}>
+                {(fys.includes(g.financial_year) ? fys : [...fys, g.financial_year]).map((fy) => <option key={fy} value={fy}>FY {fy}</option>)}
+              </select>
+              <button type="button" aria-label="Remove year" onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))} className="p-2 rounded-lg text-neutral-400 hover:text-red-600 shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+            <div>
+              <label className={LABEL}>Short-term gain (₹)</label>
+              <input type="number" step="any" inputMode="decimal" value={g.stcg} onChange={(e) => update(i, { stcg: e.target.value })} placeholder="0" className={INPUT} />
+            </div>
+            <div>
+              <label className={LABEL}>Long-term gain (₹)</label>
+              <input type="number" step="any" inputMode="decimal" value={g.ltcg} onChange={(e) => update(i, { ltcg: e.target.value })} placeholder="0" className={INPUT} />
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setRows((prev) => [...prev, { financial_year: fys.find((fy) => !prev.some((p) => p.financial_year === fy)) || fys[0], stcg: "", ltcg: "" }])}
+          className="flex items-center gap-1 text-xs font-semibold text-orange-600 dark:text-orange-400"
+        >
+          <Plus size={14} /> Add another year
+        </button>
+        {error && (
+          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400">{error}</div>
+        )}
+        <div className="flex items-center gap-3 pt-1">
+          <button type="button" onClick={onClose} disabled={saving} className="flex-1 py-3 rounded-xl border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-300 font-semibold text-sm">Cancel</button>
+          <button type="button" onClick={handleSave} disabled={saving} className="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-sm disabled:opacity-50">
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>

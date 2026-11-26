@@ -203,7 +203,7 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-white">Tax report</h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-            Capital gains on mutual funds and stocks, and interest income, for your ITR.
+            Capital gains on mutual funds, stocks and PMS, and interest income, for your ITR.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -219,9 +219,10 @@ export default function ReportsPage() {
           <label>
             <span className="sr-only">Investments</span>
             <select value={assetClass} onChange={(e) => setAssetClass(e.target.value)} className={selectCls}>
-              <option value="all">Mutual funds &amp; stocks</option>
+              <option value="all">All (funds, stocks, PMS)</option>
               <option value="mutual_fund">Mutual funds</option>
               <option value="equity">Stocks</option>
+              <option value="pms">PMS &amp; AIF</option>
             </select>
           </label>
           <label className="flex items-center gap-2 text-xs font-semibold text-neutral-500">
@@ -253,8 +254,8 @@ export default function ReportsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { label: "Estimated tax", value: summary.estimated_tax, note: slabRate === null && summary.slab_gain_taxable > 0 ? "Excl. slab-rate gains, cess" : "Excl. 4% cess & surcharge", strong: true },
-              { label: "Short-term gains", value: summary.total_stcg, note: `${summary.stcg_count} sale${summary.stcg_count === 1 ? "" : "s"}` },
-              { label: "Long-term gains", value: summary.total_ltcg, note: `${summary.ltcg_count} sale${summary.ltcg_count === 1 ? "" : "s"} · taxable value` },
+              { label: "Short-term gains", value: summary.total_stcg, note: `${summary.stcg_count} sale${summary.stcg_count === 1 ? "" : "s"}${summary.pms_gains?.some((g) => !g.long_term) ? " + PMS / AIF" : ""}` },
+              { label: "Long-term gains", value: summary.total_ltcg, note: `${summary.ltcg_count} sale${summary.ltcg_count === 1 ? "" : "s"}${summary.pms_gains?.some((g) => g.long_term) ? " + PMS / AIF" : ""} · taxable value` },
               { label: "Profit / loss", value: summary.net_realized_gain, note: `Sold for ${inr(summary.total_sale_value)}` },
             ].map((s) => (
               <div key={s.label} className={`p-4 rounded-3xl border ${s.strong ? "bg-slate-900 dark:bg-white/5 border-slate-900 dark:border-white/10 text-white" : "bg-white dark:bg-[#0F1219] border-neutral-200/80 dark:border-white/5"}`}>
@@ -267,7 +268,7 @@ export default function ReportsPage() {
             ))}
           </div>
 
-          {summary.total_trades === 0 ? (
+          {summary.total_trades === 0 && !summary.pms_gains?.length ? (
             <div className={`${card} p-6 flex items-start gap-3`}>
               <Info size={18} className="text-neutral-400 shrink-0 mt-0.5" />
               <div className="text-sm text-neutral-600 dark:text-neutral-300 space-y-1">
@@ -319,7 +320,9 @@ export default function ReportsPage() {
                       <li key={`${g.asset_type}_${g.tax_class}`} className="py-2.5 flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-neutral-900 dark:text-white">{g.label}</p>
-                          <p className="text-[11px] text-neutral-500">{g.count} sale{g.count === 1 ? "" : "s"}</p>
+                          <p className="text-[11px] text-neutral-500">
+                            {g.asset_type === "PMS" ? "Totals you entered from the statement" : `${g.count} sale${g.count === 1 ? "" : "s"}`}
+                          </p>
                         </div>
                         <div className="text-right text-xs space-y-0.5">
                           <p>Short <GainText value={g.short_term_gain} /></p>

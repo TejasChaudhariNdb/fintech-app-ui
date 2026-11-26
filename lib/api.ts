@@ -129,6 +129,8 @@ export type CapitalGainsSummary = {
   }[];
   warnings: { fmv_missing: number; cost_estimated: number; indexation_used: number; slab_trades: number };
   records: CapitalGainRecord[];
+  // BUG-120: PMS / AIF gains from the manager's statement (totals per year, not trades)
+  pms_gains?: { name: string; kind: string; financial_year: string; rate_label: string; long_term: boolean; taxable_gain: number }[];
 };
 
 export type InterestIncomeSummary = {
@@ -1171,6 +1173,12 @@ export const api = {
       method: id ? "PUT" : "POST",
       body: JSON.stringify(data),
     });
+    api.clearPortfolioCache();
+    return res;
+  },
+  // BUG-120: yearly STCG / LTCG from the manager's capital gains statement (whole list)
+  saveAltGains: async (id: number, gains: { financial_year: string; stcg: number; ltcg: number }[]) => {
+    const res = await api.fetch(`/pms-aif/investments/${id}/gains`, { method: "PUT", body: JSON.stringify({ gains }) });
     api.clearPortfolioCache();
     return res;
   },
