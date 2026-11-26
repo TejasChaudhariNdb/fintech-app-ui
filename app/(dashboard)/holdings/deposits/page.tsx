@@ -152,6 +152,15 @@ type ViewMode = "GRID" | "TIMELINE" | "REPORT" | "SCHEDULE";
 type HorizonFilter = "ALL" | "OVERDUE" | "30D" | "90D" | "180D" | "365D" | "1Y_PLUS";
 type SortField = "maturity_date" | "principal" | "rate" | "days_left";
 
+// Which deposits a filter chip shows; also used for the chip's total (BUG-115)
+function matchesTypeFilter(type: string | undefined, filter: string): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "POST_OFFICE") return !!type && (type.includes("POST_OFFICE") || type.startsWith("PO_"));
+  if (filter === "PPF") return type === "PPF" || type === "EPF";
+  if (filter === "BONDS") return type === "NCD" || type === "CORPORATE_BOND" || type === "GOVT_BOND";
+  return type === filter;
+}
+
 function formatINRShort(val: number): string {
   const abs = Math.abs(val);
   if (abs >= 10000000) {
@@ -180,6 +189,14 @@ function getDepositTypeBadge(type: string): { label: string; color: string } {
       return { label: "Tax-Free Bond", color: "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/20" };
     case "PPF":
       return { label: "PPF", color: "bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/20" };
+    case "NCD":
+      return { label: "NCD", color: "bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/20" };
+    case "CORPORATE_BOND":
+      return { label: "Corporate Bond", color: "bg-violet-50 dark:bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/20" };
+    case "GOVT_BOND":
+      return { label: "Govt / PSU Bond", color: "bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/20" };
+    case "OTHER":
+      return { label: "Other", color: "bg-neutral-100 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-white/10" };
     case "RD":
       return { label: "Recurring Deposit", color: "bg-neutral-100 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-white/10" };
     default:
@@ -512,13 +529,7 @@ export default function FixedIncomePage() {
   const filteredHoldings = useMemo(() => {
     return holdings.filter((item) => {
       // Type Filter
-      if (activeFilter === "BANK_FD" && item.deposit_type !== "BANK_FD") return false;
-      if (activeFilter === "CORPORATE_FD" && item.deposit_type !== "CORPORATE_FD") return false;
-      if (activeFilter === "POST_OFFICE" && !item.deposit_type?.includes("POST_OFFICE") && !item.deposit_type?.startsWith("PO_")) return false;
-      if (activeFilter === "RBI_BOND" && item.deposit_type !== "RBI_BOND") return false;
-      if (activeFilter === "TAX_FREE_BOND" && item.deposit_type !== "TAX_FREE_BOND") return false;
-      if (activeFilter === "PPF" && item.deposit_type !== "PPF" && item.deposit_type !== "EPF") return false;
-      if (activeFilter === "RD" && item.deposit_type !== "RD") return false;
+      if (!matchesTypeFilter(item.deposit_type, activeFilter)) return false;
 
       // Horizon Filter
       const d = item.days_to_maturity;
@@ -906,7 +917,12 @@ export default function FixedIncomePage() {
             { id: "TAX_FREE_BOND", label: "Tax-Free Bonds (NHAI/REC)" },
             { id: "PPF", label: "PPF / EPF" },
             { id: "RD", label: "RDs" },
-          ].map((f) => (
+            { id: "BONDS", label: "NCDs & Bonds" },
+            { id: "OTHER", label: "Others" },
+          ]
+            // hide categories with no deposits, unless it is the one selected
+            .filter((f) => f.id === "ALL" || f.id === activeFilter || holdings.some((h) => matchesTypeFilter(h.deposit_type, f.id)))
+            .map((f) => (
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
@@ -917,6 +933,15 @@ export default function FixedIncomePage() {
               }`}
             >
               {f.label}
+              {(() => {
+                // BUG-115: current value of this category, same basis as the summary total
+                const total = holdings.reduce((sum, h) => (matchesTypeFilter(h.deposit_type, f.id) ? sum + (h.current_value || 0) : sum), 0);
+                return total > 0 ? (
+                  <span className="ml-1.5 tabular-nums opacity-70">
+                    <PrivacyMask>{formatINRShort(total)}</PrivacyMask>
+                  </span>
+                ) : null;
+              })()}
             </button>
           ))}
           {horizonFilter !== "ALL" && (

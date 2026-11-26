@@ -106,7 +106,13 @@ const ASSET_TYPES = [
   { id: "TAX_FREE_BOND", label: "Tax-Free Bonds" },
   { id: "PPF", label: "PPF" },
   { id: "RD", label: "Recurring (RD)" },
+  // BUG-116
+  { id: "NCD", label: "NCD" },
+  { id: "CORPORATE_BOND", label: "Corporate Bonds" },
+  { id: "GOVT_BOND", label: "Govt / PSU Bonds" },
+  { id: "OTHER", label: "Others" },
 ];
+const COUPON_BOND_TYPES = ["RBI_BOND", "TAX_FREE_BOND", "NCD", "CORPORATE_BOND", "GOVT_BOND", "OTHER"];
 
 const PRINCIPAL_CHIPS = [
   { label: "₹25K", val: 25000 },
@@ -282,7 +288,7 @@ export default function FixedIncomeForm({
     // BUG-107: interest is paid out along the way, so only the principal comes back at maturity. Same rule as
     // backend pays_out_interest(): bonds, a payout bank account, or a payout scheme by name (SCSS, MIS, PMVVY).
     const paysOut = payoutFreq !== "AT_MATURITY" && (
-      depositType === "RBI_BOND" || depositType === "TAX_FREE_BOND" || payoutBankAccount.trim() !== "" ||
+      COUPON_BOND_TYPES.includes(depositType) || payoutBankAccount.trim() !== "" ||
       /SCSS|SENIOR CITIZEN SAVINGS|PMVVY|VAYA VANDANA|\bMIS\b|MONTHLY INCOME/i.test(`${institution} ${fdrNumber} ${notes}`)
     );
     if (paysOut) {
@@ -377,6 +383,9 @@ export default function FixedIncomeForm({
     } else if (typeId === "RBI_BOND") {
       setFrequency("HALF_YEARLY");
       setPayoutFreq("HALF_YEARLY");
+    } else if (typeId === "CORPORATE_BOND" || typeId === "GOVT_BOND") {
+      setFrequency("ANNUALLY");
+      setPayoutFreq("ANNUALLY");  // bonds pay a coupon; the user can switch to At maturity
     } else {
       setPayoutFreq("AT_MATURITY");  // bank / corporate / post office: cumulative unless the user picks a payout
     }
@@ -529,6 +538,10 @@ export default function FixedIncomeForm({
               ? "Bond Name / Issuing Bank"
               : depositType === "TAX_FREE_BOND"
               ? "Tax-Free PSU Issuer (e.g. HUDCO, NHAI)"
+              : depositType === "NCD" || depositType === "CORPORATE_BOND" || depositType === "GOVT_BOND"
+              ? "Issuer"
+              : depositType === "OTHER"
+              ? "Investment Name"
               : isPPF
               ? "Bank / Post Office Branch"
               : "Bank / Institution"}{" "}
@@ -552,6 +565,14 @@ export default function FixedIncomeForm({
                 ? "e.g. HUDCO, NHAI, NTPC Tax-Free Bond"
                 : depositType === "CORPORATE_FD"
                 ? "e.g. Bajaj Finance, Shriram Finance, Mahindra Finance"
+                : depositType === "NCD"
+                ? "e.g. Muthoot Finance, Shriram Finance NCD"
+                : depositType === "CORPORATE_BOND"
+                ? "e.g. HDFC Bank, Tata Capital, L&T Finance"
+                : depositType === "GOVT_BOND"
+                ? "e.g. GOI 7.18% 2033, SDL, PSU bond"
+                : depositType === "OTHER"
+                ? "e.g. Chit fund, private loan, NSC"
                 : isPPF
                 ? "e.g. SBI PPF, Post Office PPF, HDFC Bank PPF"
                 : "e.g. HDFC Bank, State Bank of India, Axis Bank"
@@ -880,6 +901,28 @@ export default function FixedIncomeForm({
             onChange={(v) => setMaturityDate(v)}
             className="w-full bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-neutral-900 dark:text-white outline-none"
           />
+          {!isPPF && (
+            // BUG-116: banks quote tenures in days (e.g. 444 days); typing them sets the maturity date
+            <div className="flex items-center gap-2 mt-1.5 text-[11px] text-neutral-500">
+              <span>or tenure</span>
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                aria-label="Tenure in days"
+                placeholder="444"
+                value={startDate && maturityDate ? Math.round((Date.parse(maturityDate) - Date.parse(startDate)) / 86400000) || "" : ""}
+                onChange={(e) => {
+                  const days = parseInt(e.target.value, 10);
+                  if (!startDate || !(days > 0)) return;
+                  const d = new Date(Date.parse(startDate) + days * 86400000);
+                  setMaturityDate(d.toISOString().split("T")[0]);
+                }}
+                className="w-20 bg-white dark:bg-[#121620] border border-neutral-200 dark:border-white/10 focus:border-emerald-500 rounded-lg px-2 py-1 text-xs text-neutral-900 dark:text-white outline-none tabular-nums"
+              />
+              <span>days</span>
+            </div>
+          )}
         </div>
       </div>
 
