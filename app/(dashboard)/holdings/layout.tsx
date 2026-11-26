@@ -10,12 +10,13 @@ import {
   Shield,
   Building,
   PiggyBank,
+  BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
 interface TabItem {
-  id: "mutual-funds" | "stocks" | "gold" | "deposits" | "insurance" | "real-estate" | "nps";
+  id: "mutual-funds" | "stocks" | "gold" | "deposits" | "insurance" | "real-estate" | "nps" | "pms-aif";
   label: string;
   path: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -28,6 +29,7 @@ const TABS: TabItem[] = [
   { id: "gold", label: "Gold", path: "/holdings/gold", icon: Coins },
   { id: "deposits", label: "Fixed Income", path: "/holdings/deposits", icon: Landmark },
   { id: "nps", label: "NPS", path: "/holdings/nps", icon: PiggyBank },
+  { id: "pms-aif", label: "PMS & AIF", path: "/holdings/pms-aif", icon: BriefcaseBusiness },
   { id: "insurance", label: "Insurance", path: "/holdings/insurance", icon: Shield },
   { id: "real-estate", label: "Real Estate", path: "/holdings/real-estate", icon: Building },
 ];
@@ -48,8 +50,11 @@ export default function HoldingsLayout({
   const isInsurance = pathname?.includes("/holdings/insurance");
   const isRealEstate = pathname?.includes("/holdings/real-estate");
   const isNps = pathname?.includes("/holdings/nps");
+  const isPmsAif = pathname?.includes("/holdings/pms-aif");
 
-  const activeTab: TabId = isNps
+  const activeTab: TabId = isPmsAif
+    ? "pms-aif"
+    : isNps
     ? "nps"
     : isRealEstate
     ? "real-estate"

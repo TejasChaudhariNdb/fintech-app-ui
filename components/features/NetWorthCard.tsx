@@ -45,10 +45,15 @@ interface NetWorthCardProps {
   ulipReturnPct?: number;
   ulipXirr?: number | null;
   /** BUG-092: NPS value (units x NAV per scheme) against contributions */
+  /** BUG-117: PMS & AIF statement value against net money put in */
   npsValue?: number;
+  altValue?: number;
   npsProfit?: number;
+  altProfit?: number;
   npsReturnPct?: number;
+  altReturnPct?: number;
   npsXirr?: number | null;
+  altXirr?: number | null;
   /** BUG-065: XIRR per asset class (gold, FD/bonds, real estate with its home loan). */
   fiXirr?: number | null;
   goldXirr?: number | null;
@@ -77,6 +82,7 @@ interface NetWorthCardProps {
   showRealEstate?: boolean;
   showUlip?: boolean;
   showNps?: boolean;
+  showAlt?: boolean;
 }
 
 
@@ -89,6 +95,7 @@ const ASSET_LABELS: Record<string, string> = {
   real_estate: "Real estate",
   ulip: "ULIPs",
   nps: "NPS",
+  alt: "PMS & AIF",
 };
 const assetLabel = (key: string) => ASSET_LABELS[key] || key;
 
@@ -256,10 +263,15 @@ export default function NetWorthCard({
   ulipXirr,
   showUlip = true,
   npsValue = 0,
+  altValue = 0,
   npsProfit,
+  altProfit,
   npsReturnPct,
+  altReturnPct,
   npsXirr,
+  altXirr,
   showNps = true,
+  showAlt = true,
   onRefresh,
   isRefreshing = false,
   dayChangePct = 0,
@@ -366,6 +378,7 @@ export default function NetWorthCard({
           real_estate: reXirr,
           ulip: ulipXirr,
           nps: npsXirr,
+          alt: altXirr,
         }}
       />
     </Modal>
@@ -495,8 +508,9 @@ export default function NetWorthCard({
           // Only for users who track a ULIP; everyone else keeps the five cards they had
           const showUlipCard = Boolean(showUlip) && ulipValue > 0;
           const showNpsCard = Boolean(showNps) && npsValue > 0;
+          const showAltCard = Boolean(showAlt) && altValue > 0;
 
-          const visibleCount = [showMfCard, showStockCard, showFiCard, showGoldCard, showReCard, showUlipCard, showNpsCard].filter(Boolean).length;
+          const visibleCount = [showMfCard, showStockCard, showFiCard, showGoldCard, showReCard, showUlipCard, showNpsCard, showAltCard].filter(Boolean).length;
           if (visibleCount === 0) return null;
 
           const gridColsClass =
@@ -510,7 +524,7 @@ export default function NetWorthCard({
               ? "grid-cols-2 md:grid-cols-4"
               : visibleCount === 6
               ? "grid-cols-2 md:grid-cols-3"
-              : visibleCount === 7
+              : visibleCount === 7 || visibleCount === 8
               ? "grid-cols-2 md:grid-cols-4"
               : "grid-cols-2 md:grid-cols-3 xl:grid-cols-5";
 
@@ -801,6 +815,31 @@ export default function NetWorthCard({
                     gain={npsProfit}
                     gainPct={npsReturnPct}
                     hasHolding={npsValue > 0}
+                  />
+                </div>
+              )}
+              {/* PMS & AIF (BUG-117) */}
+              {showAltCard && (
+                <div className="bg-white/10 dark:bg-black/25 backdrop-blur-md rounded-2xl p-3 sm:p-4 border border-white/10 shadow-sm flex flex-col justify-between transition-all hover:bg-white/15">
+                  <div>
+                    <div className="flex items-center gap-1.5 min-w-0 mb-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                      <p className="text-[11px] font-semibold text-primary-100 uppercase tracking-wider truncate">PMS & AIF</p>
+                    </div>
+                    <p className="text-base sm:text-xl font-bold tracking-tight truncate tabular-nums text-white">
+                      <PrivacyMask>₹{Math.round(altValue).toLocaleString("en-IN")}</PrivacyMask>
+                    </p>
+                    <div className="text-[10px] text-orange-200/80 font-medium mt-1.5 truncate">Portfolio managers & AIFs</div>
+                    <div className="min-h-[16px] mt-1" />
+                  </div>
+                  <MetricToggle
+                    mode={metricMode}
+                    onCycle={cycleMetric}
+                    xirr={altXirr}
+                    lifetimeXirr={altXirr}
+                    gain={altProfit}
+                    gainPct={altReturnPct}
+                    hasHolding={altValue > 0}
                   />
                 </div>
               )}

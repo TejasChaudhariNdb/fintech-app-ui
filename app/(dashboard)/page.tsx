@@ -182,6 +182,7 @@ export default function HomePage() {
             real_estate_xirr: xirrData?.real_estate_xirr ?? null,
             ulip_xirr: xirrData?.ulip_xirr ?? null,
             nps_xirr: xirrData?.nps_xirr ?? null,
+            alt_xirr: xirrData?.alt_xirr ?? null,
           });
         }
         if (topH) setTopHoldings(topH.holdings || []);
@@ -283,6 +284,7 @@ export default function HomePage() {
           real_estate_xirr: xirrData?.real_estate_xirr ?? null,
           ulip_xirr: xirrData?.ulip_xirr ?? null,
           nps_xirr: xirrData?.nps_xirr ?? null,
+          alt_xirr: xirrData?.alt_xirr ?? null,
         });
         setGoals(g || []);
         setInsights(ins || []);
@@ -418,6 +420,10 @@ export default function HomePage() {
       effectiveFamNetWorth += famAlloc.nps || 0;
       effectiveFamInvested += famInvAlloc.nps || 0;
     }
+    if (assetPrefs.alt) {
+      effectiveFamNetWorth += famAlloc.alt || 0;
+      effectiveFamInvested += famInvAlloc.alt || 0;
+    }
 
     // Fallbacks if invested_allocation was not in cache or sum is 0 but portfolio total_invested exists
     if (effectiveFamInvested <= 0 && (familySummary.total_invested || 0) > 0) {
@@ -462,6 +468,10 @@ export default function HomePage() {
       assetPrefs.nps && (famAlloc.nps || 0) > 0 && {
         category: "NPS",
         value: famAlloc.nps || 0,
+      },
+      assetPrefs.alt && (famAlloc.alt || 0) > 0 && {
+        category: "PMS & AIF",
+        value: famAlloc.alt || 0,
       },
     ]
       .filter((item): item is { category: string; value: number } => Boolean(item))
@@ -521,10 +531,13 @@ export default function HomePage() {
           reReturnPct={(famInvAlloc.real_estate || 0) > 0 ? ((famGainAlloc.real_estate ?? ((famAlloc.real_estate || 0) - (famInvAlloc.real_estate || 0))) / famInvAlloc.real_estate) * 100 : 0}
           ulipValue={famAlloc.ulip || 0}
           npsValue={famAlloc.nps || 0}
+          altValue={famAlloc.alt || 0}
           ulipProfit={famGainAlloc.ulip ?? 0}
           npsProfit={famGainAlloc.nps ?? 0}
+          altProfit={famGainAlloc.alt ?? 0}
           ulipReturnPct={(famInvAlloc.ulip || 0) > 0 ? ((famGainAlloc.ulip ?? 0) / famInvAlloc.ulip) * 100 : 0}
           npsReturnPct={(famInvAlloc.nps || 0) > 0 ? ((famGainAlloc.nps ?? 0) / famInvAlloc.nps) * 100 : 0}
+          altReturnPct={(famInvAlloc.alt || 0) > 0 ? ((famGainAlloc.alt ?? 0) / famInvAlloc.alt) * 100 : 0}
           showMF={assetPrefs.mutual_funds}
           showStock={assetPrefs.stocks}
           showFixedIncome={assetPrefs.fixed_income}
@@ -532,6 +545,7 @@ export default function HomePage() {
           showRealEstate={assetPrefs.real_estate}
           showUlip={assetPrefs.ulip}
           showNps={assetPrefs.nps}
+          showAlt={assetPrefs.alt}
           onOpenCustomize={() => setShowCustomizeModal(true)}
           activeAssetsCount={countActiveAssets(assetPrefs).active}
           totalAssetsCount={countActiveAssets(assetPrefs).total}
@@ -552,6 +566,7 @@ export default function HomePage() {
           reXirr={summary?.real_estate_xirr}
           ulipXirr={summary?.ulip_xirr}
           npsXirr={summary?.nps_xirr}
+          altXirr={summary?.alt_xirr}
           mfXirr={summary?.mf_xirr}
           mfLifetimeXirr={summary?.mf_lifetime_xirr}
           // Hide the stock XIRR when stocks is switched off, the same as the stock value (BUG-056).
@@ -638,10 +653,13 @@ export default function HomePage() {
               reCurrent={familySummary?.allocation?.real_estate ?? (summary?.re_current || 0)}
               ulipProfit={familySummary?.gain_allocation?.ulip ?? (summary?.ulip_profit || 0)}
               npsProfit={familySummary?.gain_allocation?.nps ?? (summary?.nps_profit || 0)}
+              altProfit={familySummary?.gain_allocation?.alt ?? (summary?.alt_profit || 0)}
               ulipInvested={familySummary?.invested_allocation?.ulip ?? (summary?.ulip_invested || 0)}
               npsInvested={familySummary?.invested_allocation?.nps ?? (summary?.nps_invested || 0)}
+              altInvested={familySummary?.invested_allocation?.alt ?? (summary?.alt_invested || 0)}
               ulipCurrent={familySummary?.allocation?.ulip ?? (summary?.ulip_current || 0)}
               npsCurrent={familySummary?.allocation?.nps ?? (summary?.nps_current || 0)}
+              altCurrent={familySummary?.allocation?.alt ?? (summary?.alt_current || 0)}
               profileBreakdown={familySummary?.profile_breakdown || []}
               assetPrefs={assetPrefs}
             />
@@ -907,6 +925,7 @@ export default function HomePage() {
             real_estate: familySummary?.allocation?.real_estate || 0,
             ulip: familySummary?.allocation?.ulip || 0,
             nps: familySummary?.allocation?.nps || 0,
+            alt: familySummary?.allocation?.alt || 0,
             insurance_cover:
               (insuranceData?.summary?.total_life_cover || 0) +
               (insuranceData?.summary?.total_health_cover || 0),
@@ -945,6 +964,7 @@ export default function HomePage() {
   if (assetPrefs.real_estate) effectiveIndNetWorth += netWorth?.real_estate || 0;
   if (assetPrefs.ulip) effectiveIndNetWorth += netWorth?.ulip || 0;
   if (assetPrefs.nps) effectiveIndNetWorth += netWorth?.nps || 0;
+  if (assetPrefs.alt) effectiveIndNetWorth += netWorth?.alt || 0;
 
   let effectiveIndInvested = 0;
   if (assetPrefs.mutual_funds) effectiveIndInvested += summary?.mf_invested || 0;
@@ -954,6 +974,7 @@ export default function HomePage() {
   if (assetPrefs.real_estate) effectiveIndInvested += summary?.re_invested || 0;
   if (assetPrefs.ulip) effectiveIndInvested += summary?.ulip_invested || 0;
   if (assetPrefs.nps) effectiveIndInvested += summary?.nps_invested || 0;
+  if (assetPrefs.alt) effectiveIndInvested += summary?.alt_invested || 0;
 
   const effectiveIndProfit = effectiveIndNetWorth - effectiveIndInvested;
   const effectiveIndReturnPct = effectiveIndInvested > 0 ? (effectiveIndProfit / effectiveIndInvested) * 100 : 0;
@@ -966,6 +987,7 @@ export default function HomePage() {
     assetPrefs.real_estate && { category: "Real Estate", value: netWorth?.real_estate || 0 },
     assetPrefs.ulip && (netWorth?.ulip || 0) > 0 && { category: "ULIPs", value: netWorth?.ulip || 0 },
     assetPrefs.nps && (netWorth?.nps || 0) > 0 && { category: "NPS", value: netWorth?.nps || 0 },
+    assetPrefs.alt && (netWorth?.alt || 0) > 0 && { category: "PMS & AIF", value: netWorth?.alt || 0 },
   ]
     .filter((item): item is { category: string; value: number } => Boolean(item))
     .map((item) => ({
@@ -1007,6 +1029,7 @@ export default function HomePage() {
           real_estate: netWorth?.real_estate || 0,
           ulip: netWorth?.ulip || 0,
           nps: netWorth?.nps || 0,
+          alt: netWorth?.alt || 0,
           insurance_cover:
             (insuranceData?.summary?.total_life_cover || 0) +
             (insuranceData?.summary?.total_health_cover || 0),
@@ -1069,10 +1092,13 @@ export default function HomePage() {
                   reReturnPct={(summary?.re_invested || 0) > 0 ? ((summary?.re_profit || 0) / summary.re_invested) * 100 : 0}
                   ulipValue={netWorth?.ulip || 0}
                   npsValue={netWorth?.nps || 0}
+                  altValue={netWorth?.alt || 0}
                   ulipProfit={summary?.ulip_profit || 0}
                   npsProfit={summary?.nps_profit || 0}
+                  altProfit={summary?.alt_profit || 0}
                   ulipReturnPct={(summary?.ulip_invested || 0) > 0 ? ((summary?.ulip_profit || 0) / summary.ulip_invested) * 100 : 0}
                   npsReturnPct={(summary?.nps_invested || 0) > 0 ? ((summary?.nps_profit || 0) / summary.nps_invested) * 100 : 0}
+                  altReturnPct={(summary?.alt_invested || 0) > 0 ? ((summary?.alt_profit || 0) / summary.alt_invested) * 100 : 0}
                   showMF={assetPrefs.mutual_funds}
                   showStock={assetPrefs.stocks}
                   showFixedIncome={assetPrefs.fixed_income}
@@ -1080,6 +1106,7 @@ export default function HomePage() {
                   showRealEstate={assetPrefs.real_estate}
                   showUlip={assetPrefs.ulip}
                   showNps={assetPrefs.nps}
+                  showAlt={assetPrefs.alt}
                   onOpenCustomize={() => setShowCustomizeModal(true)}
                   activeAssetsCount={countActiveAssets(assetPrefs).active}
                   totalAssetsCount={countActiveAssets(assetPrefs).total}
@@ -1100,6 +1127,7 @@ export default function HomePage() {
                   reXirr={summary?.real_estate_xirr}
                   ulipXirr={summary?.ulip_xirr}
                   npsXirr={summary?.nps_xirr}
+                  altXirr={summary?.alt_xirr}
                   mfXirr={summary?.mf_xirr}
                   mfLifetimeXirr={summary?.mf_lifetime_xirr}
                   stockXirr={summary?.stock_xirr}
@@ -1189,10 +1217,13 @@ export default function HomePage() {
                     reCurrent={netWorth?.real_estate || 0}
                     ulipProfit={summary.ulip_profit || 0}
                     npsProfit={summary.nps_profit || 0}
+                    altProfit={summary.alt_profit || 0}
                     ulipInvested={summary.ulip_invested || 0}
                     npsInvested={summary.nps_invested || 0}
+                    altInvested={summary.alt_invested || 0}
                     ulipCurrent={netWorth?.ulip || 0}
                     npsCurrent={netWorth?.nps || 0}
+                    altCurrent={netWorth?.alt || 0}
                     assetPrefs={assetPrefs}
                   />
                 </section>

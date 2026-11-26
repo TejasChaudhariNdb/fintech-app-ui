@@ -379,7 +379,9 @@ export const api = {
           "/real-estate/holdings",
           "/real-estate",
           "/nps/accounts",
-          "/nps"
+          "/nps",
+          "/pms-aif/investments",
+          "/pms-aif"
         ];
         
         const method = (options.method || "GET").toUpperCase();
@@ -1162,6 +1164,22 @@ export const api = {
     return res;
   },
 
+  // BUG-117 / BUG-094: PMS & AIF (statement value + dated money in and out)
+  getAltInvestments: () => api.fetch("/pms-aif/investments", { cacheKey: "pms-aif-investments" }),
+  saveAltInvestment: async (data: Record<string, unknown>, id?: number) => {
+    const res = await api.fetch(id ? `/pms-aif/investments/${id}` : "/pms-aif/investments", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteAltInvestment: async (id: number) => {
+    const res = await api.fetch(`/pms-aif/investments/${id}`, { method: "DELETE" });
+    api.clearPortfolioCache();
+    return res;
+  },
+
   // Real Estate & Property Vault
   getRealEstateHoldings: (profileId?: string) => {
     const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
@@ -1781,6 +1799,7 @@ export const api = {
       "insurance-policies",
       "real-estate-holdings",
       "nps-accounts",
+      "pms-aif-investments",
     ]);
   },
 

@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Umbrella,
   PiggyBank,
+  BriefcaseBusiness,
 } from "lucide-react";
 import {
   NetWorthAssetPreferences,
@@ -36,6 +37,7 @@ interface CustomizeAssetsModalProps {
     real_estate?: number;
     ulip?: number;
     nps?: number;
+    alt?: number;
     insurance_cover?: number;
   };
 }
@@ -147,6 +149,19 @@ const ASSET_OPTIONS: AssetOption[] = [
     isCoreWealth: true,
   },
   {
+    key: "alt",
+    label: "PMS & AIF",
+    description: "PMS and AIF holdings (value from the manager's statement)",
+    icon: BriefcaseBusiness,
+    colorClass: {
+      bg: "bg-orange-500/10 dark:bg-orange-500/15",
+      text: "text-orange-600 dark:text-orange-400",
+      border: "border-orange-500/20",
+      badgeBg: "bg-orange-500",
+    },
+    isCoreWealth: true,
+  },
+  {
     key: "show_insurance_cover",
     label: "Family Insurance Cover",
     description: "Display term life & health sum assured in family protection cards",
@@ -193,6 +208,7 @@ export default function CustomizeAssetsModal({
     if (localPrefs.real_estate) total += values.real_estate || 0;
     if (localPrefs.ulip) total += values.ulip || 0;
     if (localPrefs.nps) total += values.nps || 0;
+    if (localPrefs.alt) total += values.alt || 0;
     return total;
   }, [localPrefs, values]);
 
@@ -222,6 +238,7 @@ export default function CustomizeAssetsModal({
         real_estate: true,
         ulip: true,
         nps: true,
+        alt: true,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     } else if (preset === "liquid") {
@@ -233,6 +250,7 @@ export default function CustomizeAssetsModal({
         real_estate: false,
         ulip: false,
         nps: false,
+        alt: false,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     } else if (preset === "financial") {
@@ -244,6 +262,7 @@ export default function CustomizeAssetsModal({
         real_estate: false,
         ulip: true,
         nps: true,
+        alt: true,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     }
@@ -292,12 +311,13 @@ export default function CustomizeAssetsModal({
                 localPrefs.gold &&
                 localPrefs.real_estate &&
                 localPrefs.ulip &&
-                localPrefs.nps
+                localPrefs.nps &&
+                localPrefs.alt
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
             >
-              All Assets (7/7)
+              All Assets (8/8)
             </button>
 
             <button
@@ -310,7 +330,8 @@ export default function CustomizeAssetsModal({
                 !localPrefs.gold &&
                 !localPrefs.real_estate &&
                 !localPrefs.ulip &&
-                !localPrefs.nps
+                !localPrefs.nps &&
+                !localPrefs.alt
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
@@ -328,7 +349,8 @@ export default function CustomizeAssetsModal({
                 localPrefs.gold &&
                 !localPrefs.real_estate &&
                 localPrefs.ulip &&
-                localPrefs.nps
+                localPrefs.nps &&
+                localPrefs.alt
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
@@ -396,6 +418,8 @@ export default function CustomizeAssetsModal({
                   ? "ulip"
                   : opt.key === "nps"
                   ? "nps"
+                  : opt.key === "alt"
+                  ? "alt"
                   : "insurance_cover";
               const assetVal = values ? values[valKey] : undefined;
 

@@ -25,6 +25,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   PiggyBank,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -135,6 +136,12 @@ export default function SideNav() {
       label: "NPS",
       icon: PiggyBank,
       dotColor: "bg-sky-400",
+    },
+    {
+      id: "/holdings/pms-aif",
+      label: "PMS & AIF",
+      icon: BriefcaseBusiness,
+      dotColor: "bg-orange-400",
     },
     {
       id: "/holdings/gold",

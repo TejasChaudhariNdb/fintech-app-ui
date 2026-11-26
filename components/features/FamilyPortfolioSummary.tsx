@@ -19,6 +19,7 @@ interface ProfileBreakdown {
   real_estate_value?: number;
   ulip_value?: number;
   nps_value?: number;
+  alt_value?: number;
   total_value: number;
   mf_invested?: number;
   stock_invested?: number;
@@ -27,6 +28,7 @@ interface ProfileBreakdown {
   re_invested?: number;
   ulip_invested?: number;
   nps_invested?: number;
+  alt_invested?: number;
   total_invested?: number;
   mf_gain?: number;
   stock_gain?: number;
@@ -35,6 +37,7 @@ interface ProfileBreakdown {
   re_gain?: number;
   ulip_gain?: number;
   nps_gain?: number;
+  alt_gain?: number;
   total_gain?: number;
   return_pct?: number;
   day_change?: number;
@@ -76,6 +79,7 @@ interface FamilyPortfolioSummaryProps {
   reProfit?: number;
   ulipProfit?: number;
   npsProfit?: number;
+  altProfit?: number;
   mfInvested?: number;
   stockInvested?: number;
   fiInvested?: number;
@@ -83,6 +87,7 @@ interface FamilyPortfolioSummaryProps {
   reInvested?: number;
   ulipInvested?: number;
   npsInvested?: number;
+  altInvested?: number;
   mfCurrent?: number;
   stockCurrent?: number;
   fiCurrent?: number;
@@ -90,6 +95,7 @@ interface FamilyPortfolioSummaryProps {
   reCurrent?: number;
   ulipCurrent?: number;
   npsCurrent?: number;
+  altCurrent?: number;
   profileBreakdown?: ProfileBreakdown[];
   assetPrefs?: NetWorthAssetPreferences;
 }
@@ -139,6 +145,7 @@ function ProfileCard({
   const showRe = assetPrefs?.real_estate ?? true;
   const showUlip = assetPrefs?.ulip ?? true;
   const showNps = assetPrefs?.nps ?? true;
+  const showAlt = assetPrefs?.alt ?? true;
 
   const mfValue       = Number(p.mutual_fund_value) || 0;
   const stockValue    = Number(p.stock_value)    || 0;
@@ -163,12 +170,16 @@ function ProfileCard({
   const reReturnPct   = reInvested > 0 ? (reGain / reInvested) * 100 : 0;
   const ulipValue     = Number(p.ulip_value)    || 0;
   const npsValue     = Number(p.nps_value)    || 0;
+  const altValue     = Number(p.alt_value)    || 0;
   const ulipInvested  = Number(p.ulip_invested) || 0;
   const npsInvested  = Number(p.nps_invested) || 0;
+  const altInvested  = Number(p.alt_invested) || 0;
   const ulipGain      = isFinite(Number(p.ulip_gain)) ? Number(p.ulip_gain) : (ulipValue - ulipInvested);
   const npsGain      = isFinite(Number(p.nps_gain)) ? Number(p.nps_gain) : (npsValue - npsInvested);
+  const altGain      = isFinite(Number(p.alt_gain)) ? Number(p.alt_gain) : (altValue - altInvested);
   const ulipReturnPct = ulipInvested > 0 ? (ulipGain / ulipInvested) * 100 : 0;
   const npsReturnPct = npsInvested > 0 ? (npsGain / npsInvested) * 100 : 0;
+  const altReturnPct = altInvested > 0 ? (altGain / altInvested) * 100 : 0;
 
   // Dynamically calculate effective totals for this profile based on active asset preferences
   let totalValue = 0;
@@ -201,6 +212,10 @@ function ProfileCard({
     totalValue += npsValue;
     totalInvested += npsInvested;
   }
+  if (showAlt) {
+    totalValue += altValue;
+    totalInvested += altInvested;
+  }
   const totalGain = totalValue - totalInvested;
   const returnPct = isFinite(Number(p.return_pct)) ? Number(p.return_pct) : (totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0);
 
@@ -211,7 +226,8 @@ function ProfileCard({
   const hasRe    = showRe && (reValue > 0 || reInvested > 0);
   const hasUlip  = showUlip && ulipValue > 0;
   const hasNps  = showNps && npsValue > 0;
-  const hasAnyAlternative = hasFi || hasGold || hasRe || hasUlip || hasNps;
+  const hasAlt  = showAlt && altValue > 0;
+  const hasAnyAlternative = hasFi || hasGold || hasRe || hasUlip || hasNps || hasAlt;
 
   const dayChangePctToDisplay = p.day_change_pct !== undefined ? p.day_change_pct : returnPct;
   const isHeaderDayPositive = dayChangePctToDisplay >= 0;
@@ -693,6 +709,43 @@ function ProfileCard({
                 </div>
               </div>
             )}
+            {/* BUG-117 */}
+            {(showAlt && hasAlt) && (
+              <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                    <span className="text-[11px] sm:text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">PMS & AIF</span>
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-neutral-400 dark:text-neutral-500">Value</span>
+                      <PrivacyMask>
+                        <span className="font-bold text-neutral-900 dark:text-white tabular-nums">₹{fmt(altValue)}</span>
+                      </PrivacyMask>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-neutral-400 dark:text-neutral-500">Net Invested</span>
+                      <PrivacyMask blurStrength="sm">
+                        <span className="font-medium text-neutral-600 dark:text-neutral-400 tabular-nums">₹{fmt(altInvested)}</span>
+                      </PrivacyMask>
+                    </div>
+                    <div className="flex justify-between items-center pt-1.5 border-t border-neutral-100 dark:border-white/5">
+                      <span className="text-neutral-400 dark:text-neutral-500 font-medium">Gain / Loss</span>
+                      <PrivacyMask>
+                        <span className={`font-bold tabular-nums ${altGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                          {altGain >= 0 ? "+" : ""}₹{fmt(altGain)}
+                        </span>
+                      </PrivacyMask>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-neutral-200/60 dark:border-white/10 flex items-center justify-between text-[10px]">
+                  <span className="text-neutral-400 dark:text-neutral-500">Return %</span>
+                  <span className={`font-bold tabular-nums ${altReturnPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>{altReturnPct >= 0 ? "+" : "-"}{fmtPct(altReturnPct)}%</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Overall Gain/Loss bar */}
@@ -739,6 +792,7 @@ export default function FamilyPortfolioSummary({
   reProfit = 0,
   ulipProfit = 0,
   npsProfit = 0,
+  altProfit = 0,
   mfInvested = 0,
   stockInvested = 0,
   fiInvested = 0,
@@ -746,6 +800,7 @@ export default function FamilyPortfolioSummary({
   reInvested = 0,
   ulipInvested = 0,
   npsInvested = 0,
+  altInvested = 0,
   mfCurrent,
   stockCurrent,
   fiCurrent,
@@ -753,6 +808,7 @@ export default function FamilyPortfolioSummary({
   reCurrent,
   ulipCurrent,
   npsCurrent,
+  altCurrent,
   mfDayChange,
   mfDayChangePct,
   stockDayChange,
@@ -773,6 +829,7 @@ export default function FamilyPortfolioSummary({
   const showRe = assetPrefs?.real_estate ?? true;
   const showUlip = assetPrefs?.ulip ?? true;
   const showNps = assetPrefs?.nps ?? true;
+  const showAlt = assetPrefs?.alt ?? true;
 
   const mfCurrentVal = mfCurrent ?? (mfInvested + mfProfit);
   const stockCurrentVal = stockCurrent ?? (stockInvested + stockProfit);
@@ -787,8 +844,10 @@ export default function FamilyPortfolioSummary({
   const reReturnPct = reInvested > 0 ? (reProfit / reInvested) * 100 : 0;
   const ulipCurrentVal = ulipCurrent ?? (ulipInvested + ulipProfit);
   const npsCurrentVal = npsCurrent ?? (npsInvested + npsProfit);
+  const altCurrentVal = altCurrent ?? (altInvested + altProfit);
   const ulipReturnPct = ulipInvested > 0 ? (ulipProfit / ulipInvested) * 100 : 0;
   const npsReturnPct = npsInvested > 0 ? (npsProfit / npsInvested) * 100 : 0;
+  const altReturnPct = altInvested > 0 ? (altProfit / altInvested) * 100 : 0;
 
   return (
     <Card className="p-5 sm:p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -906,6 +965,18 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
+              {/* BUG-117 */}
+              {showAlt && altInvested > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                    PMS & AIF
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(altInvested)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1008,6 +1079,18 @@ export default function FamilyPortfolioSummary({
                   </span>
                   <PrivacyMask>
                     <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(npsCurrentVal)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {/* BUG-117 */}
+              {showAlt && altCurrentVal > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                    PMS & AIF
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(altCurrentVal)}</span>
                   </PrivacyMask>
                 </div>
               )}
@@ -1236,6 +1319,25 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                   <span className={`text-xs ${npsProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
                     ({npsProfit >= 0 ? "+" : ""}{fmtPct(npsReturnPct)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+            {/* BUG-117 */}
+            {showAlt && (altProfit !== 0 || altInvested > 0) && (
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+                  PMS & AIF
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask blurStrength="sm">
+                    <span className={`font-semibold ${altProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {altProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(altProfit))}
+                    </span>
+                  </PrivacyMask>
+                  <span className={`text-xs ${altProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                    ({altProfit >= 0 ? "+" : ""}{fmtPct(altReturnPct)}%)
                   </span>
                 </div>
               </div>
