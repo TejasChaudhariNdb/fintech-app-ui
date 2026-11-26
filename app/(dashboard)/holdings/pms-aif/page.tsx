@@ -25,6 +25,7 @@ interface AltInvestment {
   aif_category: string | null;
   account_ref: string | null;
   value_date: string | null;
+  lock_in_until: string | null;
   status: string;
   notes: string | null;
   flows: Flow[];
@@ -44,9 +45,9 @@ const MANAGERS: Record<Kind, string[]> = {
   AIF: ["360 ONE", "Edelweiss", "Kotak Alternate", "ICICI Prudential", "Avendus", "Abakkus", "Nippon India", "HDFC", "Motilal Oswal"],
 };
 const AIF_CATEGORIES = [
-  { id: "CAT_I", label: "Category I" },
-  { id: "CAT_II", label: "Category II" },
-  { id: "CAT_III", label: "Category III" },
+  { id: "CAT_I", label: "Category I", hint: "Venture capital, SME, infrastructure" },
+  { id: "CAT_II", label: "Category II", hint: "Private equity, private debt, real estate" },
+  { id: "CAT_III", label: "Category III", hint: "Hedge funds, long-short" },
 ];
 
 const LABEL = "block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1";
@@ -210,6 +211,11 @@ export default function PmsAifPage() {
                   {a.taken_out > 0 && <> · taken out <PrivacyMask>{inr(a.taken_out)}</PrivacyMask></>}
                   {a.value_date && <> · value as of {a.value_date}</>}
                 </div>
+                {a.lock_in_until && (
+                  <div className="text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                    {a.lock_in_until > today() ? `Locked in until ${a.lock_in_until}` : `Lock-in ended ${a.lock_in_until}`}
+                  </div>
+                )}
               </Card>
             );
           })}
@@ -236,7 +242,10 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
   const [category, setCategory] = useState("CAT_II");
   const [value, setValue] = useState("");
   const [valueDate, setValueDate] = useState(today());
-  const [flows, setFlows] = useState<FlowDraft[]>([]);
+  const [firstAmount, setFirstAmount] = useState("");
+  const [firstDate, setFirstDate] = useState(today());
+  const [flows, setFlows] = useState<FlowDraft[]>([]);  // later entries: top-ups, withdrawals, drawdowns, distributions
+  const [lockIn, setLockIn] = useState("");
   const [accountRef, setAccountRef] = useState("");
   const [status, setStatus] = useState("ACTIVE");
   const [profileId, setProfileId] = useState("");
@@ -252,7 +261,13 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
     setCategory(a?.aif_category || "CAT_II");
     setValue(a ? String(a.value) : "");
     setValueDate(a?.value_date || today());
-    setFlows(a?.flows.length ? a.flows.map((f) => ({ ...f, amount: String(f.amount) })) : [{ flow_date: today(), flow_type: "INVEST", amount: "" }]);
+    // the earliest investment is the "Amount invested" fields; every other entry is listed below
+    const sorted = [...(a?.flows || [])].sort((x, y) => x.flow_date.localeCompare(y.flow_date));
+    const firstIdx = sorted.findIndex((f) => f.flow_type === "INVEST");
+    setFirstAmount(firstIdx >= 0 ? String(sorted[firstIdx].amount) : "");
+    setFirstDate(firstIdx >= 0 ? sorted[firstIdx].flow_date : today());
+    setFlows(sorted.filter((_, i) => i !== firstIdx).map((f) => ({ ...f, amount: String(f.amount) })));
+    setLockIn(a?.lock_in_until || "");
     setAccountRef(a?.account_ref || "");
     setStatus(a?.status || "ACTIVE");
     setProfileId(String(a?.profile_id || (activeProfileId !== "all" ? activeProfileId : profiles[0]?.id || "")));
@@ -267,9 +282,10 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
     setError(null);
     if (!manager.trim()) return setError("Please enter the manager name.");
     if (!(parseFloat(value) >= 0) || value.trim() === "") return setError("Enter the current value from your statement.");
-    const rows = flows.filter((f) => f.amount.trim() !== "");
-    if (rows.some((f) => !(parseFloat(f.amount) > 0) || !f.flow_date)) return setError("Each entry needs a date and an amount above 0.");
-    if (!rows.some((f) => f.flow_type === "INVEST")) return setError("Add at least one investment (date and amount).");
+    if (!(parseFloat(firstAmount) > 0) || !firstDate) return setError("Enter the amount invested and the investment date.");
+    const extra = flows.filter((f) => f.amount.trim() !== "");
+    if (extra.some((f) => !(parseFloat(f.amount) > 0) || !f.flow_date)) return setError("Each extra entry needs a date and an amount above 0.");
+    const rows = [{ flow_date: firstDate, flow_type: "INVEST" as const, amount: firstAmount }, ...extra];
     setSaving(true);
     try {
       await api.saveAltInvestment({
@@ -280,6 +296,7 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
         account_ref: accountRef.trim() || null,
         current_value: parseFloat(value),
         value_date: valueDate || null,
+        lock_in_until: lockIn || null,
         status,
         profile_id: profileId ? parseInt(profileId) : null,
         flows: rows.map((f) => ({ flow_date: f.flow_date, flow_type: f.flow_type, amount: parseFloat(f.amount) })),
@@ -322,7 +339,7 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
           </div>
         )}
 
-        <div className={kind === "AIF" ? "grid grid-cols-2 gap-3" : ""}>
+        <div className="space-y-4">
           <div>
             <label className={LABEL}>{kind === "PMS" ? "Portfolio manager" : "Fund manager"}</label>
             <input list="alt-managers" value={manager} onChange={(e) => setManager(e.target.value)} placeholder={kind === "PMS" ? "e.g. Marcellus" : "e.g. 360 ONE"} className={INPUT} />
@@ -332,7 +349,7 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
             <div>
               <label className={LABEL}>Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={INPUT}>
-                {AIF_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {AIF_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label} ({c.hint})</option>)}
               </select>
             </div>
           )}
@@ -340,6 +357,17 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
         <div>
           <label className={LABEL}>{kind === "PMS" ? "Strategy" : "Fund / scheme"}</label>
           <input value={strategy} onChange={(e) => setStrategy(e.target.value)} placeholder={kind === "PMS" ? "e.g. Consistent Compounders" : "e.g. Real Estate Fund II"} className={INPUT} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL}>{kind === "PMS" ? "Amount invested (₹)" : "First drawdown (₹)"}</label>
+            <input type="number" min="0" step="any" inputMode="decimal" value={firstAmount} onChange={(e) => setFirstAmount(e.target.value)} placeholder="50,00,000" className={INPUT} />
+          </div>
+          <div>
+            <label className={LABEL}>Investment date</label>
+            <DatePicker value={firstDate} onChange={(v) => setFirstDate(v)} className={INPUT} />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -353,22 +381,34 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
           </div>
         </div>
 
+        <div>
+          <label className={LABEL}>Lock-in ends (optional)</label>
+          <DatePicker value={lockIn} clearable onChange={(v) => setLockIn(v)} className={INPUT} />
+          <p className="text-[10px] text-neutral-400 mt-1">{kind === "AIF" ? "Most AIFs lock money in for 3 years or more." : "Leave empty if you can withdraw any time."}</p>
+        </div>
+
         <div className="rounded-xl border border-neutral-200 dark:border-white/10 p-3 space-y-2.5">
-          <div className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Money in and out</div>
-          <p className="text-[10px] text-neutral-400">
-            {kind === "PMS" ? "Your first investment, any top-ups, and withdrawals." : "Each drawdown (capital call) you paid, and each distribution you received."}
-          </p>
+          <div className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">
+            {kind === "PMS" ? "Top-ups and withdrawals" : "Later drawdowns and distributions"} (optional)
+          </div>
+          {flows.length > 0 && (
+            <p className="text-[10px] text-neutral-400">
+              {kind === "PMS" ? "Money added after the first investment, and money taken out." : "Each later capital call you paid, and each distribution you received."}
+            </p>
+          )}
           {flows.map((f, i) => (
-            <div key={i} className="grid grid-cols-[1.2fr_1fr_1fr_auto] gap-2 items-center">
-              <DatePicker value={f.flow_date} onChange={(v) => updateFlow(i, { flow_date: v })} className={INPUT} />
+            <div key={i} className="grid grid-cols-2 gap-2 pb-2.5 border-b border-neutral-100 dark:border-white/5 last:border-0">
               <select aria-label="In or out" value={f.flow_type} onChange={(e) => updateFlow(i, { flow_type: e.target.value as FlowDraft["flow_type"] })} className={INPUT}>
-                <option value="INVEST">{kind === "PMS" ? "Invested" : "Drawdown"}</option>
-                <option value="WITHDRAW">{kind === "PMS" ? "Withdrawn" : "Distribution"}</option>
+                <option value="INVEST">{kind === "PMS" ? "Top-up" : "Drawdown"}</option>
+                <option value="WITHDRAW">{kind === "PMS" ? "Withdrawal" : "Distribution"}</option>
               </select>
-              <input type="number" min="0" step="any" inputMode="decimal" aria-label="Amount" placeholder="Amount" value={f.amount} onChange={(e) => updateFlow(i, { amount: e.target.value })} className={INPUT} />
-              <button type="button" aria-label="Remove entry" onClick={() => setFlows((prev) => prev.filter((_, idx) => idx !== i))} className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600">
-                <X size={14} />
-              </button>
+              <DatePicker value={f.flow_date} onChange={(v) => updateFlow(i, { flow_date: v })} className={INPUT} />
+              <div className="col-span-2 flex items-center gap-2">
+                <input type="number" min="0" step="any" inputMode="decimal" aria-label="Amount" placeholder="Amount (₹)" value={f.amount} onChange={(e) => updateFlow(i, { amount: e.target.value })} className={INPUT} />
+                <button type="button" aria-label="Remove entry" onClick={() => setFlows((prev) => prev.filter((_, idx) => idx !== i))} className="p-2 rounded-lg text-neutral-400 hover:text-red-600 shrink-0">
+                  <X size={16} />
+                </button>
+              </div>
             </div>
           ))}
           <button
@@ -376,7 +416,7 @@ function AltInvestmentModal({ isOpen, onClose, initial, onSaved }: {
             onClick={() => setFlows((prev) => [...prev, { flow_date: today(), flow_type: "INVEST", amount: "" }])}
             className="flex items-center gap-1 text-xs font-semibold text-orange-600 dark:text-orange-400"
           >
-            <Plus size={14} /> Add entry
+            <Plus size={14} /> {kind === "PMS" ? "Add top-up / withdrawal" : "Add drawdown / distribution"}
           </button>
         </div>
 
