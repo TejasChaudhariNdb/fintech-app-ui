@@ -26,18 +26,21 @@ interface PortfolioSummaryProps {
   goldProfit?: number;
   reProfit?: number;
   ulipProfit?: number;
+  npsProfit?: number;
   mfInvested?: number;
   stockInvested?: number;
   fiInvested?: number;
   goldInvested?: number;
   reInvested?: number;
   ulipInvested?: number;
+  npsInvested?: number;
   mfCurrent?: number;
   stockCurrent?: number;
   fiCurrent?: number;
   goldCurrent?: number;
   reCurrent?: number;
   ulipCurrent?: number;
+  npsCurrent?: number;
   assetPrefs?: NetWorthAssetPreferences;
 }
 
@@ -61,18 +64,21 @@ export default function PortfolioSummary({
   goldProfit,
   reProfit,
   ulipProfit,
+  npsProfit,
   mfInvested = 0,
   stockInvested = 0,
   fiInvested = 0,
   goldInvested = 0,
   reInvested = 0,
   ulipInvested = 0,
+  npsInvested = 0,
   mfCurrent,
   stockCurrent,
   fiCurrent,
   goldCurrent,
   reCurrent,
   ulipCurrent,
+  npsCurrent,
   assetPrefs,
 }: PortfolioSummaryProps) {
   const isPositive = profit >= 0;
@@ -88,6 +94,7 @@ export default function PortfolioSummary({
   const showGold = assetPrefs?.gold ?? true;
   const showRe = assetPrefs?.real_estate ?? true;
   const showUlip = assetPrefs?.ulip ?? true;
+  const showNps = assetPrefs?.nps ?? true;
 
   const mfCurrentVal = mfCurrent ?? (mfInvested + (mfProfit || 0));
   const stockCurrentVal = stockCurrent ?? (stockInvested + (stockProfit || 0));
@@ -95,6 +102,7 @@ export default function PortfolioSummary({
   const goldCurrentVal = goldCurrent ?? (goldInvested + (goldProfit || 0));
   const reCurrentVal = reCurrent ?? (reInvested + (reProfit || 0));
   const ulipCurrentVal = ulipCurrent ?? (ulipInvested + (ulipProfit || 0));
+  const npsCurrentVal = npsCurrent ?? (npsInvested + (npsProfit || 0));
 
   const mfReturnPct = mfInvested > 0 && mfProfit !== undefined ? (mfProfit / mfInvested) * 100 : 0;
   const stockReturnPct = stockInvested > 0 && stockProfit !== undefined ? (stockProfit / stockInvested) * 100 : 0;
@@ -102,6 +110,7 @@ export default function PortfolioSummary({
   const goldReturnPct = goldInvested > 0 && goldProfit !== undefined ? (goldProfit / goldInvested) * 100 : 0;
   const reReturnPct = reInvested > 0 && reProfit !== undefined ? (reProfit / reInvested) * 100 : 0;
   const ulipReturnPct = ulipInvested > 0 && ulipProfit !== undefined ? (ulipProfit / ulipInvested) * 100 : 0;
+  const npsReturnPct = npsInvested > 0 && npsProfit !== undefined ? (npsProfit / npsInvested) * 100 : 0;
 
   const hasMf = mfInvested > 0 || mfCurrentVal > 0 || (mfProfit !== undefined && mfProfit !== 0);
   const hasStock = stockInvested > 0 || stockCurrentVal > 0 || (stockProfit !== undefined && stockProfit !== 0);
@@ -109,7 +118,8 @@ export default function PortfolioSummary({
   const hasGold = goldInvested > 0 || goldCurrentVal > 0 || (goldProfit !== undefined && goldProfit !== 0);
   const hasRe = reInvested > 0 || reCurrentVal > 0 || (reProfit !== undefined && reProfit !== 0);
   const hasUlip = ulipCurrentVal > 0;
-  const hasAnyAsset = hasMf || hasStock || hasFi || hasGold || hasRe || hasUlip;
+  const hasNps = npsCurrentVal > 0;
+  const hasAnyAsset = hasMf || hasStock || hasFi || hasGold || hasRe || hasUlip || hasNps;
 
   return (
     <Card className="p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -218,6 +228,19 @@ export default function PortfolioSummary({
                   </span>
                 </div>
               )}
+              {/* BUG-092 */}
+              {showNps && hasNps && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    NPS
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{npsInvested.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -318,6 +341,19 @@ export default function PortfolioSummary({
                   <span className="font-medium text-neutral-700 dark:text-neutral-300">
                     <PrivacyMask>
                       ₹{ulipCurrentVal.toLocaleString("en-IN")}
+                    </PrivacyMask>
+                  </span>
+                </div>
+              )}
+              {/* BUG-092 */}
+              {showNps && hasNps && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500">
+                    NPS
+                  </span>
+                  <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                    <PrivacyMask>
+                      ₹{npsCurrentVal.toLocaleString("en-IN")}
                     </PrivacyMask>
                   </span>
                 </div>
@@ -711,6 +747,36 @@ export default function PortfolioSummary({
                         : "text-red-600/80 dark:text-red-500/80"
                     }`}>
                     ({(ulipProfit ?? 0) >= 0 ? "+" : ""}{ulipReturnPct.toFixed(2)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+            {/* BUG-092 */}
+            {showNps && (npsInvested > 0 || (npsProfit !== undefined && npsProfit !== 0)) && (
+              <div className="flex justify-between items-center gap-2">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0" />
+                  NPS
+                </span>
+                <div className="flex items-baseline gap-1.5 shrink-0 tabular-nums">
+                  <PrivacyMask blurStrength="sm">
+                    <span
+                      className={`font-semibold ${
+                        (npsProfit ?? 0) >= 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-red-500 dark:text-red-400"
+                      }`}>
+                      {(npsProfit ?? 0) >= 0 ? "▲ +" : "▼ -"}₹
+                      {Math.round(Math.abs(npsProfit ?? 0)).toLocaleString("en-IN")}
+                    </span>
+                  </PrivacyMask>
+                  <span
+                    className={`text-xs ${
+                      (npsProfit ?? 0) >= 0
+                        ? "text-emerald-600/80 dark:text-emerald-500/80"
+                        : "text-red-600/80 dark:text-red-500/80"
+                    }`}>
+                    ({(npsProfit ?? 0) >= 0 ? "+" : ""}{npsReturnPct.toFixed(2)}%)
                   </span>
                 </div>
               </div>

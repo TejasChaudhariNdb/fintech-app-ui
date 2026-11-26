@@ -15,6 +15,7 @@ import {
   Info,
   AlertCircle,
   Umbrella,
+  PiggyBank,
 } from "lucide-react";
 import {
   NetWorthAssetPreferences,
@@ -34,6 +35,7 @@ interface CustomizeAssetsModalProps {
     gold?: number;
     real_estate?: number;
     ulip?: number;
+    nps?: number;
     insurance_cover?: number;
   };
 }
@@ -132,6 +134,19 @@ const ASSET_OPTIONS: AssetOption[] = [
     isCoreWealth: true,
   },
   {
+    key: "nps",
+    label: "NPS",
+    description: "NPS accounts (units × NAV per scheme)",
+    icon: PiggyBank,
+    colorClass: {
+      bg: "bg-sky-500/10 dark:bg-sky-500/15",
+      text: "text-sky-600 dark:text-sky-400",
+      border: "border-sky-500/20",
+      badgeBg: "bg-sky-500",
+    },
+    isCoreWealth: true,
+  },
+  {
     key: "show_insurance_cover",
     label: "Family Insurance Cover",
     description: "Display term life & health sum assured in family protection cards",
@@ -177,6 +192,7 @@ export default function CustomizeAssetsModal({
     if (localPrefs.gold) total += values.gold || 0;
     if (localPrefs.real_estate) total += values.real_estate || 0;
     if (localPrefs.ulip) total += values.ulip || 0;
+    if (localPrefs.nps) total += values.nps || 0;
     return total;
   }, [localPrefs, values]);
 
@@ -205,6 +221,7 @@ export default function CustomizeAssetsModal({
         gold: true,
         real_estate: true,
         ulip: true,
+        nps: true,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     } else if (preset === "liquid") {
@@ -215,6 +232,7 @@ export default function CustomizeAssetsModal({
         gold: false,
         real_estate: false,
         ulip: false,
+        nps: false,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     } else if (preset === "financial") {
@@ -225,6 +243,7 @@ export default function CustomizeAssetsModal({
         gold: true,
         real_estate: false,
         ulip: true,
+        nps: true,
         show_insurance_cover: localPrefs.show_insurance_cover,
       });
     }
@@ -272,12 +291,13 @@ export default function CustomizeAssetsModal({
                 localPrefs.fixed_income &&
                 localPrefs.gold &&
                 localPrefs.real_estate &&
-                localPrefs.ulip
+                localPrefs.ulip &&
+                localPrefs.nps
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
             >
-              All Assets (6/6)
+              All Assets (7/7)
             </button>
 
             <button
@@ -289,7 +309,8 @@ export default function CustomizeAssetsModal({
                 !localPrefs.fixed_income &&
                 !localPrefs.gold &&
                 !localPrefs.real_estate &&
-                !localPrefs.ulip
+                !localPrefs.ulip &&
+                !localPrefs.nps
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
@@ -306,7 +327,8 @@ export default function CustomizeAssetsModal({
                 localPrefs.fixed_income &&
                 localPrefs.gold &&
                 !localPrefs.real_estate &&
-                localPrefs.ulip
+                localPrefs.ulip &&
+                localPrefs.nps
                   ? "bg-primary-500/10 text-primary-600 dark:text-primary-400 border-primary-500/30 font-bold"
                   : "bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-white/10 hover:bg-neutral-200/60 dark:hover:bg-white/10"
               }`}
@@ -372,6 +394,8 @@ export default function CustomizeAssetsModal({
                   ? "real_estate"
                   : opt.key === "ulip"
                   ? "ulip"
+                  : opt.key === "nps"
+                  ? "nps"
                   : "insurance_cover";
               const assetVal = values ? values[valKey] : undefined;
 

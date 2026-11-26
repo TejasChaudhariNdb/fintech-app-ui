@@ -24,6 +24,7 @@ import {
   CalendarClock,
   ChevronsLeft,
   ChevronsRight,
+  PiggyBank,
 } from "lucide-react";
 
 import { usePrivacy } from "@/context/PrivacyContext";
@@ -128,6 +129,12 @@ export default function SideNav() {
       label: "Fixed Income",
       icon: Landmark,
       dotColor: "bg-cyan-400",
+    },
+    {
+      id: "/holdings/nps",
+      label: "NPS",
+      icon: PiggyBank,
+      dotColor: "bg-sky-400",
     },
     {
       id: "/holdings/gold",

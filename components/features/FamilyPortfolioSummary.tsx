@@ -18,6 +18,7 @@ interface ProfileBreakdown {
   gold_value?: number;
   real_estate_value?: number;
   ulip_value?: number;
+  nps_value?: number;
   total_value: number;
   mf_invested?: number;
   stock_invested?: number;
@@ -25,6 +26,7 @@ interface ProfileBreakdown {
   gold_invested?: number;
   re_invested?: number;
   ulip_invested?: number;
+  nps_invested?: number;
   total_invested?: number;
   mf_gain?: number;
   stock_gain?: number;
@@ -32,6 +34,7 @@ interface ProfileBreakdown {
   gold_gain?: number;
   re_gain?: number;
   ulip_gain?: number;
+  nps_gain?: number;
   total_gain?: number;
   return_pct?: number;
   day_change?: number;
@@ -72,18 +75,21 @@ interface FamilyPortfolioSummaryProps {
   goldProfit?: number;
   reProfit?: number;
   ulipProfit?: number;
+  npsProfit?: number;
   mfInvested?: number;
   stockInvested?: number;
   fiInvested?: number;
   goldInvested?: number;
   reInvested?: number;
   ulipInvested?: number;
+  npsInvested?: number;
   mfCurrent?: number;
   stockCurrent?: number;
   fiCurrent?: number;
   goldCurrent?: number;
   reCurrent?: number;
   ulipCurrent?: number;
+  npsCurrent?: number;
   profileBreakdown?: ProfileBreakdown[];
   assetPrefs?: NetWorthAssetPreferences;
 }
@@ -132,6 +138,7 @@ function ProfileCard({
   const showGold = assetPrefs?.gold ?? true;
   const showRe = assetPrefs?.real_estate ?? true;
   const showUlip = assetPrefs?.ulip ?? true;
+  const showNps = assetPrefs?.nps ?? true;
 
   const mfValue       = Number(p.mutual_fund_value) || 0;
   const stockValue    = Number(p.stock_value)    || 0;
@@ -155,9 +162,13 @@ function ProfileCard({
   const goldReturnPct = goldInvested > 0 ? (goldGain / goldInvested) * 100 : 0;
   const reReturnPct   = reInvested > 0 ? (reGain / reInvested) * 100 : 0;
   const ulipValue     = Number(p.ulip_value)    || 0;
+  const npsValue     = Number(p.nps_value)    || 0;
   const ulipInvested  = Number(p.ulip_invested) || 0;
+  const npsInvested  = Number(p.nps_invested) || 0;
   const ulipGain      = isFinite(Number(p.ulip_gain)) ? Number(p.ulip_gain) : (ulipValue - ulipInvested);
+  const npsGain      = isFinite(Number(p.nps_gain)) ? Number(p.nps_gain) : (npsValue - npsInvested);
   const ulipReturnPct = ulipInvested > 0 ? (ulipGain / ulipInvested) * 100 : 0;
+  const npsReturnPct = npsInvested > 0 ? (npsGain / npsInvested) * 100 : 0;
 
   // Dynamically calculate effective totals for this profile based on active asset preferences
   let totalValue = 0;
@@ -186,6 +197,10 @@ function ProfileCard({
     totalValue += ulipValue;
     totalInvested += ulipInvested;
   }
+  if (showNps) {
+    totalValue += npsValue;
+    totalInvested += npsInvested;
+  }
   const totalGain = totalValue - totalInvested;
   const returnPct = isFinite(Number(p.return_pct)) ? Number(p.return_pct) : (totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0);
 
@@ -195,7 +210,8 @@ function ProfileCard({
   const hasGold  = showGold && (goldValue > 0 || goldInvested > 0);
   const hasRe    = showRe && (reValue > 0 || reInvested > 0);
   const hasUlip  = showUlip && ulipValue > 0;
-  const hasAnyAlternative = hasFi || hasGold || hasRe || hasUlip;
+  const hasNps  = showNps && npsValue > 0;
+  const hasAnyAlternative = hasFi || hasGold || hasRe || hasUlip || hasNps;
 
   const dayChangePctToDisplay = p.day_change_pct !== undefined ? p.day_change_pct : returnPct;
   const isHeaderDayPositive = dayChangePctToDisplay >= 0;
@@ -640,6 +656,43 @@ function ProfileCard({
                 </div>
               </div>
             )}
+            {/* BUG-092 */}
+            {(showNps && hasNps) && (
+              <div className="bg-white/80 dark:bg-black/25 rounded-xl p-3 sm:p-4 border border-neutral-200/60 dark:border-white/5 flex flex-col justify-between shadow-2xs">
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    <span className="text-[11px] sm:text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">NPS</span>
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-neutral-400 dark:text-neutral-500">Value</span>
+                      <PrivacyMask>
+                        <span className="font-bold text-neutral-900 dark:text-white tabular-nums">₹{fmt(npsValue)}</span>
+                      </PrivacyMask>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-neutral-400 dark:text-neutral-500">Contributed</span>
+                      <PrivacyMask blurStrength="sm">
+                        <span className="font-medium text-neutral-600 dark:text-neutral-400 tabular-nums">₹{fmt(npsInvested)}</span>
+                      </PrivacyMask>
+                    </div>
+                    <div className="flex justify-between items-center pt-1.5 border-t border-neutral-100 dark:border-white/5">
+                      <span className="text-neutral-400 dark:text-neutral-500 font-medium">Gain / Loss</span>
+                      <PrivacyMask>
+                        <span className={`font-bold tabular-nums ${npsGain >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                          {npsGain >= 0 ? "+" : ""}₹{fmt(npsGain)}
+                        </span>
+                      </PrivacyMask>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2.5 pt-2 border-t border-neutral-200/60 dark:border-white/10 flex items-center justify-between text-[10px]">
+                  <span className="text-neutral-400 dark:text-neutral-500">Return %</span>
+                  <span className={`font-bold tabular-nums ${npsReturnPct >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>{npsReturnPct >= 0 ? "+" : "-"}{fmtPct(npsReturnPct)}%</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Overall Gain/Loss bar */}
@@ -685,18 +738,21 @@ export default function FamilyPortfolioSummary({
   goldProfit = 0,
   reProfit = 0,
   ulipProfit = 0,
+  npsProfit = 0,
   mfInvested = 0,
   stockInvested = 0,
   fiInvested = 0,
   goldInvested = 0,
   reInvested = 0,
   ulipInvested = 0,
+  npsInvested = 0,
   mfCurrent,
   stockCurrent,
   fiCurrent,
   goldCurrent,
   reCurrent,
   ulipCurrent,
+  npsCurrent,
   mfDayChange,
   mfDayChangePct,
   stockDayChange,
@@ -716,6 +772,7 @@ export default function FamilyPortfolioSummary({
   const showGold = assetPrefs?.gold ?? true;
   const showRe = assetPrefs?.real_estate ?? true;
   const showUlip = assetPrefs?.ulip ?? true;
+  const showNps = assetPrefs?.nps ?? true;
 
   const mfCurrentVal = mfCurrent ?? (mfInvested + mfProfit);
   const stockCurrentVal = stockCurrent ?? (stockInvested + stockProfit);
@@ -729,7 +786,9 @@ export default function FamilyPortfolioSummary({
   const goldReturnPct = goldInvested > 0 ? (goldProfit / goldInvested) * 100 : 0;
   const reReturnPct = reInvested > 0 ? (reProfit / reInvested) * 100 : 0;
   const ulipCurrentVal = ulipCurrent ?? (ulipInvested + ulipProfit);
+  const npsCurrentVal = npsCurrent ?? (npsInvested + npsProfit);
   const ulipReturnPct = ulipInvested > 0 ? (ulipProfit / ulipInvested) * 100 : 0;
+  const npsReturnPct = npsInvested > 0 ? (npsProfit / npsInvested) * 100 : 0;
 
   return (
     <Card className="p-5 sm:p-6 bg-white dark:bg-[#151A23] border border-neutral-200 dark:border-white/5 shadow-sm dark:shadow-none">
@@ -835,6 +894,18 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                 </div>
               )}
+              {/* BUG-092 */}
+              {showNps && npsInvested > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    NPS
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(npsInvested)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -925,6 +996,18 @@ export default function FamilyPortfolioSummary({
                   </span>
                   <PrivacyMask>
                     <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(ulipCurrentVal)}</span>
+                  </PrivacyMask>
+                </div>
+              )}
+              {/* BUG-092 */}
+              {showNps && npsCurrentVal > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-neutral-400 dark:text-neutral-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                    NPS
+                  </span>
+                  <PrivacyMask>
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">₹{fmt(npsCurrentVal)}</span>
                   </PrivacyMask>
                 </div>
               )}
@@ -1134,6 +1217,25 @@ export default function FamilyPortfolioSummary({
                   </PrivacyMask>
                   <span className={`text-xs ${ulipProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
                     ({ulipProfit >= 0 ? "+" : ""}{fmtPct(ulipReturnPct)}%)
+                  </span>
+                </div>
+              </div>
+            )}
+            {/* BUG-092 */}
+            {showNps && (npsProfit !== 0 || npsInvested > 0) && (
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                  NPS
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <PrivacyMask blurStrength="sm">
+                    <span className={`font-semibold ${npsProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                      {npsProfit >= 0 ? "▲ +" : "▼ -"}₹{fmt(Math.abs(npsProfit))}
+                    </span>
+                  </PrivacyMask>
+                  <span className={`text-xs ${npsProfit >= 0 ? "text-emerald-600/80 dark:text-emerald-500/80" : "text-red-600/80 dark:text-red-500/80"}`}>
+                    ({npsProfit >= 0 ? "+" : ""}{fmtPct(npsReturnPct)}%)
                   </span>
                 </div>
               </div>

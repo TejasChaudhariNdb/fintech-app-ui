@@ -11,6 +11,8 @@ export interface NetWorthAssetPreferences {
   real_estate: boolean;
   /** BUG-106: ULIP fund value (units x NAV) from insurance policies */
   ulip: boolean;
+  /** BUG-092: NPS fund value (units x NAV) from insurance policies */
+  nps: boolean;
   show_insurance_cover: boolean;
 }
 
@@ -21,6 +23,7 @@ export const DEFAULT_ASSET_PREFERENCES: NetWorthAssetPreferences = {
   gold: true,
   real_estate: true,
   ulip: true,
+  nps: true,
   show_insurance_cover: false,
 };
 
@@ -57,6 +60,7 @@ export function getStoredAssetPreferences(profileId: string | number = "all"): N
       gold: typeof parsed.gold === "boolean" ? parsed.gold : true,
       real_estate: typeof parsed.real_estate === "boolean" ? parsed.real_estate : true,
       ulip: typeof parsed.ulip === "boolean" ? parsed.ulip : true,
+      nps: typeof parsed.nps === "boolean" ? parsed.nps : true,
       show_insurance_cover: typeof parsed.show_insurance_cover === "boolean" ? parsed.show_insurance_cover : false,
     };
   } catch (e) {
@@ -131,6 +135,7 @@ export function syncPreferencesFromBackend(
       gold: typeof p.gold === "boolean" ? p.gold : true,
       real_estate: typeof p.real_estate === "boolean" ? p.real_estate : true,
       ulip: typeof p.ulip === "boolean" ? p.ulip : true,
+      nps: typeof p.nps === "boolean" ? p.nps : true,
       show_insurance_cover: typeof p.show_insurance_cover === "boolean" ? p.show_insurance_cover : false,
     });
 
@@ -161,6 +166,7 @@ export function countActiveAssets(prefs: NetWorthAssetPreferences): { active: nu
     "gold",
     "real_estate",
     "ulip",
+    "nps",
   ];
   const active = keys.filter((k) => prefs[k]).length;
   return { active, total: keys.length };
@@ -177,6 +183,7 @@ export function isCustomized(prefs: NetWorthAssetPreferences): boolean {
     !prefs.gold ||
     !prefs.real_estate ||
     !prefs.ulip ||
+    !prefs.nps ||
     prefs.show_insurance_cover
   );
 }

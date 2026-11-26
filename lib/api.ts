@@ -377,7 +377,9 @@ export const api = {
           "/gold/holdings",
           "/gold",
           "/real-estate/holdings",
-          "/real-estate"
+          "/real-estate",
+          "/nps/accounts",
+          "/nps"
         ];
         
         const method = (options.method || "GET").toUpperCase();
@@ -1144,6 +1146,22 @@ export const api = {
     return res;
   },
 
+  // BUG-092: NPS accounts (units x NAV per scheme, contributions)
+  getNpsAccounts: () => api.fetch("/nps/accounts", { cacheKey: "nps-accounts" }),
+  saveNpsAccount: async (data: Record<string, unknown>, id?: number) => {
+    const res = await api.fetch(id ? `/nps/accounts/${id}` : "/nps/accounts", {
+      method: id ? "PUT" : "POST",
+      body: JSON.stringify(data),
+    });
+    api.clearPortfolioCache();
+    return res;
+  },
+  deleteNpsAccount: async (id: number) => {
+    const res = await api.fetch(`/nps/accounts/${id}`, { method: "DELETE" });
+    api.clearPortfolioCache();
+    return res;
+  },
+
   // Real Estate & Property Vault
   getRealEstateHoldings: (profileId?: string) => {
     const activeProf = profileId !== undefined ? profileId : (typeof window !== "undefined" ? localStorage.getItem("active_profile_id") : null);
@@ -1762,6 +1780,7 @@ export const api = {
       "fixed-income-holdings",
       "insurance-policies",
       "real-estate-holdings",
+      "nps-accounts",
     ]);
   },
 
